@@ -6,14 +6,14 @@ import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
+import Time "mo:core/Time";
+import Migration "migration";
 
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
 
-
-
-
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -44,6 +44,7 @@ actor {
   };
 
   public type ResidentStatus = { #active; #discharged };
+
   public type RoomType = { #solo; #sharedRoom };
 
   module Resident {
@@ -129,7 +130,11 @@ actor {
     address : Text;
   };
 
-  public type MedicationStatus = { #active; #discontinued };
+  public type MedicationStatus = {
+    #active;
+    #discontinued;
+  };
+
   public type AdministrationRoute = {
     #oral;
     #injection;
@@ -252,24 +257,21 @@ actor {
 
   // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
-    };
-    if (caller != user and not (AccessControl.isAdmin(accessControlState, caller))) {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
     userProfiles.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
@@ -392,8 +394,8 @@ actor {
   };
 
   public shared ({ caller }) func removeResident(id : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can remove residents");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can remove residents");
     };
 
     switch (residents.get(id)) {
@@ -403,22 +405,22 @@ actor {
   };
 
   public query ({ caller }) func getResident(id : Nat) : async ?Resident {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view resident information");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     residents.get(id);
   };
 
   public query ({ caller }) func getAllResidents() : async [Resident] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view resident information");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     sortResidentsByBed(residents.values().toArray());
   };
 
   public query ({ caller }) func getResidentsByRoom(roomNumber : Text) : async [Resident] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view resident information");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.roomNumber == roomNumber }
@@ -427,8 +429,8 @@ actor {
   };
 
   public query ({ caller }) func getActiveResidents() : async [Resident] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view resident information");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.status == #active }
@@ -437,8 +439,8 @@ actor {
   };
 
   public query ({ caller }) func getDischargedResidents() : async [Resident] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view resident information");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.status == #discharged }
@@ -448,7 +450,7 @@ actor {
 
   public query ({ caller }) func getResidentsByRoomType(roomType : RoomType) : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view resident information");
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.roomType == roomType }
@@ -936,9 +938,9 @@ actor {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can calculate age");
     };
-    let now = 0;
+    let now = Time.now();
     let ageInNanoseconds = now;
-    let nanosecondsInYear : Int = 365 * 24 * 60 * 60 * 1_000_000_000;
+    let nanosecondsInYear = 365 * 24 * 60 * 60 * 1_000_000_000;
     let age = ageInNanoseconds / nanosecondsInYear;
     age;
   };
@@ -991,20 +993,20 @@ actor {
   };
 
   public query ({ caller : Principal }) func getAllRoomNumbers() : async [Text] {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can view room numbers");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     residents.values().toArray().map(func(r) { r.roomNumber });
   };
 
   public query ({ caller : Principal }) func findResidentByRoom(roomNumber : Text) : async ?Resident {
-    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
-      Runtime.trap("Unauthorized: Only users can search residents");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     residents.values().toArray().find(func(r) { r.roomNumber == roomNumber });
   };
 
-  // Upgrade Debugging (returns number of records, not PII)
+  // Upgrade Testing (returns number of records, not PII)
   public query ({ caller }) func checkUpgradeHealth() : async {
     residents : Nat;
     userProfiles : Nat;

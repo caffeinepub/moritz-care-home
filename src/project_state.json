@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 63,
+  "projectStateVersion": 65,
   "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
   "architectural_notes": [
     "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
@@ -22,7 +22,8 @@
     "AccessControl.getUserRole traps 'User is not registered' for authenticated principals until initialization runs; frontend calls _initializeAccessControlWithSecret but misconfiguration can lead to unexpected traps.",
     "MAR entry stores a full Medication object provided by the client; if medication details change later, historical MAR records may not reflect the original administered values consistently.",
     "Some backend functions (e.g., addPhysician/addPharmacy/addInsurance/addResponsiblePerson) exist but are not surfaced in the shown UI flows.",
-    "Resident deletion removes the resident record but does not explicitly reclaim or clean up any associated blob storage resources (if added later)."
+    "Resident deletion removes the resident record but does not explicitly reclaim or clean up any associated blob storage resources (if added later).",
+    "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable)."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -284,6 +285,30 @@
       "summary": "Remove all transparency/opacity from UI; make all pop-out dialog backgrounds solid white including the overlay (no translucency).",
       "reqIds": [],
       "status": "in_progress"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Identify and fix the backend cause of resident profiles “disappearing” by auditing all resident persistence and retrieval paths (create/update/delete/query) to ensure resident records cannot be unintentionally removed, overwritten with partial data, or become unreachable.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Ensure resident data (and any required related state such as ID counters and user profiles) persists reliably across canister upgrades by implementing stable-state upgrade handling (preupgrade/postupgrade) and adding/using a conditional migration in the backend migration file if the stable layout changes.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Add an admin-only backend diagnostics query to support verifying data integrity in production without exposing sensitive resident data (e.g., return counts and next-ID counters, and optionally a small sample of resident IDs/room numbers).",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "status": "pending"
     }
   ],
   "gameProjectType": "none",

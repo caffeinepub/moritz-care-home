@@ -1,59 +1,86 @@
 {
   "kind": "build_request",
-  "title": "Make all modal dialog backgrounds fully opaque solid white (including overlay)",
-  "priority": "normal",
+  "title": "Fix backend data loss: resident profiles intermittently disappear",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-3",
-      "text": "Update global styling so all shadcn/Radix Dialog overlays render as fully opaque solid white (no transparency, no opacity utilities, no backdrop blur), ensuring the underlying page is not visible when any modal dialog is open.",
-      "target": "frontend",
+      "id": "REQ-5",
+      "text": "Identify and fix the backend cause of resident profiles “disappearing” by auditing all resident persistence and retrieval paths (create/update/delete/query) to ensure resident records cannot be unintentionally removed, overwritten with partial data, or become unreachable.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "msg-6"
         ],
         "quotes": [
-          "remove all transparencies and opacity. all backgrounds for all pop-out dialogs should be solid white",
-          "yes"
+          "review and fix backend. resident's profiles disappear"
         ]
       },
       "acceptanceCriteria": [
-        "When any modal dialog is opened (e.g., Add Resident, Edit Resident, Add/Edit Medication, Add MAR, Add ADL, Add Daily Vitals, Add Weight), the full-screen overlay is pure solid white and fully opaque (no translucency).",
-        "With a modal open, the page behind it is not visible through the overlay.",
-        "There is no backdrop blur effect on the dialog overlay."
+        "Reproduction steps are documented (what action(s) cause residents to disappear, e.g., canister upgrade, specific mutation, or authorization/init flow).",
+        "After applying the fix, repeating the previously documented reproduction steps no longer causes resident records to disappear.",
+        "All resident-mutating functions preserve existing nested arrays/fields unless explicitly intended (e.g., medication edits must not drop MAR/ADL/vitals/weight history).",
+        "If a resident is missing, backend returns a consistent not-found behavior (no silent failure), and logs/diagnostics (if added) indicate why."
       ]
     },
     {
-      "id": "REQ-4",
-      "text": "Ensure every modal dialog panel/content background is fully opaque solid white (not semi-transparent), by auditing all dialog components and removing/replacing any Tailwind opacity/translucent background utilities applied to dialog containers.",
-      "target": "frontend",
+      "id": "REQ-6",
+      "text": "Ensure resident data (and any required related state such as ID counters and user profiles) persists reliably across canister upgrades by implementing stable-state upgrade handling (preupgrade/postupgrade) and adding/using a conditional migration in the backend migration file if the stable layout changes.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "msg-6"
         ],
         "quotes": [
-          "remove all transparencies and opacity. all backgrounds for all pop-out dialogs should be solid white",
-          "yes"
+          "resident's profiles disappear"
         ]
       },
       "acceptanceCriteria": [
-        "All DialogContent panels render with a solid white background in both light and dark modes (no alpha backgrounds).",
-        "No dialog panel uses Tailwind `opacity-*` utilities or alpha color syntax (e.g., `bg-*/xx`) that results in visible transparency.",
-        "Visual regression check: opening each of the existing dialogs shows a consistent solid white panel and solid white overlay."
+        "After a canister upgrade, `getAllResidents()` returns the same residents as before the upgrade (no loss of resident records).",
+        "After a canister upgrade, creating new residents continues with correct non-colliding IDs (ID counters are restored correctly).",
+        "If migration is required, it is implemented in the designated migration file (per project architecture) and is conditional (only runs when upgrading existing state).",
+        "Upgrade flow does not trap for existing deployments that already have data."
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "text": "Add an admin-only backend diagnostics query to support verifying data integrity in production without exposing sensitive resident data (e.g., return counts and next-ID counters, and optionally a small sample of resident IDs/room numbers).",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "review and fix backend. resident's profiles disappear"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A new admin-only query exists that returns: total resident count, counts for active/discharged, and the next-id counters relevant to residents and embedded records.",
+        "The diagnostics endpoint does not return full resident PHI/PII fields (no names, DOB, insurance numbers, notes, etc.).",
+        "Non-admin callers receive an authorization error when calling the diagnostics endpoint.",
+        "Endpoint can be used to confirm (before/after upgrade) that resident counts are unchanged."
       ]
     }
   ],
   "constraints": [
-    "Do not edit any files under frontend/src/components/ui (shadcn/ui sources are read-only); implement styling changes via global CSS overrides and/or by adjusting className usage in non-immutable component files.",
-    "Use English for any user-facing text."
+    "Respect the single-actor backend architecture: all Motoko logic remains in backend/main.mo (migration code only in the designated backend migration file if needed).",
+    "Do not introduce additional backend services, external databases, or non-Motoko backend code."
   ],
   "nonGoals": [
-    "Changing non-dialog UI translucency across the entire app (e.g., page gradients, cards, buttons) unless it directly affects dialog overlays/panels.",
-    "Backend changes or schema migrations."
+    "Frontend/UI changes (unless strictly necessary to surface a backend error state already returned).",
+    "Adding new resident features or changing the resident data model beyond what is required to prevent data loss."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

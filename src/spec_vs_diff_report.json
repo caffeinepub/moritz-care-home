@@ -1,23 +1,56 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T02:09:32.340Z",
-  "summary": "The diff implements global CSS overrides to force Radix/shadcn Dialog overlays and contents to be fully opaque solid white with no backdrop blur, and updates multiple dialog components to use solid `bg-white` (removing/avoiding translucent/alpha backgrounds on DialogContent and inner controls).",
-  "missing_requirements": [],
-  "hallucinated_features": [],
-  "confidence": 0.78,
+  "generatedAt": "2026-02-07T02:28:46.027Z",
+  "summary": "Diff adds a new backend migration module and wires migration into backend/main.mo, but the provided diff summary does not show implementation of the required diagnostics query, explicit preupgrade/postupgrade stable-state handling details, or documentation of reproduction steps / persistence-path audit fixes. Migration code also introduces resident filtering/sanitization that was not requested and could itself remove records.",
+  "missing_requirements": [
+    {
+      "id": "REQ-5",
+      "requirement": "Identify and fix the backend cause of resident profiles “disappearing” by auditing all resident persistence and retrieval paths (create/update/delete/query) to ensure resident records cannot be unintentionally removed, overwritten with partial data, or become unreachable.",
+      "reason": "The diff summary does not show changes to resident create/update/delete/query functions, nor any documented reproduction steps, nor any explicit not-found/logging behavior updates. backend/main.mo is truncated and shows mostly type/module definitions and migration wiring, not persistence-path fixes.",
+      "evidence": [
+        "backend/main.mo (truncated)",
+        "backend/migration.mo"
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "requirement": "Ensure resident data (and any required related state such as ID counters and user profiles) persists reliably across canister upgrades by implementing stable-state upgrade handling (preupgrade/postupgrade) and adding/using a conditional migration in the backend migration file if the stable layout changes.",
+      "reason": "While migration is wired in via `(with migration = Migration.run)`, the diff summary does not show explicit `preupgrade`/`postupgrade` stable-state serialization/restoration or confirmation that ID counters and user profiles are restored correctly. Also, the migration shown does not appear conditional (no versioning/guard indicating only runs for existing state).",
+      "evidence": [
+        "backend/main.mo (truncated)",
+        "backend/migration.mo"
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "requirement": "Add an admin-only backend diagnostics query to support verifying data integrity in production without exposing sensitive resident data (e.g., return counts and next-ID counters, and optionally a small sample of resident IDs/room numbers).",
+      "reason": "No new diagnostics query endpoint is shown in the diff summary, and there is no evidence of an admin-only authorization check around such an endpoint or of returning only non-PHI aggregates/counters.",
+      "evidence": [
+        "backend/main.mo (truncated)"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Resident migration sanitization/filtering that can drop resident records during migration (`sanitizedResidents = old.residents.filter(...)`).",
+      "reason": "BuildRequest asks to prevent residents from disappearing; adding a migration that filters residents is an additional behavior not requested and could remove records (even if current `isValidResident` always returns true, the filtering mechanism is still introduced).",
+      "evidence": [
+        "backend/migration.mo"
+      ]
+    },
+    {
+      "description": "Large update to project_state.json summary/feature list describing many frontend/backend capabilities unrelated to the requested backend data-loss fix.",
+      "reason": "BuildRequest is focused on backend persistence/upgrade/diagnostics; updating repository metadata to describe many unrelated features is not requested.",
+      "evidence": [
+        "project_state.json (truncated)"
+      ]
+    }
+  ],
+  "confidence": 0.62,
   "changed_files": [
-    "frontend-file-summaries.txt",
-    "frontend/src/components/AddAdlRecordDialog.tsx",
-    "frontend/src/components/AddDailyVitalsDialog.tsx",
-    "frontend/src/components/AddMarRecordDialog.tsx",
-    "frontend/src/components/AddMedicationDialog.tsx",
-    "frontend/src/components/AddResidentDialog.tsx",
-    "frontend/src/components/AddWeightEntryDialog.tsx",
-    "frontend/src/components/EditMedicationDialog.tsx",
-    "frontend/src/components/EditResidentDialog.tsx",
-    "frontend/src/index.css",
-    "frontend/src/pages/ResidentProfile.tsx",
+    "backend/main.mo",
+    "backend/migration.mo",
     "project_state.json"
   ]
 }

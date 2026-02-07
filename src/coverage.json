@@ -1,72 +1,48 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T02:09:32.343Z",
+  "generatedAt": "2026-02-07T02:28:46.029Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 0,
     "items": [
       {
-        "id": "REQ-3",
-        "summary": "Update global styling so all shadcn/Radix Dialog overlays render as fully opaque solid white (no transparency, no opacity utilities, no backdrop blur), ensuring the underlying page is not visible when any modal dialog is open.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/index.css",
-          "frontend/index.css"
-        ],
-        "matchedFiles": [
-          "frontend/src/index.css"
-        ]
+        "id": "REQ-5",
+        "summary": "Identify and fix the backend cause of resident profiles “disappearing” by auditing all resident persistence and retrieval paths (create/update/delete/query) to ensure resident records cannot be unintentionally removed, overwritten with partial data, or become unreachable.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
-        "id": "REQ-4",
-        "summary": "Ensure every modal dialog panel/content background is fully opaque solid white (not semi-transparent), by auditing all dialog components and removing/replacing any Tailwind opacity/translucent background utilities applied to dialog containers.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/index.css",
-          "frontend/src/components/AddResidentDialog.tsx",
-          "frontend/src/components/EditResidentDialog.tsx",
-          "frontend/src/components/AddMedicationDialog.tsx",
-          "frontend/src/components/EditMedicationDialog.tsx",
-          "frontend/src/components/AddMarRecordDialog.tsx",
-          "frontend/src/components/AddAdlRecordDialog.tsx",
-          "frontend/src/components/AddDailyVitalsDialog.tsx",
-          "frontend/src/components/AddWeightEntryDialog.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/index.css",
-          "frontend/src/components/AddResidentDialog.tsx",
-          "frontend/src/components/EditResidentDialog.tsx",
-          "frontend/src/components/AddMedicationDialog.tsx",
-          "frontend/src/components/EditMedicationDialog.tsx",
-          "frontend/src/components/AddMarRecordDialog.tsx",
-          "frontend/src/components/AddAdlRecordDialog.tsx",
-          "frontend/src/components/AddDailyVitalsDialog.tsx",
-          "frontend/src/components/AddWeightEntryDialog.tsx"
-        ]
+        "id": "REQ-6",
+        "summary": "Ensure resident data (and any required related state such as ID counters and user profiles) persists reliably across canister upgrades by implementing stable-state upgrade handling (preupgrade/postupgrade) and adding/using a conditional migration in the backend migration file if the stable layout changes.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-7",
+        "summary": "Add an admin-only backend diagnostics query to support verifying data integrity in production without exposing sensitive resident data (e.g., return counts and next-ID counters, and optionally a small sample of resident IDs/room numbers).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
-    "caffeine.lock.json",
     "feature_evidence.json",
-    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/AddAdlRecordDialog.tsx",
-    "frontend/src/components/AddDailyVitalsDialog.tsx",
-    "frontend/src/components/AddMarRecordDialog.tsx",
-    "frontend/src/components/AddMedicationDialog.tsx",
-    "frontend/src/components/AddResidentDialog.tsx",
-    "frontend/src/components/AddWeightEntryDialog.tsx",
-    "frontend/src/components/EditMedicationDialog.tsx",
-    "frontend/src/components/EditResidentDialog.tsx",
-    "frontend/src/index.css",
-    "frontend/src/pages/ResidentProfile.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",
