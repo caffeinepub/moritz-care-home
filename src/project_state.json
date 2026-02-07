@@ -1,0 +1,293 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 63,
+  "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
+  "architectural_notes": [
+    "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
+    "Role-based access control implemented as a reusable Motoko mixin; first authorized initializer can become admin based on a shared secret token.",
+    "Frontend uses TanStack React Query for all backend I/O with cache invalidation/refetch patterns keyed by stable query keys (e.g., residentId as string).",
+    "Frontend uses TanStack Router for routing (Dashboard and Resident Profile routes) and gates app access via an authenticated identity + user profile presence.",
+    "Date/time stored as nanoseconds (bigint) and converted in the UI using UTC-based helpers to avoid timezone drift for calendar dates.",
+    "Backend keeps domain data primarily embedded within the Resident record (medications, MAR, ADL, vitals, weight log) rather than fully normalized collections.",
+    "Caffeine blob-storage mixin provides gateway authorization list refresh, dead-blob enumeration/pruning, and cashier cycle refill workflow.",
+    "Build/deploy template expanded into a reusable React + shadcn/ui starter with standardized canister YAMLs, workspace package management, and helper scripts (e.g., resize/prune unused images).",
+    "Frontend template adds custom ESLint rules to enforce safe patterns (e.g., prohibit BigInt in React Query keys; require explicit Internet Identity provider configuration).",
+    "Authorization (AccessControl + MixinAuthorization) and blob-storage (Mixin/Storage) modules were updated as versioned components (authorization v4.0.0, blob-storage v4.0.0), implying their public interfaces/behavior are now aligned with those component releases."
+  ],
+  "known_issues": [
+    "backend/main.mo calculateAge() is a stub (uses now = 0), so backend age calculations will be incorrect if used.",
+    "frontend has two different index.css files shown; if both exist in the repo/build pipeline, styles/variables may conflict unpredictably.",
+    "Motoko env var names for storage appear misspelled with triple 'F' (e.g., CAFFFEINE_STORAGE_CASHIER_PRINCIPAL), which can cause runtime traps if deployment uses different names.",
+    "Backend stores physicians/pharmacy/insurance/responsiblePersons as resident-embedded records while also having separate Maps and add* functions; this split suggests incomplete normalization or unused global registries.",
+    "AccessControl.getUserRole traps 'User is not registered' for authenticated principals until initialization runs; frontend calls _initializeAccessControlWithSecret but misconfiguration can lead to unexpected traps.",
+    "MAR entry stores a full Medication object provided by the client; if medication details change later, historical MAR records may not reflect the original administered values consistently.",
+    "Some backend functions (e.g., addPhysician/addPharmacy/addInsurance/addResponsiblePerson) exist but are not surfaced in the shown UI flows.",
+    "Resident deletion removes the resident record but does not explicitly reclaim or clean up any associated blob storage resources (if added later)."
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "IF-1",
+      "title": "Internet Identity authentication (login/logout, persisted identity)",
+      "synonyms": [
+        "II login",
+        "AuthClient integration",
+        "Internet Computer login"
+      ],
+      "description": "Users authenticate via DFINITY Internet Identity using @dfinity/auth-client. The app loads any stored delegation on startup, supports login with a long TTL (30 days), and supports logout that clears identity and resets frontend query cache.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-2",
+      "title": "Role-based authorization & admin initialization via secret token",
+      "synonyms": [
+        "Access control",
+        "RBAC",
+        "Admin token initialization"
+      ],
+      "description": "Backend includes an AccessControl module and authorization mixin. The first principal to initialize with the correct secret becomes admin; subsequent principals become users. Admins can assign roles and check admin status. Frontend passes a secret (caffeineAdminToken) extracted from URL hash/session.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-3",
+      "title": "User profile storage and first-time profile setup gate",
+      "synonyms": [
+        "ProfileSetup",
+        "Employee profile",
+        "Staff profile"
+      ],
+      "description": "Users must create a profile (name, role, employeeId) before accessing the main application. Profile is stored per-caller on the backend and the app routes to a Profile Setup screen if missing.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-4",
+      "title": "Resident directory dashboard with tabs, stats, filtering, and sorting",
+      "synonyms": [
+        "Resident list",
+        "Dashboard residents",
+        "Room filter"
+      ],
+      "description": "Dashboard displays all/active/discharged residents with stats, room number filtering, and sorting by room+bed, resident ID, or name. Each resident card shows room/bed, age, counts of physicians/medications, and quick actions.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-5",
+      "title": "Resident CRUD (add, view, edit, remove) with room type and bed assignment",
+      "synonyms": [
+        "Resident intake",
+        "Edit resident dialog",
+        "Delete resident"
+      ],
+      "description": "Staff can add and edit residents including demographics, admission details, room number, room type (solo/shared), bed assignment for shared rooms, insurance identifiers, physicians, pharmacy, insurance, responsible contacts, and initial medications. Residents can be removed with confirmation.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-6",
+      "title": "Resident status management (active/discharged) with admin restriction",
+      "synonyms": [
+        "Discharge resident",
+        "Reactivate resident",
+        "Toggle status"
+      ],
+      "description": "Backend supports toggling resident status (active/discharged) restricted to admins; frontend exposes Discharge/Activate action on resident cards and refreshes cached queries after updates.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-7",
+      "title": "Resident profile page with robust loading/error handling and printing",
+      "synonyms": [
+        "Resident details",
+        "Bulletproof fetch UI",
+        "Print profile"
+      ],
+      "description": "Resident profile page fetches a single resident with a stable cache key, timeout protection, selective retries, and user-friendly error states (not found/unauthorized/network/timeout). Provides printable views including a dedicated 'Print Profile' report layout.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-8",
+      "title": "Medication management per resident (add/edit, route, times, physician, notes)",
+      "synonyms": [
+        "Prescriptions",
+        "Resident medications"
+      ],
+      "description": "Users can add and edit medications for a resident, including dosage, quantity, administration route (including Ophthalmic), administration times, prescribing physician association, and notes. Frontend maps string routes to the backend AdministrationRoute enum.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-9",
+      "title": "Medication lifecycle status (active/discontinued)",
+      "synonyms": [
+        "Discontinue medication",
+        "Reactivate medication"
+      ],
+      "description": "Medications support status updates (active/discontinued). UI separates active vs discontinued medications, provides discontinue/reactivate actions, and ensures MAR can be recorded only for active medications.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-10",
+      "title": "Medication Administration Record (MAR) logging",
+      "synonyms": [
+        "MAR entry",
+        "Administration log"
+      ],
+      "description": "Users can record MAR entries per resident by selecting an active medication, specifying administration datetime, staff member, and notes. The UI shows selected medication details before submission and updates resident data after save.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-11",
+      "title": "Activities of Daily Living (ADL) record logging",
+      "synonyms": [
+        "ADL entry",
+        "Daily living activities"
+      ],
+      "description": "Users can log ADL records for a resident including date, activity type, assistance level, and staff notes. Records are stored per resident and displayed on the resident profile.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-12",
+      "title": "Daily vitals recording and history (optional blood glucose)",
+      "synonyms": [
+        "Vitals tracking",
+        "Clinical vitals"
+      ],
+      "description": "Users can record daily vitals including temperature (unit conversion to Fahrenheit for storage), blood pressure, pulse, respiratory rate, oxygen saturation, optional blood glucose (validated 0–600), datetime, and notes. Vitals history is shown in a sortable (most recent first) table on the resident profile.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-13",
+      "title": "Weight entry logging (unit + date + notes)",
+      "synonyms": [
+        "Weight log",
+        "Weight tracking"
+      ],
+      "description": "Users can record weight measurements (lbs/kg), measurement date, and optional notes via a dialog. Backend stores entries in the resident's weightLog and exposes query accessors.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-14",
+      "title": "Report generation endpoints (MAR, ADL, medication, resident profile)",
+      "synonyms": [
+        "Reports",
+        "Export data"
+      ],
+      "description": "Backend provides report queries for MAR records, ADL records, active-only medication lists, full medication lists, and resident profile report. Frontend includes React Query hooks for MAR/ADL report generation and age calculation calls.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-15",
+      "title": "Caffeine blob storage maintenance mixin and authorization list syncing",
+      "synonyms": [
+        "Blob GC",
+        "Storage gateway authorization",
+        "Cashier refill"
+      ],
+      "description": "Backend includes a blob-storage mixin providing endpoints to refresh authorized gateway principals, check blob liveness, list/prune dead blobs (authorized callers only), and a cashier refill/top-up mechanism guarded by the cashier principal.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-16",
+      "title": "Centralized React Query hooks with cache invalidation and user-friendly toasts",
+      "synonyms": [
+        "Data layer hooks",
+        "API hooks"
+      ],
+      "description": "All backend interactions are wrapped in React Query hooks with consistent query keys, invalidation/refetch patterns on mutation success, and user-facing notifications via sonner. Permission errors are parsed and displayed with clearer guidance.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-17",
+      "title": "Timezone-safe date utilities for nanoseconds-bigint storage",
+      "synonyms": [
+        "dateUtils",
+        "Nanoseconds conversion"
+      ],
+      "description": "Frontend includes utilities to convert YYYY-MM-DD strings to nanoseconds using UTC to avoid timezone offsets, format dates/datetimes for display, and compute age client-side using UTC components.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-18",
+      "title": "Resident photo upload and retrieval via blob storage",
+      "synonyms": [
+        "ResidentPhotoUpload",
+        "Photo management",
+        "Blob-stored resident images"
+      ],
+      "description": "Frontend supports uploading a resident photo and displaying it on the resident profile. Photos are stored in the blob-storage canister/gateway workflow (via the StorageClient utilities), with backend integration to associate the stored blob reference with the resident record and allow subsequent retrieval/display.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-19",
+      "title": "Centralized brand logo rendering via BrandLogo component",
+      "synonyms": [
+        "BrandLogo",
+        "Logo consistency",
+        "App branding"
+      ],
+      "description": "All UI locations that display the app brand mark render it through `frontend/src/components/BrandLogo.tsx`, ensuring the updated Moritz Care Home logo asset is used consistently and avoiding stale direct image references (at minimum applied on the Login page header).",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "IF-21",
+      "title": "Use uploaded Moritz Care Home PNG logo asset (exact casing) across login + header",
+      "synonyms": [
+        "Static logo asset",
+        "Public assets logo",
+        "Case-sensitive asset path"
+      ],
+      "description": "BrandLogo and any other logo references now load the uploaded PNG from `frontend/public/assets/MoritzCareHomeLOGO-1.png` (exact casing) so the logo reliably appears on both the login page and authenticated header without relying on generated JPG assets.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-global-styling-so-all-shadcn-radix-dialog-overlays-render-as-fully-opaque-solid-white-no-transparency-no-opacity-utilities-no-backdrop-blur-ensuring-the-underlying-page-is-not-visible-when-any-modal-dialog-is-open",
+      "title": "Update global styling so all shadcn/Radix Dialog overlays render as fully opaque solid white (no transparency, no opacity utilities, no backdrop blur), ensuring the underlying page is not visible when any modal dialog is open.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-every-modal-dialog-panel-content-background-is-fully-opaque-solid-white-not-semi-transparent-by-auditing-all-dialog-components-and-removing-replacing-any-tailwind-opacity-translucent-background-utilities-applied-to-dialog-containers",
+      "title": "Ensure every modal dialog panel/content background is fully opaque solid white (not semi-transparent), by auditing all dialog components and removing/replacing any Tailwind opacity/translucent background utilities applied to dialog containers.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Remove all transparency/opacity from UI; make all pop-out dialog backgrounds solid white including the overlay (no translucency).",
+      "reqIds": [],
+      "status": "in_progress"
+    }
+  ],
+  "gameProjectType": "none",
+  "projectName": "Moritz Care Home",
+  "clarification_mode": "pro",
+  "clarification_rounds": 0
+}

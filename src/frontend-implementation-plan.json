@@ -1,0 +1,84 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Make all Dialog overlays and panels fully opaque solid white",
+  "requirements": [
+    {
+      "id": "REQ-3",
+      "summary": "Force all shadcn/Radix Dialog overlays to render as fully opaque solid white with no blur so the underlying page is never visible while a modal is open.",
+      "acceptanceCriteria": [
+        "When any modal dialog is opened (e.g., Add Resident, Edit Resident, Add/Edit Medication, Add MAR, Add ADL, Add Daily Vitals, Add Weight), the full-screen overlay is pure solid white and fully opaque (no translucency).",
+        "With a modal open, the page behind it is not visible through the overlay.",
+        "There is no backdrop blur effect on the dialog overlay."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Add global CSS overrides targeting Radix/shadcn Dialog overlay elements (e.g., the overlay data-attributes) to enforce a solid white, fully opaque background and to explicitly disable any blur/backdrop-filter. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/index.css",
+          "operation": "modify",
+          "description": "If this stylesheet is part of the active Tailwind/CSS import chain in this project, mirror the same Dialog overlay overrides here to ensure consistent behavior across builds/environments. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Audit all app dialog usages and ensure every DialogContent panel uses a fully opaque solid white background by removing any opacity/alpha Tailwind background utilities from dialog containers.",
+      "acceptanceCriteria": [
+        "All DialogContent panels render with a solid white background in both light and dark modes (no alpha backgrounds).",
+        "No dialog panel uses Tailwind `opacity-*` utilities or alpha color syntax (e.g., `bg-*/xx`) that results in visible transparency.",
+        "Visual regression check: opening each of the existing dialogs shows a consistent solid white panel and solid white overlay."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Add global CSS overrides targeting Radix/shadcn Dialog content elements (e.g., the DialogContent data-attributes) to force an opaque solid white panel background regardless of light/dark theme variables. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddResidentDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/EditResidentDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddMedicationDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/EditMedicationDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddMarRecordDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddAdlRecordDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddDailyVitalsDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddWeightEntryDialog.tsx",
+          "operation": "modify",
+          "description": "Update the DialogContent className to use a solid white background (no theme-driven bg-card/popover variables or alpha colors) and remove any opacity/translucency utilities applied at the dialog container level. Verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

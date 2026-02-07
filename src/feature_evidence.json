@@ -1,0 +1,53 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-update-global-styling-so-all-shadcn-radix-dialog-overlays-render-as-fully-opaque-solid-white-no-transparency-no-opacity-utilities-no-backdrop-blur-ensuring-the-underlying-page-is-not-visible-when-any-modal-dialog-is-open",
+      "featureTitle": "Update global styling so all shadcn/Radix Dialog overlays render as fully opaque solid white (no transparency, no opacity utilities, no backdrop blur), ensuring the underlying page is not visible when any modal dialog is open.",
+      "files": [
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-every-modal-dialog-panel-content-background-is-fully-opaque-solid-white-not-semi-transparent-by-auditing-all-dialog-components-and-removing-replacing-any-tailwind-opacity-translucent-background-utilities-applied-to-dialog-containers",
+      "featureTitle": "Ensure every modal dialog panel/content background is fully opaque solid white (not semi-transparent), by auditing all dialog components and removing/replacing any Tailwind opacity/translucent background utilities applied to dialog containers.",
+      "files": [
+        "frontend/src/components/AddAdlRecordDialog.tsx",
+        "frontend/src/components/AddDailyVitalsDialog.tsx",
+        "frontend/src/components/AddMarRecordDialog.tsx",
+        "frontend/src/components/AddMedicationDialog.tsx",
+        "frontend/src/components/AddResidentDialog.tsx",
+        "frontend/src/components/AddWeightEntryDialog.tsx",
+        "frontend/src/components/EditMedicationDialog.tsx",
+        "frontend/src/components/EditResidentDialog.tsx",
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-07T02:09:32.340Z",
+  "summary": "The diff implements global CSS overrides to force Radix/shadcn Dialog overlays and contents to be fully opaque solid white with no backdrop blur, and updates multiple dialog components to use solid `bg-white` (removing/avoiding translucent/alpha backgrounds on DialogContent and inner controls).",
+  "missing_requirements": [],
+  "hallucinated_features": [],
+  "confidence": 0.78,
+  "changed_files": [
+    "frontend-file-summaries.txt",
+    "frontend/src/components/AddAdlRecordDialog.tsx",
+    "frontend/src/components/AddDailyVitalsDialog.tsx",
+    "frontend/src/components/AddMarRecordDialog.tsx",
+    "frontend/src/components/AddMedicationDialog.tsx",
+    "frontend/src/components/AddResidentDialog.tsx",
+    "frontend/src/components/AddWeightEntryDialog.tsx",
+    "frontend/src/components/EditMedicationDialog.tsx",
+    "frontend/src/components/EditResidentDialog.tsx",
+    "frontend/src/index.css",
+    "frontend/src/pages/ResidentProfile.tsx",
+    "project_state.json"
+  ]
+}

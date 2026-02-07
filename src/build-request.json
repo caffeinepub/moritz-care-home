@@ -1,0 +1,59 @@
+{
+  "kind": "build_request",
+  "title": "Make all modal dialog backgrounds fully opaque solid white (including overlay)",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-3",
+      "text": "Update global styling so all shadcn/Radix Dialog overlays render as fully opaque solid white (no transparency, no opacity utilities, no backdrop blur), ensuring the underlying page is not visible when any modal dialog is open.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1",
+          "msg-2"
+        ],
+        "quotes": [
+          "remove all transparencies and opacity. all backgrounds for all pop-out dialogs should be solid white",
+          "yes"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When any modal dialog is opened (e.g., Add Resident, Edit Resident, Add/Edit Medication, Add MAR, Add ADL, Add Daily Vitals, Add Weight), the full-screen overlay is pure solid white and fully opaque (no translucency).",
+        "With a modal open, the page behind it is not visible through the overlay.",
+        "There is no backdrop blur effect on the dialog overlay."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Ensure every modal dialog panel/content background is fully opaque solid white (not semi-transparent), by auditing all dialog components and removing/replacing any Tailwind opacity/translucent background utilities applied to dialog containers.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1",
+          "msg-2"
+        ],
+        "quotes": [
+          "remove all transparencies and opacity. all backgrounds for all pop-out dialogs should be solid white",
+          "yes"
+        ]
+      },
+      "acceptanceCriteria": [
+        "All DialogContent panels render with a solid white background in both light and dark modes (no alpha backgrounds).",
+        "No dialog panel uses Tailwind `opacity-*` utilities or alpha color syntax (e.g., `bg-*/xx`) that results in visible transparency.",
+        "Visual regression check: opening each of the existing dialogs shows a consistent solid white panel and solid white overlay."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not edit any files under frontend/src/components/ui (shadcn/ui sources are read-only); implement styling changes via global CSS overrides and/or by adjusting className usage in non-immutable component files.",
+    "Use English for any user-facing text."
+  ],
+  "nonGoals": [
+    "Changing non-dialog UI translucency across the entire app (e.g., page gradients, cards, buttons) unless it directly affects dialog overlays/panels.",
+    "Backend changes or schema migrations."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}
