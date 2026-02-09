@@ -1,4 +1,45 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-ensure-the-dashboard-ui-exposes-resident-discharge-and-permanent-delete-actions-for-administrators-including-clear-affordances-and-confirmation-dialogs-and-wire-these-actions-to-the-existing-react-query-mutations-usedischargeresident-usepermanentlydeleteresident-so-the-operations-can-be-performed-from-the-dashboard",
+      "featureTitle": "Ensure the Dashboard UI exposes resident discharge and permanent delete actions for administrators, including clear affordances and confirmation dialogs, and wire these actions to the existing React Query mutations (useDischargeResident, usePermanentlyDeleteResident) so the operations can be performed from the dashboard.",
+      "files": [
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-verify-backend-admin-check-integration-used-by-the-dashboard-iscalleradmin-and-resident-lifecycle-methods-dischargeresident-permanentlydeleteresident-are-available-in-the-generated-frontend-backend-bindings-and-behave-consistently-with-authorization-rules-fix-any-mismatch-preventing-the-dashboard-from-showing-or-executing-discharge-delete-actions",
+      "featureTitle": "Verify backend/admin-check integration used by the Dashboard (isCallerAdmin) and resident lifecycle methods (dischargeResident, permanentlyDeleteResident) are available in the generated frontend backend bindings and behave consistently with authorization rules; fix any mismatch preventing the Dashboard from showing or executing discharge/delete actions.",
+      "files": [
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

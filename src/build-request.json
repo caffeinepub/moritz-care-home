@@ -1,50 +1,58 @@
 {
   "kind": "build_request",
-  "title": "Backend fix: allow unregistered users to fetch null profile and reach Profile Setup",
+  "title": "Enable discharge and permanent delete resident actions from Dashboard",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update the backend user-profile lookup so a first-time (unregistered) authenticated caller does not receive an error for profile load. The `getCallerUserProfile` call must return `null`/`?UserProfile = null` when the caller has no saved profile, rather than throwing/trapping or returning an error like \"User is not registered\".",
-      "target": "backend",
+      "text": "Ensure the Dashboard UI exposes resident discharge and permanent delete actions for administrators, including clear affordances and confirmation dialogs, and wire these actions to the existing React Query mutations (useDischargeResident, usePermanentlyDeleteResident) so the operations can be performed from the dashboard.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "recent-messages-user-1"
         ],
         "quotes": [
-          "please spply backend fix"
+          "discharging or deleting a resident is not available in the dashboard"
         ]
       },
       "acceptanceCriteria": [
-        "Calling `getCallerUserProfile()` for a principal with no profile returns `null` (Motoko `null`) and does not trap.",
-        "The backend no longer produces the error message \"User is not registered\" for the first-time profile lookup path."
+        "When logged in as an admin, each active resident card in the Dashboard shows an actionable control to discharge the resident.",
+        "When logged in as an admin, each resident card in the Dashboard shows an actionable control to permanently delete the resident (not hidden behind ambiguous/unlabeled UI).",
+        "Attempting to permanently delete prompts a confirmation dialog that clearly states the action is irreversible.",
+        "After a successful discharge, the resident no longer appears in the Active tab and appears in the Discharged tab without requiring a manual page refresh.",
+        "After a successful permanent delete, the resident disappears from all dashboard lists without requiring a manual page refresh.",
+        "If the caller is not an admin, the dashboard does not allow discharge/delete actions and shows an English error/toast message if an action is attempted by any means."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure that a newly authenticated principal can complete initial profile setup without requiring prior registration/role assignment. Specifically, backend authorization must allow a first-time caller to (a) call `getCallerUserProfile()` and receive `null`, and (b) call `saveCallerUserProfile(profile)` successfully to create their profile (without an admin needing to pre-register them).",
-      "target": "backend",
+      "text": "Verify backend/admin-check integration used by the Dashboard (isCallerAdmin) and resident lifecycle methods (dischargeResident, permanentlyDeleteResident) are available in the generated frontend backend bindings and behave consistently with authorization rules; fix any mismatch preventing the Dashboard from showing or executing discharge/delete actions.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-1"
+          "recent-messages-user-1"
         ],
         "quotes": [
-          "please spply backend fix"
+          "discharging or deleting a resident is not available in the dashboard"
         ]
       },
       "acceptanceCriteria": [
-        "A principal that has never interacted with the canister can call `saveCallerUserProfile` once to create their profile without hitting an authorization trap.",
-        "After saving, `getCallerUserProfile()` returns the saved profile for that principal."
+        "The frontend can successfully call isCallerAdmin and receives the expected boolean for an admin principal.",
+        "The frontend can successfully call dischargeResident and permanentlyDeleteResident for an admin principal.",
+        "Non-admin principals receive an authorization error from dischargeResident and permanentlyDeleteResident.",
+        "No runtime errors occur due to missing actor methods or mismatched candid/bindings when loading the Dashboard."
       ]
     }
   ],
   "constraints": [
-    "Keep all Motoko logic within the existing single-actor backend (backend/main.mo).",
-    "Only add a migration (backend/migration.mo) if the change requires state/schema upgrade; otherwise, do not add migration code."
+    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
+    "Do not edit files under frontend/src/components/ui or any frontend immutablePaths (compose components instead).",
+    "Use English for all user-facing text."
   ],
   "nonGoals": [
-    "No UI/UX changes to the Profile Setup screen or startup error screen.",
-    "No changes to resident/physician/pharmacy/insurance domain logic beyond what is necessary to fix the user profile registration flow."
+    "Implementing new authentication providers beyond Internet Identity.",
+    "Adding a new database or external persistence layer.",
+    "Adding real-time updates via WebSockets or similar."
   ],
   "imageRequirements": {
     "required": [],

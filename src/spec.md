@@ -1,11 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Fix backend user-profile handling so first-time authenticated users can load a missing profile as `null` and complete Profile Setup without pre-registration.
+**Goal:** Allow administrators to discharge or permanently delete residents directly from the Dashboard, with clear UI controls, confirmations, and correct authorization behavior.
 
 **Planned changes:**
-- Update `getCallerUserProfile` to return Motoko `null` when the authenticated caller has no saved profile, instead of throwing/trapping or returning an error (e.g., "User is not registered").
-- Adjust backend authorization/guards so a newly authenticated principal can call `saveCallerUserProfile(profile)` to create their first profile without requiring an admin pre-registration or role assignment.
-- Preserve existing single-actor Motoko structure in `backend/main.mo`, adding migration code only if a state/schema upgrade is strictly required.
+- Add clearly labeled Dashboard controls on each resident card for admins to discharge a resident and to permanently delete a resident.
+- Add confirmation dialog for permanent delete that explicitly states the action is irreversible.
+- Wire the Dashboard controls to existing React Query mutations (`useDischargeResident`, `usePermanentlyDeleteResident`) and ensure lists update immediately after success (no manual refresh).
+- Ensure non-admin users cannot perform these actions from the Dashboard; show an English error/toast if an attempt is made.
+- Verify and fix (if needed) the generated frontend bindings/integration for `isCallerAdmin`, `dischargeResident`, and `permanentlyDeleteResident` so the Dashboard can both display and execute these actions without runtime errors, while preserving backend authorization rules.
 
-**User-visible outcome:** A newly authenticated user will no longer hit “User is not registered” on initial profile load, and can proceed through Profile Setup and save their profile successfully.
+**User-visible outcome:** Admin users can discharge or permanently delete residents from the Dashboard with clear actions and confirmations, and resident lists update immediately; non-admin users are prevented from doing so and see an English error message if attempted.

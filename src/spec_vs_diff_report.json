@@ -1,38 +1,59 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T21:29:21.330Z",
-  "summary": "The diff summary does not show any changes to the backend user-profile lookup/authorization logic (the displayed portion of `backend/main.mo` is unrelated type definitions), so REQ-1 and REQ-2 cannot be verified as implemented. The only clearly evidenced functional change is an update to `project_state.json`, which is not part of the BuildRequest requirements.",
+  "generatedAt": "2026-02-09T21:42:01.450Z",
+  "summary": "Dashboard was modified to add admin-only Discharge and Delete controls with confirmation dialogs and query invalidation; backend main actor was modified to include a new migration module, and a new backend/migration.mo was added to mark long-discharged residents as archived. However, the diff summary also shows several unrelated frontend changes (startup fast-fail, print/report enhancements, opaque background styling) and introduces an auto-archive migration that is not requested.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "Update `getCallerUserProfile` so that for a first-time (unregistered) authenticated caller it returns `null` (`?UserProfile = null`) instead of trapping/throwing/returning an error like \"User is not registered\".",
-      "reason": "The provided diff excerpt of `backend/main.mo` does not include `getCallerUserProfile` or any profile lookup/error handling logic, so there is no evidence that the return behavior or the \"User is not registered\" error path was changed.",
-      "evidence": [
-        "backend/main.mo (truncated; no getCallerUserProfile shown)"
-      ]
-    },
-    {
       "id": "REQ-2",
-      "requirement": "Allow a newly authenticated principal to complete initial profile setup without prior registration/role assignment: (a) `getCallerUserProfile()` returns null for new users, and (b) `saveCallerUserProfile(profile)` succeeds for first-time callers to create their profile.",
-      "reason": "The diff excerpt does not show any authorization or profile-save logic changes (no `saveCallerUserProfile` function or related authorization checks are visible), so there is no evidence that first-time callers can save a profile without admin pre-registration.",
+      "requirement": "Verify isCallerAdmin, dischargeResident, and permanentlyDeleteResident are available in generated frontend backend bindings and fix any candid/bindings mismatch preventing dashboard calls.",
+      "reason": "The diff summary shows Dashboard now calls useIsCallerAdmin/useDischargeResident/usePermanentlyDeleteResident, but it does not show any changes to the generated frontend backend bindings/candid output (or equivalent) to ensure these actor methods exist and match at runtime. backend/main.mo changes are truncated before any evidence of these methods, and no bindings files are shown as modified.",
       "evidence": [
-        "backend/main.mo (truncated; no saveCallerUserProfile/authorization changes shown)"
+        "backend/main.mo (truncated; no visible isCallerAdmin/dischargeResident/permanentlyDeleteResident definitions)",
+        "frontend/src/pages/Dashboard.tsx (imports useIsCallerAdmin/useDischargeResident/usePermanentlyDeleteResident)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Project metadata/state tracking update (added/updated entries like AR-1/AR-2/AR-3 and issue notes) in `project_state.json`.",
-      "reason": "The BuildRequest only specifies backend Motoko behavior changes; it does not request adding/updating project tracking metadata.",
+      "description": "Automatic archival migration: marks discharged residents as archived after 30 days and wires migration into the backend actor.",
+      "reason": "BuildRequest is about exposing discharge and permanent delete actions and verifying admin/bindings. It does not request adding a migration or auto-archival behavior.",
       "evidence": [
-        "project_state.json"
+        "backend/migration.mo",
+        "backend/main.mo (with migration = Migration.run)"
+      ]
+    },
+    {
+      "description": "Frontend startup fast-fail/health-check and retry/error-screen logic changes.",
+      "reason": "Not requested by REQ-1/REQ-2; unrelated to discharge/delete actions.",
+      "evidence": [
+        "frontend-file-summaries.txt (\"frontend/src/App.tsx\": fast-fail startup logic, health check trigger, fail-fast timeout, comprehensive error screens, full retry handler)"
+      ]
+    },
+    {
+      "description": "Resident profile print/report enhancements (combined print report, signature line toggles, print layout overrides).",
+      "reason": "Not requested by REQ-1/REQ-2; unrelated to Dashboard discharge/delete actions.",
+      "evidence": [
+        "frontend-file-summaries.txt (\"frontend/src/pages/ResidentProfile.tsx\": combined print report and signature toggle)",
+        "frontend-file-summaries.txt (\"frontend/src/index.css\": enhanced print styles and fixed-width desktop layout override)"
+      ]
+    },
+    {
+      "description": "UI styling changes enforcing solid white/opaque backgrounds across login and many dialogs/forms.",
+      "reason": "Not requested by REQ-1/REQ-2; additionally risks violating the constraint about not editing immutable UI components (cannot be confirmed from summary, but the styling work itself is not part of the request).",
+      "evidence": [
+        "frontend-file-summaries.txt (\"frontend/src/pages/LoginPage.tsx\": fully opaque solid backgrounds, overlay changes)",
+        "frontend-file-summaries.txt (multiple dialog components: \"solid white backgrounds...\")",
+        "frontend-file-summaries.txt (\"frontend/src/index.css\": solid white dialog enforcement)"
       ]
     }
   ],
-  "confidence": 0.38,
+  "confidence": 0.62,
   "changed_files": [
     "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]
 }

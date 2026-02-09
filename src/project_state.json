@@ -1,40 +1,39 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Project involves a deployed app with authenticated users and a profile setup flow; currently addressing backend/frontend mismatch where new (unregistered) users should be able to reach Profile Setup.",
-  "architectural_notes": [
-    "Frontend expects getCallerUserProfile() to return null for brand-new users; backend currently throws/returns Err(\"User is not registered\"), which routes UI into StartupErrorScreen instead of Profile Setup."
-  ],
+  "summary": "Dashboard application for managing residents.",
+  "architectural_notes": [],
   "known_issues": [
-    "New users cannot reach Profile Setup because backend returns/throws \"User is not registered\" instead of returning null/empty profile; results in Profile Load Failed despite backend health check passing."
+    "Discharging or deleting a resident is not available in the dashboard"
   ],
   "isFixRequest": true,
-  "existing_features": [],
-  "new_feature_requests": [
+  "existing_features": [
     {
-      "id": "AR-1",
-      "summary": "Backend fix: make getCallerUserProfile return null (or an optional) for unregistered users instead of throwing/Err(\"User is not registered\"), so frontend can show Profile Setup",
-      "reqIds": [],
-      "status": "in_progress"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Update the backend user-profile lookup so a first-time (unregistered) authenticated caller does not receive an error for profile load. The `getCallerUserProfile` call must return `null`/`?UserProfile = null` when the caller has no saved profile, rather than throwing/trapping or returning an error like \"User is not registered\".",
+      "id": "feature-ensure-the-dashboard-ui-exposes-resident-discharge-and-permanent-delete-actions-for-administrators-including-clear-affordances-and-confirmation-dialogs-and-wire-these-actions-to-the-existing-react-query-mutations-usedischargeresident-usepermanentlydeleteresident-so-the-operations-can-be-performed-from-the-dashboard",
+      "title": "Ensure the Dashboard UI exposes resident discharge and permanent delete actions for administrators, including clear affordances and confirmation dialogs, and wire these actions to the existing React Query mutations (useDischargeResident, usePermanentlyDeleteResident) so the operations can be performed from the dashboard.",
       "reqIds": [
         "REQ-1"
       ],
-      "status": "pending"
+      "version": 1
     },
     {
-      "id": "AR-3",
-      "summary": "Ensure that a newly authenticated principal can complete initial profile setup without requiring prior registration/role assignment. Specifically, backend authorization must allow a first-time caller to (a) call `getCallerUserProfile()` and receive `null`, and (b) call `saveCallerUserProfile(profile)` successfully to create their profile (without an admin needing to pre-register them).",
+      "id": "feature-verify-backend-admin-check-integration-used-by-the-dashboard-iscalleradmin-and-resident-lifecycle-methods-dischargeresident-permanentlydeleteresident-are-available-in-the-generated-frontend-backend-bindings-and-behave-consistently-with-authorization-rules-fix-any-mismatch-preventing-the-dashboard-from-showing-or-executing-discharge-delete-actions",
+      "title": "Verify backend/admin-check integration used by the Dashboard (isCallerAdmin) and resident lifecycle methods (dischargeResident, permanentlyDeleteResident) are available in the generated frontend backend bindings and behave consistently with authorization rules; fix any mismatch preventing the Dashboard from showing or executing discharge/delete actions.",
       "reqIds": [
         "REQ-2"
       ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Add ability to discharge or delete a resident from the dashboard",
+      "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Backend fix: allow unregistered users to fetch null profile and reach Profile Setup",
+  "projectName": "Enable discharge and permanent delete resident actions from Dashboard",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

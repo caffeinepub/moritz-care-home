@@ -1,6 +1,8 @@
-import Principal "mo:core/Principal";
 import Map "mo:core/Map";
+import List "mo:core/List";
 import Nat "mo:core/Nat";
+import Principal "mo:core/Principal";
+import Time "mo:core/Time";
 
 module {
   type Resident = {
@@ -9,15 +11,9 @@ module {
     lastName : Text;
     dateOfBirth : Int;
     admissionDate : Int;
-    status : {
-      #active;
-      #discharged;
-    };
+    status : ResidentStatus;
     roomNumber : Text;
-    roomType : {
-      #solo;
-      #sharedRoom;
-    };
+    roomType : RoomType;
     bed : ?Text;
     physicians : [Physician];
     pharmacy : ?Pharmacy;
@@ -30,7 +26,12 @@ module {
     adlRecords : [ADLRecord];
     dailyVitals : [DailyVitals];
     weightLog : [WeightEntry];
+    dischargeTimestamp : ?Int;
+    isArchived : Bool;
   };
+
+  type ResidentStatus = { #active; #discharged };
+  type RoomType = { #solo; #sharedRoom };
 
   type Physician = {
     id : Nat;
@@ -62,31 +63,31 @@ module {
     address : Text;
   };
 
+  type MedicationStatus = { #active; #discontinued };
+  type AdministrationRoute = {
+    #oral;
+    #injection;
+    #topical;
+    #inhaled;
+    #sublingual;
+    #rectal;
+    #transdermal;
+    #intravenous;
+    #intramuscular;
+    #subcutaneous;
+    #ophthalmic;
+  };
+
   type Medication = {
     id : Nat;
     name : Text;
     dosage : Text;
     administrationTimes : [Text];
     prescribingPhysician : ?Physician;
-    administrationRoute : {
-      #oral;
-      #injection;
-      #topical;
-      #inhaled;
-      #sublingual;
-      #rectal;
-      #transdermal;
-      #intravenous;
-      #intramuscular;
-      #subcutaneous;
-      #ophthalmic;
-    };
+    administrationRoute : AdministrationRoute;
     dosageQuantity : Text;
     notes : Text;
-    status : {
-      #active;
-      #discontinued;
-    };
+    status : MedicationStatus;
   };
 
   type MedicationAdministrationRecord = {
@@ -137,18 +138,31 @@ module {
 
   type OldActor = {
     residents : Map.Map<Nat, Resident>;
-    nextResidentId : Nat;
     userProfiles : Map.Map<Principal, UserProfile>;
   };
 
-  type NewActor = {
-    residents : Map.Map<Nat, Resident>;
-    nextResidentId : Nat;
-    userProfiles : Map.Map<Principal, UserProfile>;
-  };
+  type NewActor = OldActor;
 
   public func run(old : OldActor) : NewActor {
-    // No data transformations needed
-    old;
+    let currentTime = Time.now();
+    let archiveThreshold : Int = 30 * 24 * 60 * 60 * 1_000_000_000; // 30 days in nanoseconds
+
+    let archivedResidents = old.residents.map<Nat, Resident, Resident>(
+      func(_id, resident) {
+        switch (resident.status, resident.dischargeTimestamp) {
+          case (#discharged, ?dischargeTime) {
+            if (currentTime - dischargeTime > archiveThreshold) {
+              { resident with isArchived = true };
+            } else { resident };
+          };
+          case (_, _) { resident };
+        };
+      }
+    );
+
+    {
+      old with
+      residents = archivedResidents;
+    };
   };
 };
