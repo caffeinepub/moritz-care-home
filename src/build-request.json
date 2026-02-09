@@ -1,54 +1,74 @@
 {
   "kind": "build_request",
-  "title": "Apply fixed-width mobile/desktop print layout fix across all reports",
+  "title": "Add combined resident print report with active/discontinued medication tables and optional physician signature lines",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-8",
-      "text": "Update the global print stylesheet to force a consistent desktop-style print viewport on all devices (desktop, mobile, tablet) by locking the printed layout to a fixed width inside `@media print`.",
+      "id": "REQ-10",
+      "text": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-1"
         ],
         "quotes": [
-          "Apply the print fix to all reports"
+          "print report must show resident profile, active medications and discontinued medications (in tables format separately)"
         ]
       },
       "acceptanceCriteria": [
-        "In `frontend/src/index.css` under `@media print`, `html` and `body` are forced to a fixed desktop-style width (e.g., 1000px) with centered margins so mobile/tablet printing no longer triggers narrow responsive layout.",
-        "The fixed-width print override does not affect non-print (screen) rendering.",
-        "Printing from a mobile browser produces the same multi-column report layout as desktop for the Resident Profile Report, MAR Report, and ADL Report."
+        "When printing the combined report for a resident, the print output includes a Resident Information/profile section.",
+        "The print output includes an “Active Medications” section rendered as a table, containing only medications with status = active.",
+        "The print output includes a “Discontinued Medications” section rendered as a separate table, containing only medications with status = discontinued.",
+        "If there are no medications in a section, the section renders a clear empty-state message (e.g., “No active medications prescribed” / “No discontinued medications”)."
       ]
     },
     {
-      "id": "REQ-9",
-      "text": "Audit all report print render paths in the UI and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
+      "id": "REQ-11",
+      "text": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-user-1"
+          "msg-1"
         ],
         "quotes": [
-          "Apply the print fix to all reports"
+          "toggle to print with Physician's Name and Signature",
+          "on-screen checkbox or toggle before printing",
+          "just blank underline that they can manual write"
         ]
       },
       "acceptanceCriteria": [
-        "Each existing report print view uses a common printable root class (existing `print-profile` or a new shared class) so the global `@media print` rules apply uniformly.",
-        "No report print view relies on responsive Tailwind breakpoint classes in a way that reverts to a single-column mobile layout during printing.",
-        "From the Resident Profile page, printing the Resident Profile Report, MAR Report, and ADL Report yields consistent widths, table/grid alignment, and header spacing across desktop and mobile/tablet."
+        "On the resident screen where the print action is initiated, there is a clearly labeled toggle/checkbox (English text) that controls inclusion of physician signature fields in the printed report.",
+        "When the toggle is OFF, the printed report does not show physician name/signature underline fields.",
+        "When the toggle is ON, the printed report includes two blank lines/underline fields labeled “Physician Name” and “Physician Signature” (no prefilled values)."
+      ]
+    },
+    {
+      "id": "REQ-12",
+      "text": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "combined print report"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The combined print report’s printable root container opts into the shared print styles so that the global fixed-width print override applies.",
+        "Printing from mobile/tablet produces the same fixed-width desktop-style layout as desktop printing (no responsive reflow in the printed output)."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under `frontend/src/components/ui` (shadcn/ui components are read-only).",
-    "Do not edit any frontend paths listed as immutable in SYSTEM_CONTEXT.",
-    "Keep all user-facing text in English."
+    "Frontend must not modify files under frontend/immutablePaths (compose existing hooks and shadcn/ui components instead).",
+    "Backend must remain a single Motoko actor; only add migration handling if state layout changes (not expected for this request).",
+    "Use English for any user-facing text."
   ],
   "nonGoals": [
-    "Adding new report types or new report data endpoints.",
-    "Changing report content/fields or backend report generation logic.",
-    "Introducing third-party printing libraries."
+    "Do not add new backend fields to store physician name/signature; the signature fields must be blank lines for manual completion.",
+    "Do not change medication data models or statuses; only use existing active/discontinued status to split tables.",
+    "Do not add a third-party e-signature or digital signing workflow."
   ],
   "imageRequirements": {
     "required": [],

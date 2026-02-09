@@ -1,36 +1,46 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T03:06:22.081Z",
+  "generatedAt": "2026-02-09T03:33:28.749Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-8",
-        "summary": "Update the global print stylesheet to force a consistent desktop-style print viewport on all devices (desktop, mobile, tablet) by locking the printed layout to a fixed width inside `@media print`.",
+        "id": "REQ-10",
+        "summary": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/index.css"
+          "frontend/src/pages/ResidentProfile.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/index.css"
+          "frontend/src/pages/ResidentProfile.tsx"
         ]
       },
       {
-        "id": "REQ-9",
-        "summary": "Audit all report print render paths in the UI and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
+        "id": "REQ-11",
+        "summary": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx",
-          "frontend/src/index.css"
+          "frontend/src/pages/ResidentProfile.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/index.css"
+          "frontend/src/pages/ResidentProfile.tsx"
+        ]
+      },
+      {
+        "id": "REQ-12",
+        "summary": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/ResidentProfile.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/ResidentProfile.tsx"
         ]
       }
     ]
@@ -40,7 +50,7 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/index.css",
+    "frontend/src/pages/ResidentProfile.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

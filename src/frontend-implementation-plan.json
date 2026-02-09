@@ -1,42 +1,53 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fixed-width print layout override across all report print views",
+  "title": "Combined resident medication print report with optional physician signature lines",
   "requirements": [
     {
-      "id": "REQ-8",
-      "summary": "Lock print rendering to a consistent desktop-style fixed width for all devices via global @media print overrides.",
+      "id": "REQ-10",
+      "summary": "Update the resident print flow to output a combined report that includes resident profile information plus separate Active/Discontinued medication tables derived from existing medication status values.",
       "acceptanceCriteria": [
-        "In `frontend/src/index.css` under `@media print`, `html` and `body` are forced to a fixed desktop-style width (e.g., 1000px) with centered margins so mobile/tablet printing no longer triggers narrow responsive layout.",
-        "The fixed-width print override does not affect non-print (screen) rendering.",
-        "Printing from a mobile browser produces the same multi-column report layout as desktop for the Resident Profile Report, MAR Report, and ADL Report."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/index.css",
-          "operation": "modify",
-          "description": "Update `@media print` rules to force a fixed desktop-style print viewport by setting `html`/`body` to a fixed width (e.g., 1000px), centering via margins, and preventing mobile responsive shrink behaviors during printing; ensure changes are scoped to print only and do not affect screen rendering."
-        }
-      ]
-    },
-    {
-      "id": "REQ-9",
-      "summary": "Ensure every existing report print view uses a common printable root container/class and avoids responsive breakpoint-dependent layout when printing.",
-      "acceptanceCriteria": [
-        "Each existing report print view uses a common printable root class (existing `print-profile` or a new shared class) so the global `@media print` rules apply uniformly.",
-        "No report print view relies on responsive Tailwind breakpoint classes in a way that reverts to a single-column mobile layout during printing.",
-        "From the Resident Profile page, printing the Resident Profile Report, MAR Report, and ADL Report yields consistent widths, table/grid alignment, and header spacing across desktop and mobile/tablet."
+        "When printing the combined report for a resident, the print output includes a Resident Information/profile section.",
+        "The print output includes an “Active Medications” section rendered as a table, containing only medications with status = active.",
+        "The print output includes a “Discontinued Medications” section rendered as a separate table, containing only medications with status = discontinued.",
+        "If there are no medications in a section, the section renders a clear empty-state message (e.g., “No active medications prescribed” / “No discontinued medications”)."
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/ResidentProfile.tsx",
           "operation": "modify",
-          "description": "Audit and update all report print render paths reachable from the Resident Profile page (Resident Profile Report, MAR Report, ADL Report) so each printable view is wrapped in the same shared printable root class (reuse `print-profile` or introduce a shared class applied consistently), and ensure print-only markup uses the shared print classes (e.g., `.print-grid`, `.print-table`) rather than responsive Tailwind breakpoint classes that could collapse to single-column during printing."
-        },
+          "description": "Refactor the existing print-mode render into a dedicated combined medication print report: ensure the Resident Information/profile section is present and keep Active Medications and Discontinued Medications as separate table sections, each filtered strictly by the existing medication status values. Ensure each section includes an explicit empty-state message when its filtered list is empty."
+        }
+      ]
+    },
+    {
+      "id": "REQ-11",
+      "summary": "Add an on-screen toggle that controls whether the printed combined report includes blank physician name and signature underline fields.",
+      "acceptanceCriteria": [
+        "On the resident screen where the print action is initiated, there is a clearly labeled toggle/checkbox (English text) that controls inclusion of physician signature fields in the printed report.",
+        "When the toggle is OFF, the printed report does not show physician name/signature underline fields.",
+        "When the toggle is ON, the printed report includes two blank lines/underline fields labeled “Physician Name” and “Physician Signature” (no prefilled values)."
+      ],
+      "file_operations": [
         {
-          "path": "frontend/src/index.css",
+          "path": "frontend/src/pages/ResidentProfile.tsx",
           "operation": "modify",
-          "description": "Align global print styling with the chosen shared printable root class (keep/extend existing `.print-profile` and, if introducing a new shared class, alias it to the same print rules) so all report print views opt in uniformly."
+          "description": "Add a clearly labeled on-screen toggle next to/near the print action to control inclusion of signature lines (use the existing state `includeSignature`). Use the shadcn-ui Switch and Label components to provide the toggle UI. Verify the component's usage instructions before implementing. In print-mode rendering, conditionally include a signature block containing two blank underline fields labeled “Physician Name” and “Physician Signature” only when the toggle is enabled, using the existing print signature utility classes."
+        }
+      ]
+    },
+    {
+      "id": "REQ-12",
+      "summary": "Ensure the combined print report opts into the existing shared print root container and utility classes so the fixed-width print override applies consistently across devices.",
+      "acceptanceCriteria": [
+        "The combined print report’s printable root container opts into the shared print styles so that the global fixed-width print override applies.",
+        "Printing from mobile/tablet produces the same fixed-width desktop-style layout as desktop printing (no responsive reflow in the printed output)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/ResidentProfile.tsx",
+          "operation": "modify",
+          "description": "Ensure the combined print report uses the existing shared print conventions by keeping the printable root container on the established `.print-profile` wrapper and using existing print utility classes (`print-header`, `print-section`, `print-grid`, `print-table`, `print-empty`, and the signature-related classes) rather than introducing responsive Tailwind layout classes in the print-only tree."
         }
       ]
     }

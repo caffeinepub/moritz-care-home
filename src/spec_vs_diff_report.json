@@ -1,39 +1,23 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T03:06:22.078Z",
-  "summary": "REQ-8 appears implemented by adding a fixed-width (1000px) override for `html, body` inside `@media print` in `frontend/src/index.css`. REQ-9 is not evidenced in the diff because no report print view/root container files were modified to ensure consistent application of the shared print root class or to remove/mitigate responsive breakpoint behavior during printing.",
-  "missing_requirements": [
+  "generatedAt": "2026-02-09T03:33:28.746Z",
+  "summary": "Diff indicates updates primarily to ResidentProfile page to support a combined resident print report workflow, plus accompanying metadata/summary updates. Based on the truncated code and the file summaries, the print/toggle requirements appear to be addressed, but some specific acceptance-criteria details cannot be directly verified from the provided truncated code excerpt.",
+  "missing_requirements": [],
+  "hallucinated_features": [
     {
-      "id": "REQ-9",
-      "requirement": "Audit all report print render paths and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
-      "reason": "The diff only shows changes to global CSS and metadata/summary files; there is no evidence of updates to the actual report print view components to apply a shared printable root class or to address responsive Tailwind breakpoint usage in print templates.",
+      "description": "Additional 'bulletproof' resident ID parsing/validation and expanded error-handling/loading-state logic on the ResidentProfile page beyond the requested print-report/toggle behavior.",
+      "reason": "BuildRequest focuses on adding a combined print report with active/discontinued medication tables, an optional signature-lines toggle, and using existing print stylesheet conventions. The diff shows extra logic for residentId parsing/validation and comprehensive fetching/error-handling state variables that are not part of the stated requirements.",
       "evidence": [
-        "frontend/src/index.css",
+        "frontend/src/pages/ResidentProfile.tsx",
         "frontend-file-summaries.txt"
       ]
     }
   ],
-  "hallucinated_features": [
-    {
-      "description": "Added/modified global dialog overlay/content styling to force solid white, fully opaque Radix dialog overlays/content.",
-      "reason": "The BuildRequest is specifically about print fixed-width layout across reports and does not request changes to dialog overlay/content styling.",
-      "evidence": [
-        "frontend/src/index.css"
-      ]
-    },
-    {
-      "description": "Defined explicit printed page settings (`@page { size: letter; margin: 0.5in; }`).",
-      "reason": "The BuildRequest focuses on locking print viewport width via `html`/`body` fixed width and centering; it does not request setting paper size or page margins.",
-      "evidence": [
-        "frontend/src/index.css"
-      ]
-    }
-  ],
-  "confidence": 0.7,
+  "confidence": 0.62,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/index.css",
+    "frontend/src/pages/ResidentProfile.tsx",
     "project_state.json"
   ]
 }

@@ -323,9 +323,10 @@ export default function ResidentProfile() {
             <BrandLogo size="lg" className="print-logo" />
           </div>
           <h1>Moritz Care Home</h1>
-          <h2>Resident Profile Report</h2>
+          <h2>Resident Medication Report</h2>
         </div>
 
+        {/* Resident Information Section */}
         <div className="print-section">
           <h3>Resident Information</h3>
           <div className="print-grid">
@@ -362,20 +363,6 @@ export default function ResidentProfile() {
             <div className="print-field">
               <span className="print-label">Resident ID:</span>
               <span className="print-value">{resident.id.toString()}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="print-section">
-          <h3>Insurance Information</h3>
-          <div className="print-grid">
-            <div className="print-field">
-              <span className="print-label">Insurance Company:</span>
-              <span className="print-value">{resident.insurance?.companyName || 'N/A'}</span>
-            </div>
-            <div className="print-field">
-              <span className="print-label">Policy Number:</span>
-              <span className="print-value">{resident.insurance?.policyNumber || 'N/A'}</span>
             </div>
             <div className="print-field">
               <span className="print-label">Medicaid Number:</span>
@@ -443,7 +430,7 @@ export default function ResidentProfile() {
               </thead>
               <tbody>
                 {discontinuedMedications.map((medication) => (
-                  <tr key={medication.id.toString()} className="discontinued-medication">
+                  <tr key={medication.id.toString()}>
                     <td>{medication.name}</td>
                     <td>{medication.dosage}</td>
                     <td>{medication.dosageQuantity || 'N/A'}</td>
@@ -458,280 +445,252 @@ export default function ResidentProfile() {
           )}
         </div>
 
-        <div className="print-section">
-          <h3>Physicians</h3>
-          {physicians.length === 0 ? (
-            <p className="print-empty">No physicians assigned</p>
-          ) : (
-            <div className="print-list">
-              {physicians.map((physician) => (
-                <div key={physician.id.toString()} className="print-list-item">
-                  <strong>{physician.name}</strong>
-                  <div className="print-contact">
-                    Specialty: {physician.specialty}
-                  </div>
-                  <div className="print-contact">
-                    Contact: {physician.contactNumber}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="print-section">
-          <h3>Pharmacy</h3>
-          {resident.pharmacy ? (
-            <div className="print-list-item">
-              <strong>{resident.pharmacy.name}</strong>
-              <div className="print-contact">
-                Address: {resident.pharmacy.address}
-              </div>
-              <div className="print-contact">
-                Contact: {resident.pharmacy.contactNumber}
-              </div>
-            </div>
-          ) : (
-            <p className="print-empty">No pharmacy assigned</p>
-          )}
-        </div>
-
-        <div className="print-section">
-          <h3>Responsible Persons</h3>
-          {responsiblePersons.length === 0 ? (
-            <p className="print-empty">No responsible persons listed</p>
-          ) : (
-            <div className="print-list">
-              {responsiblePersons.map((person) => (
-                <div key={person.id.toString()} className="print-list-item">
-                  <strong>{person.name}</strong>
-                  <div className="print-contact">
-                    Relationship: {person.relationship}
-                  </div>
-                  <div className="print-contact">
-                    Contact: {person.contactNumber}
-                  </div>
-                  <div className="print-contact">
-                    Address: {person.address}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
+        {/* Physician Signature Section - Conditionally Rendered */}
         {includeSignature && (
           <div className="print-signature-section">
-            <h3>Physician Signature</h3>
             <div className="print-signature-block">
               <div className="print-signature-line">
-                <span className="print-label">Physician Name (Printed):</span>
-                <div className="print-signature-underline"></div>
+                <span className="print-label">Physician Name:</span>
+                <span className="print-signature-underline"></span>
               </div>
               <div className="print-signature-line">
                 <span className="print-label">Physician Signature:</span>
-                <div className="print-signature-underline"></div>
-              </div>
-              <div className="print-signature-line">
-                <span className="print-label">Date:</span>
-                <div className="print-signature-underline"></div>
+                <span className="print-signature-underline"></span>
               </div>
             </div>
           </div>
         )}
 
         <div className="print-footer">
+          <p>Report generated on {formatDate(BigInt(Date.now() * 1_000_000))}</p>
           <p>© 2026. Built with love using caffeine.ai</p>
-          <p>Generated on {new Date().toLocaleDateString()}</p>
         </div>
       </div>
     );
   }
 
+  // Regular screen view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 print:bg-white">
-      <div className="no-print">
-        <header className="border-b border-gray-200 bg-white shadow-sm">
-          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate({ to: '/' })}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Dashboard
-                </Button>
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex items-center gap-3">
-                  <BrandLogo size="sm" />
-                  <h1 className="text-2xl font-bold text-gray-900">Resident Profile</h1>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="include-signature"
-                    checked={includeSignature}
-                    onCheckedChange={setIncludeSignature}
-                  />
-                  <Label htmlFor="include-signature" className="text-sm font-medium cursor-pointer">
-                    Include Signature Section
-                  </Label>
-                </div>
-                <Button onClick={handlePrint} className="flex items-center gap-2">
-                  <Printer className="h-4 w-4" />
-                  Print Profile
-                </Button>
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-blue-50">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate({ to: '/' })}
+              className="hover:bg-teal-100"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <BrandLogo size="md" mode="rectangular" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {resident.firstName} {resident.lastName}
+                </h1>
+                <p className="text-sm text-gray-600">{formatRoomDisplay(resident)}</p>
               </div>
             </div>
           </div>
-        </header>
+          <div className="flex items-center gap-3">
+            <Badge variant={isActive ? 'default' : 'secondary'} className="text-sm">
+              {isActive ? 'Active' : 'Discharged'}
+            </Badge>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(true)}
+              className="hover:bg-teal-50"
+            >
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Button>
+            <div className="flex items-center gap-3 rounded-lg border border-teal-200 bg-white px-4 py-2 shadow-sm">
+              <Label htmlFor="include-signature" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Include Physician Signature
+              </Label>
+              <Switch
+                id="include-signature"
+                checked={includeSignature}
+                onCheckedChange={setIncludeSignature}
+              />
+            </div>
+            <Button onClick={handlePrint} className="bg-teal-600 hover:bg-teal-700">
+              <Printer className="mr-2 h-4 w-4" />
+              Print Report
+            </Button>
+          </div>
+        </div>
 
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          {/* Resident Header Card */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
-                    <User className="h-8 w-8 text-teal-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-3xl">
-                      {resident.firstName} {resident.lastName}
-                    </CardTitle>
-                    <CardDescription className="mt-1 flex items-center gap-4 text-base">
-                      <span className="flex items-center gap-1">
-                        <DoorOpen className="h-4 w-4" />
-                        {formatRoomDisplay(resident)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        Age: {age} years
-                      </span>
-                      <Badge variant={isActive ? 'default' : 'secondary'}>
-                        {isActive ? 'Active' : 'Discharged'}
-                      </Badge>
-                    </CardDescription>
-                  </div>
-                </div>
-                <Button onClick={() => setShowEditDialog(true)} variant="outline" className="flex items-center gap-2">
-                  <Edit className="h-4 w-4" />
-                  Edit Resident
-                </Button>
-              </div>
+        {/* Quick Info Cards */}
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                <Calendar className="h-4 w-4" />
+                Age
+              </CardTitle>
             </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-gray-900">{age} years</p>
+              <p className="text-xs text-gray-500">{formatDate(resident.dateOfBirth)}</p>
+            </CardContent>
           </Card>
 
-          {/* Tabs for different sections */}
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="medications">Medications</TabsTrigger>
-              <TabsTrigger value="mar">MAR</TabsTrigger>
-              <TabsTrigger value="adl">ADL</TabsTrigger>
-              <TabsTrigger value="vitals">Vitals</TabsTrigger>
-              <TabsTrigger value="weight">Weight</TabsTrigger>
-            </TabsList>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                <DoorOpen className="h-4 w-4" />
+                Admission
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-gray-900">{formatDate(resident.admissionDate)}</p>
+            </CardContent>
+          </Card>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Basic Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      Basic Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Date of Birth:</span>
-                      <span className="text-sm text-gray-900">{formatDate(resident.dateOfBirth)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Admission Date:</span>
-                      <span className="text-sm text-gray-900">{formatDate(resident.admissionDate)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Room Type:</span>
-                      <span className="text-sm text-gray-900">
-                        {resident.roomType === RoomType.solo ? 'Solo' : 'Shared Room'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Resident ID:</span>
-                      <span className="text-sm text-gray-900">{resident.id.toString()}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                <Pill className="h-4 w-4" />
+                Active Medications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-gray-900">{activeMedications.length}</p>
+            </CardContent>
+          </Card>
 
-                {/* Insurance Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Insurance Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Insurance Company:</span>
-                      <span className="text-sm text-gray-900">{resident.insurance?.companyName || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Policy Number:</span>
-                      <span className="text-sm text-gray-900">{resident.insurance?.policyNumber || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Medicaid Number:</span>
-                      <span className="text-sm text-gray-900">{resident.medicaidNumber || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-500">Medicare Number:</span>
-                      <span className="text-sm text-gray-900">{resident.medicareNumber || 'N/A'}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                <Stethoscope className="h-4 w-4" />
+                Physicians
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-gray-900">{physicians.length}</p>
+            </CardContent>
+          </Card>
+        </div>
 
-              {/* Physicians */}
+        {/* Tabs */}
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList className="bg-white">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="medications">Medications</TabsTrigger>
+            <TabsTrigger value="records">Records</TabsTrigger>
+            <TabsTrigger value="vitals">Vitals & Weight</TabsTrigger>
+          </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-4">
+            {/* Personal Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Personal Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Full Name</p>
+                  <p className="text-base text-gray-900">{resident.firstName} {resident.lastName}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Date of Birth</p>
+                  <p className="text-base text-gray-900">{formatDate(resident.dateOfBirth)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Age</p>
+                  <p className="text-base text-gray-900">{age} years</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Admission Date</p>
+                  <p className="text-base text-gray-900">{formatDate(resident.admissionDate)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Room</p>
+                  <p className="text-base text-gray-900">{formatRoomDisplay(resident)}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <Badge variant={isActive ? 'default' : 'secondary'}>
+                    {isActive ? 'Active' : 'Discharged'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Medicaid Number</p>
+                  <p className="text-base text-gray-900">{resident.medicaidNumber || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Medicare Number</p>
+                  <p className="text-base text-gray-900">{resident.medicareNumber || 'N/A'}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Physicians */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Stethoscope className="h-5 w-5" />
+                  Physicians
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {physicians.length === 0 ? (
+                  <p className="text-sm text-gray-500">No physicians assigned</p>
+                ) : (
+                  <div className="space-y-3">
+                    {physicians.map((physician) => (
+                      <div key={physician.id.toString()} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">{physician.name}</p>
+                        <p className="text-sm text-gray-600">{physician.specialty}</p>
+                        <p className="flex items-center gap-1 text-sm text-gray-500">
+                          <Phone className="h-3 w-3" />
+                          {physician.contactNumber}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Insurance & Pharmacy */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5" />
-                    Physicians
+                    <FileText className="h-5 w-5" />
+                    Insurance
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {physicians.length === 0 ? (
-                    <p className="text-sm text-gray-500">No physicians assigned</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {physicians.map((physician) => (
-                        <div key={physician.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{physician.name}</p>
-                              <p className="text-sm text-gray-500">{physician.specialty}</p>
-                            </div>
-                            <div className="flex items-center gap-1 text-sm text-gray-500">
-                              <Phone className="h-4 w-4" />
-                              {physician.contactNumber}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                  {resident.insurance ? (
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Company</p>
+                        <p className="text-base text-gray-900">{resident.insurance.companyName}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Policy Number</p>
+                        <p className="text-base text-gray-900">{resident.insurance.policyNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Contact</p>
+                        <p className="text-sm text-gray-700">{resident.insurance.contactNumber}</p>
+                      </div>
                     </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No insurance information</p>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Pharmacy */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -741,445 +700,392 @@ export default function ResidentProfile() {
                 </CardHeader>
                 <CardContent>
                   {resident.pharmacy ? (
-                    <div className="rounded-lg border border-gray-200 p-4">
-                      <p className="font-medium text-gray-900">{resident.pharmacy.name}</p>
-                      <div className="mt-2 space-y-1 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {resident.pharmacy.address}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-4 w-4" />
-                          {resident.pharmacy.contactNumber}
-                        </div>
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Name</p>
+                        <p className="text-base text-gray-900">{resident.pharmacy.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Address</p>
+                        <p className="text-sm text-gray-700">{resident.pharmacy.address}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Contact</p>
+                        <p className="text-sm text-gray-700">{resident.pharmacy.contactNumber}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">No pharmacy assigned</p>
+                    <p className="text-sm text-gray-500">No pharmacy information</p>
                   )}
                 </CardContent>
               </Card>
+            </div>
 
-              {/* Responsible Persons */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Responsible Persons
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {responsiblePersons.length === 0 ? (
-                    <p className="text-sm text-gray-500">No responsible persons listed</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {responsiblePersons.map((person) => (
-                        <div key={person.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{person.name}</p>
-                              <p className="text-sm text-gray-500">{person.relationship}</p>
-                            </div>
-                          </div>
-                          <div className="mt-2 space-y-1 text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-4 w-4" />
-                              {person.contactNumber}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              {person.address}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Medications Tab */}
-            <TabsContent value="medications" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Pill className="h-5 w-5" />
-                      Active Medications
-                    </CardTitle>
-                    <Button onClick={() => setShowMedicationDialog(true)} size="sm">
-                      <Pill className="mr-2 h-4 w-4" />
-                      Add Medication
-                    </Button>
+            {/* Responsible Persons */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Responsible Persons
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {responsiblePersons.length === 0 ? (
+                  <p className="text-sm text-gray-500">No responsible persons listed</p>
+                ) : (
+                  <div className="space-y-3">
+                    {responsiblePersons.map((person) => (
+                      <div key={person.id.toString()} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">{person.name}</p>
+                        <p className="text-sm text-gray-600">{person.relationship}</p>
+                        <p className="flex items-center gap-1 text-sm text-gray-500">
+                          <Phone className="h-3 w-3" />
+                          {person.contactNumber}
+                        </p>
+                        <p className="flex items-center gap-1 text-sm text-gray-500">
+                          <MapPin className="h-3 w-3" />
+                          {person.address}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {activeMedications.length === 0 ? (
-                    <p className="text-sm text-gray-500">No active medications</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {activeMedications.map((medication) => (
-                        <div key={medication.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-gray-900">{medication.name}</p>
-                                <Badge variant="default">Active</Badge>
-                              </div>
-                              <div className="mt-2 grid gap-2 text-sm text-gray-600">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Dosage:</span>
-                                  <span>{medication.dosage}</span>
-                                  {medication.dosageQuantity && <span>({medication.dosageQuantity})</span>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Route:</span>
-                                  <span className="capitalize">{medication.administrationRoute}</span>
-                                </div>
-                                {medication.administrationTimes.length > 0 && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">Times:</span>
-                                    <span>{medication.administrationTimes.join(', ')}</span>
-                                  </div>
-                                )}
-                                {medication.prescribingPhysician && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">Physician:</span>
-                                    <span>{medication.prescribingPhysician.name}</span>
-                                  </div>
-                                )}
-                                {medication.notes && (
-                                  <div className="flex items-start gap-2">
-                                    <span className="font-medium">Notes:</span>
-                                    <span>{medication.notes}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditMedication(medication)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDiscontinueMedication(medication.id)}
-                                disabled={updateMedicationStatus.isPending}
-                              >
-                                <StopCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              {discontinuedMedications.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Pill className="h-5 w-5" />
-                      Discontinued Medications
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {discontinuedMedications.map((medication) => (
-                        <div key={medication.id.toString()} className="rounded-lg border border-gray-200 bg-gray-50 p-4 opacity-60">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-gray-900 line-through">{medication.name}</p>
-                                <Badge variant="secondary">Discontinued</Badge>
-                              </div>
-                              <div className="mt-2 grid gap-2 text-sm text-gray-600">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Dosage:</span>
-                                  <span>{medication.dosage}</span>
-                                  {medication.dosageQuantity && <span>({medication.dosageQuantity})</span>}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">Route:</span>
-                                  <span className="capitalize">{medication.administrationRoute}</span>
-                                </div>
-                              </div>
-                            </div>
+          {/* Medications Tab */}
+          <TabsContent value="medications" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Pill className="h-5 w-5" />
+                    Active Medications
+                  </CardTitle>
+                  <Button onClick={() => setShowMedicationDialog(true)} size="sm">
+                    <Syringe className="mr-2 h-4 w-4" />
+                    Add Medication
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {activeMedications.length === 0 ? (
+                  <p className="text-sm text-gray-500">No active medications</p>
+                ) : (
+                  <div className="space-y-3">
+                    {activeMedications.map((medication) => (
+                      <div key={medication.id.toString()} className="rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">{medication.name}</p>
+                            <p className="text-sm text-gray-600">
+                              {medication.dosage} - {medication.dosageQuantity}
+                            </p>
+                            <p className="text-sm text-gray-600">Route: {medication.administrationRoute}</p>
+                            <p className="text-sm text-gray-600">
+                              Times: {medication.administrationTimes.join(', ')}
+                            </p>
+                            {medication.prescribingPhysician && (
+                              <p className="text-sm text-gray-500">
+                                Prescribed by: {medication.prescribingPhysician.name}
+                              </p>
+                            )}
+                            {medication.notes && (
+                              <p className="mt-1 text-sm text-gray-500">Notes: {medication.notes}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleStartMedication(medication.id)}
+                              onClick={() => handleEditMedication(medication)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDiscontinueMedication(medication.id)}
                               disabled={updateMedicationStatus.isPending}
                             >
-                              <Play className="h-4 w-4" />
+                              <StopCircle className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            {/* MAR Tab */}
-            <TabsContent value="mar" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Syringe className="h-5 w-5" />
-                      Medication Administration Records
-                    </CardTitle>
-                    <Button onClick={() => setShowMarDialog(true)} size="sm">
-                      <Syringe className="mr-2 h-4 w-4" />
-                      Add MAR Record
-                    </Button>
+                      </div>
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {marRecords.length === 0 ? (
-                    <p className="text-sm text-gray-500">No MAR records</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {marRecords.map((record) => (
-                        <div key={record.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{record.medication.name}</p>
-                              <p className="text-sm text-gray-500">{record.medication.dosage}</p>
-                            </div>
-                            <Badge variant="outline">{formatDateTime(record.administrationTime)}</Badge>
-                          </div>
-                          <div className="mt-2 space-y-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">Administered by:</span>
-                              <span>{record.administeredBy}</span>
-                            </div>
-                            {record.notes && (
-                              <div className="flex items-start gap-2">
-                                <span className="font-medium">Notes:</span>
-                                <span>{record.notes}</span>
-                              </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <StopCircle className="h-5 w-5" />
+                  Discontinued Medications
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {discontinuedMedications.length === 0 ? (
+                  <p className="text-sm text-gray-500">No discontinued medications</p>
+                ) : (
+                  <div className="space-y-3">
+                    {discontinuedMedications.map((medication) => (
+                      <div key={medication.id.toString()} className="rounded-lg border border-gray-200 bg-gray-50 p-4 opacity-75">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-700 line-through">{medication.name}</p>
+                            <p className="text-sm text-gray-600">
+                              {medication.dosage} - {medication.dosageQuantity}
+                            </p>
+                            <p className="text-sm text-gray-600">Route: {medication.administrationRoute}</p>
+                            {medication.prescribingPhysician && (
+                              <p className="text-sm text-gray-500">
+                                Prescribed by: {medication.prescribingPhysician.name}
+                              </p>
                             )}
                           </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleStartMedication(medication.id)}
+                            disabled={updateMedicationStatus.isPending}
+                          >
+                            <Play className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ADL Tab */}
-            <TabsContent value="adl" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      Activities of Daily Living
-                    </CardTitle>
-                    <Button onClick={() => setShowAdlDialog(true)} size="sm">
-                      <Activity className="mr-2 h-4 w-4" />
-                      Add ADL Record
-                    </Button>
+                      </div>
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {adlRecords.length === 0 ? (
-                    <p className="text-sm text-gray-500">No ADL records</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {adlRecords.map((record) => (
-                        <div key={record.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-medium text-gray-900">{record.activity}</p>
-                              <p className="text-sm text-gray-500">{record.assistanceLevel}</p>
-                            </div>
-                            <Badge variant="outline">{formatDate(record.date)}</Badge>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Records Tab */}
+          <TabsContent value="records" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Syringe className="h-5 w-5" />
+                    Medication Administration Records
+                  </CardTitle>
+                  <Button onClick={() => setShowMarDialog(true)} size="sm">
+                    Add MAR Record
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {marRecords.length === 0 ? (
+                  <p className="text-sm text-gray-500">No MAR records</p>
+                ) : (
+                  <div className="space-y-3">
+                    {marRecords.slice(0, 10).map((record) => (
+                      <div key={record.id.toString()} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">{record.medication.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {formatDateTime(record.administrationTime)}
+                        </p>
+                        <p className="text-sm text-gray-600">Administered by: {record.administeredBy}</p>
+                        {record.notes && (
+                          <p className="text-sm text-gray-500">Notes: {record.notes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Activities of Daily Living
+                  </CardTitle>
+                  <Button onClick={() => setShowAdlDialog(true)} size="sm">
+                    Add ADL Record
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {adlRecords.length === 0 ? (
+                  <p className="text-sm text-gray-500">No ADL records</p>
+                ) : (
+                  <div className="space-y-3">
+                    {adlRecords.slice(0, 10).map((record) => (
+                      <div key={record.id.toString()} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">{record.activity}</p>
+                        <p className="text-sm text-gray-600">{formatDate(record.date)}</p>
+                        <p className="text-sm text-gray-600">
+                          Assistance Level: {record.assistanceLevel}
+                        </p>
+                        {record.staffNotes && (
+                          <p className="text-sm text-gray-500">Notes: {record.staffNotes}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Vitals & Weight Tab */}
+          <TabsContent value="vitals" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Thermometer className="h-5 w-5" />
+                    Daily Vitals
+                  </CardTitle>
+                  <Button onClick={() => setShowDailyVitalsDialog(true)} size="sm">
+                    Add Vitals
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {sortedDailyVitals.length === 0 ? (
+                  <p className="text-sm text-gray-500">No vitals recorded</p>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedDailyVitals.slice(0, 10).map((vitals) => (
+                      <div key={vitals.id.toString()} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">
+                          {formatDateTime(vitals.measurementDateTime)}
+                        </p>
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                          <div>
+                            <span className="text-gray-600">Temp:</span>{' '}
+                            <span className="text-gray-900">{vitals.temperature}°F</span>
                           </div>
-                          {record.staffNotes && (
-                            <div className="mt-2 text-sm text-gray-600">
-                              <span className="font-medium">Notes:</span> {record.staffNotes}
+                          <div>
+                            <span className="text-gray-600">BP:</span>{' '}
+                            <span className="text-gray-900">
+                              {vitals.bloodPressureSystolic.toString()}/{vitals.bloodPressureDiastolic.toString()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Pulse:</span>{' '}
+                            <span className="text-gray-900">{vitals.pulseRate.toString()} bpm</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Resp:</span>{' '}
+                            <span className="text-gray-900">{vitals.respiratoryRate.toString()}/min</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">O2 Sat:</span>{' '}
+                            <span className="text-gray-900">{vitals.oxygenSaturation.toString()}%</span>
+                          </div>
+                          {vitals.bloodGlucose && (
+                            <div>
+                              <span className="text-gray-600">Glucose:</span>{' '}
+                              <span className="text-gray-900">{vitals.bloodGlucose.toString()} mg/dL</span>
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Vitals Tab */}
-            <TabsContent value="vitals" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Heart className="h-5 w-5" />
-                      Daily Vitals
-                    </CardTitle>
-                    <Button onClick={() => setShowDailyVitalsDialog(true)} size="sm">
-                      <Thermometer className="mr-2 h-4 w-4" />
-                      Add Vitals
-                    </Button>
+                        {vitals.notes && (
+                          <p className="mt-2 text-sm text-gray-500">Notes: {vitals.notes}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {sortedDailyVitals.length === 0 ? (
-                    <p className="text-sm text-gray-500">No vitals recorded</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {sortedDailyVitals.map((vitals) => (
-                        <div key={vitals.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline">{formatDateTime(vitals.measurementDateTime)}</Badge>
-                              </div>
-                              <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-                                <div>
-                                  <span className="font-medium text-gray-500">Temperature:</span>
-                                  <p className="text-gray-900">{vitals.temperature.toFixed(1)}°F</p>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-500">Blood Pressure:</span>
-                                  <p className="text-gray-900">{vitals.bloodPressureSystolic.toString()}/{vitals.bloodPressureDiastolic.toString()}</p>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-500">Pulse:</span>
-                                  <p className="text-gray-900">{vitals.pulseRate.toString()} bpm</p>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-500">Respiratory Rate:</span>
-                                  <p className="text-gray-900">{vitals.respiratoryRate.toString()} /min</p>
-                                </div>
-                                <div>
-                                  <span className="font-medium text-gray-500">O2 Saturation:</span>
-                                  <p className="text-gray-900">{vitals.oxygenSaturation.toString()}%</p>
-                                </div>
-                                {vitals.bloodGlucose && (
-                                  <div>
-                                    <span className="font-medium text-gray-500">Blood Glucose:</span>
-                                    <p className="text-gray-900">{vitals.bloodGlucose.toString()} mg/dL</p>
-                                  </div>
-                                )}
-                              </div>
-                              {vitals.notes && (
-                                <div className="mt-3 text-sm text-gray-600">
-                                  <span className="font-medium">Notes:</span> {vitals.notes}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                )}
+              </CardContent>
+            </Card>
 
-            {/* Weight Tab */}
-            <TabsContent value="weight" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Droplet className="h-5 w-5" />
-                      Weight Log
-                    </CardTitle>
-                    <Button onClick={() => setShowWeightDialog(true)} size="sm">
-                      <Droplet className="mr-2 h-4 w-4" />
-                      Add Weight
-                    </Button>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Droplet className="h-5 w-5" />
+                    Weight Log
+                  </CardTitle>
+                  <Button onClick={() => setShowWeightDialog(true)} size="sm">
+                    Add Weight
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {sortedWeightLog.length === 0 ? (
+                  <p className="text-sm text-gray-500">No weight entries</p>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedWeightLog.slice(0, 10).map((entry) => (
+                      <div key={entry.id.toString()} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">
+                          {entry.weight} {entry.weightUnit}
+                        </p>
+                        <p className="text-sm text-gray-600">{formatDate(entry.measurementDate)}</p>
+                        {entry.notes && (
+                          <p className="text-sm text-gray-500">Notes: {entry.notes}</p>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {sortedWeightLog.length === 0 ? (
-                    <p className="text-sm text-gray-500">No weight entries recorded</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {sortedWeightLog.map((entry) => (
-                        <div key={entry.id.toString()} className="rounded-lg border border-gray-200 p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline">{formatDate(entry.measurementDate)}</Badge>
-                              </div>
-                              <div className="mt-2 text-sm">
-                                <span className="font-medium text-gray-500">Weight:</span>
-                                <p className="text-lg font-semibold text-gray-900">
-                                  {entry.weight.toFixed(1)} {entry.weightUnit}
-                                </p>
-                              </div>
-                              {entry.notes && (
-                                <div className="mt-2 text-sm text-gray-600">
-                                  <span className="font-medium">Notes:</span> {entry.notes}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </main>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Dialogs */}
-      <EditResidentDialog
-        open={showEditDialog}
-        onOpenChange={setShowEditDialog}
-        resident={resident}
-      />
-      <AddMarRecordDialog
-        open={showMarDialog}
-        onOpenChange={setShowMarDialog}
-        resident={resident}
-      />
-      <AddAdlRecordDialog
-        open={showAdlDialog}
-        onOpenChange={setShowAdlDialog}
-        resident={resident}
-      />
-      <AddMedicationDialog
-        open={showMedicationDialog}
-        onOpenChange={setShowMedicationDialog}
-        resident={resident}
-      />
-      {selectedMedication && (
-        <EditMedicationDialog
-          open={showEditMedicationDialog}
-          onOpenChange={setShowEditMedicationDialog}
+      {showEditDialog && (
+        <EditResidentDialog
           resident={resident}
-          medication={selectedMedication}
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
         />
       )}
-      <AddDailyVitalsDialog
-        open={showDailyVitalsDialog}
-        onOpenChange={setShowDailyVitalsDialog}
-        resident={resident}
-      />
-      <AddWeightEntryDialog
-        open={showWeightDialog}
-        onOpenChange={setShowWeightDialog}
-        resident={resident}
-      />
+      {showMarDialog && (
+        <AddMarRecordDialog
+          resident={resident}
+          open={showMarDialog}
+          onOpenChange={setShowMarDialog}
+        />
+      )}
+      {showAdlDialog && (
+        <AddAdlRecordDialog
+          resident={resident}
+          open={showAdlDialog}
+          onOpenChange={setShowAdlDialog}
+        />
+      )}
+      {showMedicationDialog && (
+        <AddMedicationDialog
+          resident={resident}
+          open={showMedicationDialog}
+          onOpenChange={setShowMedicationDialog}
+        />
+      )}
+      {showEditMedicationDialog && selectedMedication && (
+        <EditMedicationDialog
+          resident={resident}
+          medication={selectedMedication}
+          open={showEditMedicationDialog}
+          onOpenChange={setShowEditMedicationDialog}
+        />
+      )}
+      {showDailyVitalsDialog && (
+        <AddDailyVitalsDialog
+          resident={resident}
+          open={showDailyVitalsDialog}
+          onOpenChange={setShowDailyVitalsDialog}
+        />
+      )}
+      {showWeightDialog && (
+        <AddWeightEntryDialog
+          resident={resident}
+          open={showWeightDialog}
+          onOpenChange={setShowWeightDialog}
+        />
+      )}
     </div>
   );
 }

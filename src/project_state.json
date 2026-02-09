@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 67,
+  "projectStateVersion": 69,
   "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
   "architectural_notes": [
     "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
@@ -26,7 +26,7 @@
     "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable).",
     "Report print layouts may differ between desktop and mobile/tablet due to responsive CSS/print viewport behavior; needs a fixed-width @media print override for consistent output."
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "IF-1",
@@ -294,6 +294,30 @@
         "REQ-9"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-implement-a-combined-print-report-for-a-resident-that-includes-1-resident-profile-information-and-2-separate-table-sections-for-active-medications-and-discontinued-medications-using-the-resident-s-existing-medication-status-values-to-determine-which-table-each-medication-appears-in",
+      "title": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-on-screen-checkbox-or-toggle-available-before-printing-that-controls-whether-the-combined-print-report-includes-blank-underline-fields-for-physician-name-and-physician-signature-intended-for-manual-completion",
+      "title": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-combined-print-report-uses-the-existing-shared-print-stylesheet-conventions-e-g-the-existing-print-root-container-and-print-utility-classes-so-the-fixed-width-media-print-override-applies-consistently-across-desktop-and-mobile-tablet-printing",
+      "title": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -330,6 +354,12 @@
     {
       "id": "AR-5",
       "summary": "Make print layouts for Resident Profile Report, MAR Report, and ADL Report consistent across desktop and mobile/tablet by enforcing a fixed desktop-style width in @media print CSS.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Create a combined print report that includes the resident profile plus separate tables for active medications and discontinued medications, with an on-screen toggle to optionally include blank Physician Name and Physician Signature underline fields for manual completion.",
       "reqIds": [],
       "status": "pending"
     }

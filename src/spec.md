@@ -1,11 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Ensure all report print views use a consistent fixed-width, desktop-style layout when printing from any device (desktop, mobile, tablet).
+**Goal:** Add a combined resident print report that includes resident profile details plus separate Active and Discontinued medication tables, with an optional physician name/signature line section.
 
 **Planned changes:**
-- Update the global print stylesheet in `frontend/src/index.css` under `@media print` to force `html` and `body` to a fixed desktop-style width (e.g., ~1000px) and center the printed page layout.
-- Audit all existing report print views and ensure each printable root container uses a shared printable root class so the global `@media print` rules apply uniformly.
-- Remove or avoid responsive breakpoint-dependent layout behavior in print render paths that could collapse reports to a single-column mobile layout during printing.
+- Create/update a combined resident print layout that includes a Resident Information/profile section.
+- Split the resident’s medications into two table sections in the print output: “Active Medications” (status = active) and “Discontinued Medications” (status = discontinued), each with an empty-state message when no items exist.
+- Add an on-screen checkbox/toggle on the resident screen (before printing) to include/exclude blank underline fields labeled “Physician Name” and “Physician Signature” in the printed report.
+- Ensure the combined print report uses the existing shared print root container and print utility classes so the fixed-width print styling applies consistently across devices.
 
-**User-visible outcome:** Printing the Resident Profile Report, MAR Report, ADL Report (and other existing report print views) from mobile/tablet produces the same multi-column, aligned desktop-style print layout as printing from desktop, without affecting normal on-screen rendering.
+**User-visible outcome:** Staff can print a single resident report showing profile info plus separate active/discontinued medication tables, and optionally include blank physician name/signature lines for manual completion.
