@@ -66,6 +66,9 @@ export function useResilientActor() {
     staleTime: Infinity,
     retry: false, // Don't auto-retry, let user trigger retry
     enabled: true,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   return {

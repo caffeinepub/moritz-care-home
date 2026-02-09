@@ -13,8 +13,6 @@ import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
 
-// data migration clause for stable types only, not array
-
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -584,7 +582,7 @@ actor {
     companyName : Text,
     policyNumber : Text,
     address : Text,
-    contactNumber : Text
+    contactNumber : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can add insurance companies");
@@ -621,7 +619,7 @@ actor {
     name : Text,
     relationship : Text,
     contactNumber : Text,
-    address : Text
+    address : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can add responsible persons");
@@ -662,7 +660,7 @@ actor {
     prescribingPhysician : ?Physician,
     administrationRoute : AdministrationRoute,
     dosageQuantity : Text,
-    notes : Text
+    notes : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can add medications");
@@ -697,7 +695,7 @@ actor {
   public shared ({ caller }) func updateMedicationStatus(
     residentId : Nat,
     medicationId : Nat,
-    status : MedicationStatus
+    status : MedicationStatus,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can modify medication status");
@@ -733,7 +731,7 @@ actor {
     prescribingPhysician : ?Physician,
     administrationRoute : AdministrationRoute,
     dosageQuantity : Text,
-    notes : Text
+    notes : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can edit medications");
@@ -818,7 +816,7 @@ actor {
     medication : Medication,
     administrationTime : Int,
     administeredBy : Text,
-    notes : Text
+    notes : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can add MAR records");
@@ -852,7 +850,7 @@ actor {
     date : Int,
     activity : Text,
     assistanceLevel : Text,
-    staffNotes : Text
+    staffNotes : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can add ADL records");
@@ -892,7 +890,7 @@ actor {
     oxygenSaturation : Nat,
     bloodGlucose : ?Nat,
     measurementDateTime : Int,
-    notes : Text
+    notes : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can add daily vitals");
@@ -943,7 +941,7 @@ actor {
     weight : Float,
     weightUnit : Text,
     measurementDate : Int,
-    notes : Text
+    notes : Text,
   ) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: Only users can add weight entries");
@@ -1164,6 +1162,17 @@ actor {
     residents.values().toArray().filter(
       func(r) { not r.isArchived }
     );
+  };
+
+  // Open function for public health check
+  public query ({ caller }) func healthCheck() : async {
+    message : Text;
+    timestamp : ?Int;
+  } {
+    {
+      message = "Backend is up and responding.";
+      timestamp = ?Time.now();
+    };
   };
 
   public query ({ caller }) func checkUpgradeHealth() : async {

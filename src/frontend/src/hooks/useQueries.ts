@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
+import { useResilientActor } from './useResilientActor';
 import type {
   Resident,
   UserProfile,
@@ -23,6 +24,40 @@ import type {
 // User Profile Queries
 // ============================================================================
 
+/**
+ * Startup-safe profile query that uses the resilient actor
+ * This is used during app initialization to prevent infinite loading states
+ */
+export function useGetCallerUserProfileStartup() {
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
+
+  const query = useQuery<UserProfile | null>({
+    queryKey: ['currentUserProfile'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      try {
+        return await actor.getCallerUserProfile();
+      } catch (error) {
+        // Surface authorization/trap errors clearly
+        if (error instanceof Error) {
+          if (error.message.includes('Unauthorized') || error.message.includes('trap')) {
+            throw new Error('Authorization error: ' + error.message);
+          }
+        }
+        throw error;
+      }
+    },
+    enabled: !!actor && !actorFetching && !actorIsError,
+    retry: false,
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && !actorFetching && query.isFetched,
+  };
+}
+
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -43,6 +78,35 @@ export function useGetCallerUserProfile() {
   };
 }
 
+/**
+ * Startup-safe profile save mutation using resilient actor
+ * Used during ProfileSetup to avoid dependency on immutable useActor hook
+ */
+export function useSaveCallerUserProfileStartup() {
+  const { actor } = useResilientActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profile: UserProfile) => {
+      if (!actor) throw new Error('Actor not available');
+      try {
+        await actor.saveCallerUserProfile(profile);
+      } catch (error) {
+        // Provide clear error messages for authorization issues
+        if (error instanceof Error) {
+          if (error.message.includes('Unauthorized') || error.message.includes('trap')) {
+            throw new Error('Unable to save profile: You may not have the required permissions. Please contact an administrator.');
+          }
+        }
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    },
+  });
+}
+
 export function useSaveCallerUserProfile() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -50,7 +114,17 @@ export function useSaveCallerUserProfile() {
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.saveCallerUserProfile(profile);
+      try {
+        await actor.saveCallerUserProfile(profile);
+      } catch (error) {
+        // Provide clear error messages for authorization issues
+        if (error instanceof Error) {
+          if (error.message.includes('Unauthorized') || error.message.includes('trap')) {
+            throw new Error('Unable to save profile: You may not have the required permissions. Please contact an administrator.');
+          }
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
@@ -364,7 +438,29 @@ export function useAddMedication() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
+    },
+  });
+}
+
+export function useUpdateMedicationStatus() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      residentId: bigint;
+      medicationId: bigint;
+      status: MedicationStatus;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.updateMedicationStatus(
+        params.residentId,
+        params.medicationId,
+        params.status
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
     },
   });
 }
@@ -400,37 +496,12 @@ export function useEditMedication() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
-    },
-  });
-}
-
-export function useUpdateMedicationStatus() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      residentId: bigint;
-      medicationId: bigint;
-      status: MedicationStatus;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.updateMedicationStatus(
-        params.residentId,
-        params.medicationId,
-        params.status
-      );
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
   });
 }
 
 // ============================================================================
-// MAR Records
+// MAR Record Queries
 // ============================================================================
 
 export function useAddMarRecord() {
@@ -460,21 +531,8 @@ export function useAddMarRecord() {
   });
 }
 
-export function useGenerateMarReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<MedicationAdministrationRecord[]>({
-    queryKey: ['marReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateMarReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
 // ============================================================================
-// ADL Records
+// ADL Record Queries
 // ============================================================================
 
 export function useAddAdlRecord() {
@@ -504,21 +562,8 @@ export function useAddAdlRecord() {
   });
 }
 
-export function useGenerateAdlReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<ADLRecord[]>({
-    queryKey: ['adlReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateAdlReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
 // ============================================================================
-// Daily Vitals
+// Daily Vitals Queries
 // ============================================================================
 
 export function useAddDailyVitals() {
@@ -554,26 +599,12 @@ export function useAddDailyVitals() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['dailyVitals', variables.residentId.toString()] });
     },
-  });
-}
-
-export function useGetDailyVitals(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<DailyVitals[]>({
-    queryKey: ['dailyVitals', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.getDailyVitals(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
   });
 }
 
 // ============================================================================
-// Weight Entries
+// Weight Entry Queries
 // ============================================================================
 
 export function useAddWeightEntry() {
@@ -599,50 +630,6 @@ export function useAddWeightEntry() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['weightLog', variables.residentId.toString()] });
     },
-  });
-}
-
-export function useGetWeightLog(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<WeightEntry[]>({
-    queryKey: ['weightLog', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.getWeightLog(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
-// ============================================================================
-// Medication Reports
-// ============================================================================
-
-export function useGenerateMedicationReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Medication[]>({
-    queryKey: ['medicationReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateMedicationReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
-export function useGenerateFullMedicationReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Medication[]>({
-    queryKey: ['fullMedicationReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateFullMedicationReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
   });
 }

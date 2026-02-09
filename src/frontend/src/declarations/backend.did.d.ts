@@ -331,6 +331,10 @@ export interface _SERVICE {
   >,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getWeightLog' : ActorMethod<[bigint], Array<WeightEntry>>,
+  'healthCheck' : ActorMethod<
+    [],
+    { 'message' : string, 'timestamp' : [] | [bigint] }
+  >,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'updateMedication' : ActorMethod<

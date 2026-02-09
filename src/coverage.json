@@ -1,25 +1,102 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T14:51:12.421Z",
+  "generatedAt": "2026-02-09T19:27:02.269Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 0,
-    "implemented": 0,
-    "items": []
+    "total": 5,
+    "implemented": 4,
+    "items": [
+      {
+        "id": "REQ-1",
+        "summary": "Ensure the app cannot remain on the “Connecting to backend...” screen indefinitely by guaranteeing that backend actor creation always either succeeds (actor available) or transitions to the existing StartupErrorScreen within the configured startup time limits.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/lib/startupDiagnostics.ts",
+          "frontend/src/hooks/useResilientActor.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx",
+          "frontend/src/lib/startupDiagnostics.ts",
+          "frontend/src/hooks/useResilientActor.ts"
+        ]
+      },
+      {
+        "id": "REQ-2",
+        "summary": "Make backend connectivity diagnostics shown on startup error screens accurate and actionable by reliably determining and displaying the backend canister ID, network, and host the frontend is targeting (using window.__ENV__ where available, with safe fallbacks).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/startupDiagnostics.ts",
+          "frontend/src/components/StartupErrorScreen.tsx",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/startupDiagnostics.ts",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Add a public, unauthenticated backend method `healthCheck()` that is compatible with the existing frontend `performHealthCheck()` implementation (anonymous actor calling `healthCheck()` expecting an object with `message` and optional `timestamp`).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Fix the startup gating flow so that once the backend actor is successfully created and the caller profile is missing, the app reliably reaches the Profile Setup screen instead of being blocked by access-control initialization errors or profile query failures.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/ProfileSetup.tsx",
+          "frontend/src/hooks/useResilientActor.ts",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/ProfileSetup.tsx",
+          "frontend/src/hooks/useResilientActor.ts",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Detect and surface “backend canister is stopped” failures during profile load and actor calls by improving frontend error normalization and error-screen messaging to explicitly indicate the canister is stopped and show the targeted canister ID from diagnostics.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/actorInit.ts",
+          "frontend/src/lib/startupDiagnostics.ts",
+          "frontend/src/App.tsx",
+          "frontend/src/components/StartupErrorScreen.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/actorInit.ts",
+          "frontend/src/lib/startupDiagnostics.ts",
+          "frontend/src/App.tsx"
+        ]
+      }
+    ]
   },
   "changedFiles": [
     "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
+    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
     "frontend/src/backend.d.ts",
     "frontend/src/backend.ts",
+    "frontend/src/components/ProfileSetup.tsx",
     "frontend/src/declarations/backend.did.d.ts",
     "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/hooks/useResilientActor.ts",
+    "frontend/src/lib/actorInit.ts",
+    "frontend/src/lib/startupDiagnostics.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

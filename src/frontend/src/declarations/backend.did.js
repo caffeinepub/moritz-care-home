@@ -413,6 +413,11 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
+  'healthCheck' : IDL.Func(
+      [],
+      [IDL.Record({ 'message' : IDL.Text, 'timestamp' : IDL.Opt(IDL.Int) })],
+      ['query'],
+    ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'updateMedication' : IDL.Func(
@@ -865,6 +870,11 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
+    'healthCheck' : IDL.Func(
+        [],
+        [IDL.Record({ 'message' : IDL.Text, 'timestamp' : IDL.Opt(IDL.Int) })],
+        ['query'],
+      ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'updateMedication' : IDL.Func(

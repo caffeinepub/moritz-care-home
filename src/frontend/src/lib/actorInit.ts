@@ -23,6 +23,36 @@ export function withTimeout<T>(
 }
 
 /**
+ * Detects if an error indicates a stopped canister
+ * @param error - The error to check
+ * @returns True if the error indicates a stopped canister
+ */
+export function isStoppedCanisterError(error: unknown): boolean {
+  if (!error) return false;
+  
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    // Check for stopped canister patterns
+    return (
+      message.includes('is stopped') ||
+      message.includes('callcontextmanager') ||
+      (message.includes('canister') && message.includes('stopped'))
+    );
+  }
+  
+  if (typeof error === 'string') {
+    const message = error.toLowerCase();
+    return (
+      message.includes('is stopped') ||
+      message.includes('callcontextmanager') ||
+      (message.includes('canister') && message.includes('stopped'))
+    );
+  }
+  
+  return false;
+}
+
+/**
  * Normalizes various error types into a human-readable message
  * @param error - The error to normalize
  * @returns A user-friendly error message
@@ -35,6 +65,11 @@ export function normalizeError(error: unknown): string {
   if (error instanceof Error) {
     // Check for common error patterns
     const message = error.message;
+
+    // Check for stopped canister first
+    if (isStoppedCanisterError(error)) {
+      return 'Backend canister is stopped: The canister cannot process requests. Please contact the administrator to restart it.';
+    }
 
     if (message.includes('fetch') || message.includes('network')) {
       return 'Network error: Unable to reach the backend. Please check your internet connection.';
@@ -72,14 +107,10 @@ export function normalizeError(error: unknown): string {
     return error;
   }
 
-  // For objects, try to extract a message
+  // Try to extract message from object
   if (typeof error === 'object' && error !== null) {
-    const errorObj = error as Record<string, unknown>;
-    if ('message' in errorObj && typeof errorObj.message === 'string') {
-      return errorObj.message;
-    }
-    if ('error' in errorObj && typeof errorObj.error === 'string') {
-      return errorObj.error;
+    if ('message' in error && typeof (error as any).message === 'string') {
+      return normalizeError((error as any).message);
     }
   }
 
@@ -87,34 +118,34 @@ export function normalizeError(error: unknown): string {
 }
 
 /**
- * Checks if an error is non-fatal (can be ignored)
+ * Checks if an error is non-fatal (e.g., "already initialized")
  * @param error - The error to check
- * @returns True if the error can be safely ignored
+ * @returns True if the error is non-fatal
  */
 export function isNonFatalError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    return (
-      message.includes('already initialized') ||
-      message.includes('already exists')
-    );
-  }
-  return false;
+  if (!error) return false;
+
+  const message = normalizeError(error).toLowerCase();
+  return (
+    message.includes('already initialized') ||
+    message.includes('already exists') ||
+    message.includes('non-fatal')
+  );
 }
 
 /**
- * Checks if an error is an authorization/permission error
+ * Checks if an error is an authorization error
  * @param error - The error to check
- * @returns True if the error is related to authorization
+ * @returns True if the error is authorization-related
  */
 export function isAuthorizationError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const message = error.message.toLowerCase();
-    return (
-      message.includes('unauthorized') ||
-      message.includes('permission') ||
-      message.includes('admin')
-    );
-  }
-  return false;
+  if (!error) return false;
+
+  const message = normalizeError(error).toLowerCase();
+  return (
+    message.includes('unauthorized') ||
+    message.includes('permission') ||
+    message.includes('authorization') ||
+    message.includes('access denied')
+  );
 }

@@ -1,36 +1,68 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T14:51:12.418Z",
-  "summary": "The BuildRequest is to enable resident discharge and archive (deletion) actions from the Dashboard, with a constraint not to duplicate existing Dashboard actions already implemented in frontend/src/pages/Dashboard.tsx. The diff only modifies backend/main.mo and project_state.json; there are no frontend Dashboard changes shown, so the requested Dashboard enablement is not evidenced in this diff. The diff also includes backend/type/state changes and project metadata updates that are not requested by the BuildRequest.",
+  "generatedAt": "2026-02-09T19:27:02.267Z",
+  "summary": "Frontend adds a resilient actor hook with timeouts, startup watchdog (45s) and retry logic with React Query cache clearing, plus diagnostics/health-check utilities and stopped-canister error normalization. Backend changes are shown only in a truncated snippet and do not evidence the required public `healthCheck()` export. Some requirements that depend on StartupErrorScreen/ProfileSetup routing behavior are not verifiable from the provided diff summary.",
   "missing_requirements": [
     {
-      "requirement": "Enable resident discharge and archive (soft delete) actions from the Dashboard.",
-      "reason": "No changes are shown to any frontend Dashboard code (e.g., frontend/src/pages/Dashboard.tsx). The only modified files are backend/main.mo and project_state.json, which do not evidence enabling Dashboard actions.",
+      "id": "REQ-3",
+      "requirement": "Add a public, unauthenticated backend method `healthCheck()` compatible with frontend `performHealthCheck()` (returns object with `message` and optional `timestamp`).",
+      "reason": "The diff summary for `backend/main.mo` is truncated and does not show any `public query func healthCheck()` definition or export, so implementation cannot be confirmed.",
       "evidence": [
-        "MODIFIED FILES list shows only: backend/main.mo, project_state.json"
+        "backend/main.mo (truncated)",
+        "frontend/src/lib/startupDiagnostics.ts (calls `(actor as any).healthCheck()` expecting `message`/`timestamp`)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "StartupErrorScreen shows accurate backend diagnostics (canister ID, network, host) derived from `window.__ENV__` with safe fallbacks and without secrets.",
+      "reason": "While `getBackendDiagnostics()` is implemented, there is no diff evidence that `StartupErrorScreen` is updated to always display these values, nor that it avoids displaying secrets (beyond the helper’s intent).",
+      "evidence": [
+        "frontend/src/lib/startupDiagnostics.ts",
+        "frontend/src/App.tsx (imports `StartupErrorScreen` and `getBackendDiagnostics`, but StartupErrorScreen implementation not shown/modified)"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "requirement": "After actor creation, if `getCallerUserProfile()` returns null, the app reliably reaches ProfileSetup; non-fatal access-control init issues do not block reaching ProfileSetup/main app.",
+      "reason": "Non-fatal access control init handling is present in `useResilientActor`, and a startup-safe profile query exists, but the diff snippet for `App.tsx` is truncated before showing the actual routing/gating logic that renders/navigates to `ProfileSetup` when profile is null.",
+      "evidence": [
+        "frontend/src/hooks/useResilientActor.ts",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/App.tsx (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Detect and surface “backend canister is stopped” failures with explicit stopped-canister messaging on StartupErrorScreen including targeted canister ID; Retry reruns health check and retries actor/profile queries without infinite loading.",
+      "reason": "Stopped-canister detection/normalization and retry behavior are implemented in utilities and `App.tsx`, but there is no diff evidence that the displayed error content in `StartupErrorScreen` is updated to explicitly present the stopped-canister message alongside diagnostics (including canister ID).",
+      "evidence": [
+        "frontend/src/lib/actorInit.ts",
+        "frontend/src/App.tsx (handleRetry + health check triggering)",
+        "frontend/src/lib/startupDiagnostics.ts",
+        "frontend/src/App.tsx (imports `StartupErrorScreen`, but component not shown/modified)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Backend/main.mo modifications (type/state logic changes) unrelated to enabling Dashboard discharge/archive actions.",
-      "reason": "The BuildRequest is about enabling actions from the Dashboard (frontend behavior). The diff shows changes only in backend/main.mo with type definitions and modules, without any explicit linkage to Dashboard UI actions in the provided summary.",
+      "description": "Best-effort admin access-control initialization via secret URL parameter (`caffeineAdminToken`) during actor creation, with special handling for non-fatal init errors.",
+      "reason": "The BuildRequest focuses on startup hardening, diagnostics, and a public health check; it does not request adding or changing admin-token-based initialization behavior during actor creation.",
       "evidence": [
-        "backend/main.mo"
-      ]
-    },
-    {
-      "description": "Project metadata/state update (project_state.json projectStateVersion/summary/features edits).",
-      "reason": "Updating project_state.json is not part of the BuildRequest and does not contribute to enabling discharge/archive actions from the Dashboard.",
-      "evidence": [
-        "project_state.json"
+        "frontend/src/hooks/useResilientActor.ts (uses `getSecretParameter('caffeineAdminToken')` and calls `actor._initializeAccessControlWithSecret(adminToken)`)"
       ]
     }
   ],
-  "confidence": 0.68,
+  "confidence": 0.62,
   "changed_files": [
     "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/App.tsx",
+    "frontend/src/components/ProfileSetup.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/hooks/useResilientActor.ts",
+    "frontend/src/lib/actorInit.ts",
+    "frontend/src/lib/startupDiagnostics.ts",
     "project_state.json"
   ]
 }

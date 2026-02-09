@@ -330,6 +330,10 @@ export interface backendInterface {
     }>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
+    healthCheck(): Promise<{
+        message: string;
+        timestamp?: bigint;
+    }>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
@@ -1158,6 +1162,23 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async healthCheck(): Promise<{
+        message: string;
+        timestamp?: bigint;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.healthCheck();
+                return from_candid_record_n65(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.healthCheck();
+            return from_candid_record_n65(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async isCallerAdmin(): Promise<boolean> {
         if (this.processError) {
             try {
@@ -1535,6 +1556,18 @@ function from_candid_record_n63(_uploadFile: (file: ExternalBlob) => Promise<Uin
         nextIdCounters: value.nextIdCounters,
         sampleData: record_opt_to_undefined(from_candid_opt_n64(_uploadFile, _downloadFile, value.sampleData)),
         aggregateCounts: value.aggregateCounts
+    };
+}
+function from_candid_record_n65(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    message: string;
+    timestamp: [] | [bigint];
+}): {
+    message: string;
+    timestamp?: bigint;
+} {
+    return {
+        message: value.message,
+        timestamp: record_opt_to_undefined(from_candid_opt_n46(_uploadFile, _downloadFile, value.timestamp))
     };
 }
 function from_candid_tuple_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [bigint, string, _RoomType]): [bigint, string, RoomType] {

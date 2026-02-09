@@ -1,511 +1,60 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 81,
-  "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
+  "projectStateVersion": 3,
+  "summary": "App with Internet Computer (IC) backend canister; current focus is restoring profile loading by redeploying/recreating a stopped backend canister.",
   "architectural_notes": [
-    "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
-    "Role-based access control implemented as a reusable Motoko mixin; first authorized initializer can become admin based on a shared secret token.",
-    "Frontend uses TanStack React Query for all backend I/O with cache invalidation/refetch patterns keyed by stable query keys (e.g., residentId as string).",
-    "Frontend uses TanStack Router for routing (Dashboard and Resident Profile routes) and gates app access via an authenticated identity + user profile presence.",
-    "Date/time stored as nanoseconds (bigint) and converted in the UI using UTC-based helpers to avoid timezone drift for calendar dates.",
-    "Backend keeps domain data primarily embedded within the Resident record (medications, MAR, ADL, vitals, weight log) rather than fully normalized collections.",
-    "Caffeine blob-storage mixin provides gateway authorization list refresh, dead-blob enumeration/pruning, and cashier cycle refill workflow.",
-    "Build/deploy template expanded into a reusable React + shadcn/ui starter with standardized canister YAMLs, workspace package management, and helper scripts (e.g., resize/prune unused images).",
-    "Frontend template adds custom ESLint rules to enforce safe patterns (e.g., prohibit BigInt in React Query keys; require explicit Internet Identity provider configuration).",
-    "Authorization (AccessControl + MixinAuthorization) and blob-storage (Mixin/Storage) modules were updated as versioned components (authorization v4.0.0, blob-storage v4.0.0), implying their public interfaces/behavior are now aligned with those component releases."
+    "Frontend calls IC backend canister method getCallerUserProfile; if the canister is stopped, calls are rejected (code 5 / IC0508)."
   ],
   "known_issues": [
-    "backend/main.mo calculateAge() is a stub (uses now = 0), so backend age calculations will be incorrect if used.",
-    "frontend has two different index.css files shown; if both exist in the repo/build pipeline, styles/variables may conflict unpredictably.",
-    "Motoko env var names for storage appear misspelled with triple 'F' (e.g., CAFFFEINE_STORAGE_CASHIER_PRINCIPAL), which can cause runtime traps if deployment uses different names.",
-    "Backend stores physicians/pharmacy/insurance/responsiblePersons as resident-embedded records while also having separate Maps and add* functions; this split suggests incomplete normalization or unused global registries.",
-    "AccessControl.getUserRole traps 'User is not registered' for authenticated principals until initialization runs; frontend calls _initializeAccessControlWithSecret but misconfiguration can lead to unexpected traps.",
-    "MAR entry stores a full Medication object provided by the client; if medication details change later, historical MAR records may not reflect the original administered values consistently.",
-    "Some backend functions (e.g., addPhysician/addPharmacy/addInsurance/addResponsiblePerson) exist but are not surfaced in the shown UI flows.",
-    "Resident deletion removes the resident record but does not explicitly reclaim or clean up any associated blob storage resources (if added later).",
-    "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable).",
-    "Report print layouts may differ between desktop and mobile/tablet due to responsive CSS/print viewport behavior; needs a fixed-width @media print override for consistent output."
+    "Profile Load Failed: backend canister rj6i2-3aaaa-aaaai-q46cq-cai is stopped, causing query rejection (code 5 / IC0508).",
+    "Build/deploy pipeline intermittently fails with 'Our AI encountered an unexpected issue' / 'Something broke on our end', preventing redeploy attempts."
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "IF-1",
-      "title": "Internet Identity authentication (login/logout, persisted identity)",
-      "synonyms": [
-        "II login",
-        "AuthClient integration",
-        "Internet Computer login"
-      ],
-      "description": "Users authenticate via DFINITY Internet Identity using @dfinity/auth-client. The app loads any stored delegation on startup, supports login with a long TTL (30 days), and supports logout that clears identity and resets frontend query cache.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-2",
-      "title": "Role-based authorization & admin initialization via secret token",
-      "synonyms": [
-        "Access control",
-        "RBAC",
-        "Admin token initialization"
-      ],
-      "description": "Backend includes an AccessControl module and authorization mixin. The first principal to initialize with the correct secret becomes admin; subsequent principals become users. Admins can assign roles and check admin status. Frontend passes a secret (caffeineAdminToken) extracted from URL hash/session.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-3",
-      "title": "User profile storage and first-time profile setup gate",
-      "synonyms": [
-        "ProfileSetup",
-        "Employee profile",
-        "Staff profile"
-      ],
-      "description": "Users must create a profile (name, role, employeeId) before accessing the main application. Profile is stored per-caller on the backend and the app routes to a Profile Setup screen if missing.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-4",
-      "title": "Resident directory dashboard with tabs, stats, filtering, and sorting",
-      "synonyms": [
-        "Resident list",
-        "Dashboard residents",
-        "Room filter"
-      ],
-      "description": "Dashboard displays all/active/discharged residents with stats, room number filtering, and sorting by room+bed, resident ID, or name. Each resident card shows room/bed, age, counts of physicians/medications, and quick actions.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-5",
-      "title": "Resident CRUD (add, view, edit, remove) with room type and bed assignment",
-      "synonyms": [
-        "Resident intake",
-        "Edit resident dialog",
-        "Delete resident"
-      ],
-      "description": "Staff can add and edit residents including demographics, admission details, room number, room type (solo/shared), bed assignment for shared rooms, insurance identifiers, physicians, pharmacy, insurance, responsible contacts, and initial medications. Residents can be removed with confirmation.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-6",
-      "title": "Resident status management (active/discharged) with admin restriction",
-      "synonyms": [
-        "Discharge resident",
-        "Reactivate resident",
-        "Toggle status"
-      ],
-      "description": "Backend supports toggling resident status (active/discharged) restricted to admins; frontend exposes Discharge/Activate action on resident cards and refreshes cached queries after updates.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-7",
-      "title": "Resident profile page with robust loading/error handling and printing",
-      "synonyms": [
-        "Resident details",
-        "Bulletproof fetch UI",
-        "Print profile"
-      ],
-      "description": "Resident profile page fetches a single resident with a stable cache key, timeout protection, selective retries, and user-friendly error states (not found/unauthorized/network/timeout). Provides printable views including a dedicated 'Print Profile' report layout.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-8",
-      "title": "Medication management per resident (add/edit, route, times, physician, notes)",
-      "synonyms": [
-        "Prescriptions",
-        "Resident medications"
-      ],
-      "description": "Users can add and edit medications for a resident, including dosage, quantity, administration route (including Ophthalmic), administration times, prescribing physician association, and notes. Frontend maps string routes to the backend AdministrationRoute enum.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-9",
-      "title": "Medication lifecycle status (active/discontinued)",
-      "synonyms": [
-        "Discontinue medication",
-        "Reactivate medication"
-      ],
-      "description": "Medications support status updates (active/discontinued). UI separates active vs discontinued medications, provides discontinue/reactivate actions, and ensures MAR can be recorded only for active medications.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-10",
-      "title": "Medication Administration Record (MAR) logging",
-      "synonyms": [
-        "MAR entry",
-        "Administration log"
-      ],
-      "description": "Users can record MAR entries per resident by selecting an active medication, specifying administration datetime, staff member, and notes. The UI shows selected medication details before submission and updates resident data after save.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-11",
-      "title": "Activities of Daily Living (ADL) record logging",
-      "synonyms": [
-        "ADL entry",
-        "Daily living activities"
-      ],
-      "description": "Users can log ADL records for a resident including date, activity type, assistance level, and staff notes. Records are stored per resident and displayed on the resident profile.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-12",
-      "title": "Daily vitals recording and history (optional blood glucose)",
-      "synonyms": [
-        "Vitals tracking",
-        "Clinical vitals"
-      ],
-      "description": "Users can record daily vitals including temperature (unit conversion to Fahrenheit for storage), blood pressure, pulse, respiratory rate, oxygen saturation, optional blood glucose (validated 0–600), datetime, and notes. Vitals history is shown in a sortable (most recent first) table on the resident profile.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-13",
-      "title": "Weight entry logging (unit + date + notes)",
-      "synonyms": [
-        "Weight log",
-        "Weight tracking"
-      ],
-      "description": "Users can record weight measurements (lbs/kg), measurement date, and optional notes via a dialog. Backend stores entries in the resident's weightLog and exposes query accessors.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-14",
-      "title": "Report generation endpoints (MAR, ADL, medication, resident profile)",
-      "synonyms": [
-        "Reports",
-        "Export data"
-      ],
-      "description": "Backend provides report queries for MAR records, ADL records, active-only medication lists, full medication lists, and resident profile report. Frontend includes React Query hooks for MAR/ADL report generation and age calculation calls.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-15",
-      "title": "Caffeine blob storage maintenance mixin and authorization list syncing",
-      "synonyms": [
-        "Blob GC",
-        "Storage gateway authorization",
-        "Cashier refill"
-      ],
-      "description": "Backend includes a blob-storage mixin providing endpoints to refresh authorized gateway principals, check blob liveness, list/prune dead blobs (authorized callers only), and a cashier refill/top-up mechanism guarded by the cashier principal.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-16",
-      "title": "Centralized React Query hooks with cache invalidation and user-friendly toasts",
-      "synonyms": [
-        "Data layer hooks",
-        "API hooks"
-      ],
-      "description": "All backend interactions are wrapped in React Query hooks with consistent query keys, invalidation/refetch patterns on mutation success, and user-facing notifications via sonner. Permission errors are parsed and displayed with clearer guidance.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-17",
-      "title": "Timezone-safe date utilities for nanoseconds-bigint storage",
-      "synonyms": [
-        "dateUtils",
-        "Nanoseconds conversion"
-      ],
-      "description": "Frontend includes utilities to convert YYYY-MM-DD strings to nanoseconds using UTC to avoid timezone offsets, format dates/datetimes for display, and compute age client-side using UTC components.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-18",
-      "title": "Resident photo upload and retrieval via blob storage",
-      "synonyms": [
-        "ResidentPhotoUpload",
-        "Photo management",
-        "Blob-stored resident images"
-      ],
-      "description": "Frontend supports uploading a resident photo and displaying it on the resident profile. Photos are stored in the blob-storage canister/gateway workflow (via the StorageClient utilities), with backend integration to associate the stored blob reference with the resident record and allow subsequent retrieval/display.",
-      "reqIds": [],
-      "version": 1
-    },
-    {
-      "id": "IF-19",
-      "title": "Centralized brand logo rendering via BrandLogo component",
-      "synonyms": [
-        "BrandLogo",
-        "Logo consistency",
-        "App branding"
-      ],
-      "description": "All UI locations that display the app brand mark render it through `frontend/src/components/BrandLogo.tsx`, ensuring the updated Moritz Care Home logo asset is used consistently and avoiding stale direct image references (at minimum applied on the Login page header).",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "IF-21",
-      "title": "Use uploaded Moritz Care Home PNG logo asset (exact casing) across login + header",
-      "synonyms": [
-        "Static logo asset",
-        "Public assets logo",
-        "Case-sensitive asset path"
-      ],
-      "description": "BrandLogo and any other logo references now load the uploaded PNG from `frontend/public/assets/MoritzCareHomeLOGO-1.png` (exact casing) so the logo reliably appears on both the login page and authenticated header without relying on generated JPG assets.",
+      "id": "feature-ensure-the-app-cannot-remain-on-the-connecting-to-backend-screen-indefinitely-by-guaranteeing-that-backend-actor-creation-always-either-succeeds-actor-available-or-transitions-to-the-existing-startuperrorscreen-within-the-configured-startup-time-limits",
+      "title": "Ensure the app cannot remain on the “Connecting to backend...” screen indefinitely by guaranteeing that backend actor creation always either succeeds (actor available) or transitions to the existing StartupErrorScreen within the configured startup time limits.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-global-styling-so-all-shadcn-radix-dialog-overlays-render-as-fully-opaque-solid-white-no-transparency-no-opacity-utilities-no-backdrop-blur-ensuring-the-underlying-page-is-not-visible-when-any-modal-dialog-is-open",
-      "title": "Update global styling so all shadcn/Radix Dialog overlays render as fully opaque solid white (no transparency, no opacity utilities, no backdrop blur), ensuring the underlying page is not visible when any modal dialog is open.",
+      "id": "feature-make-backend-connectivity-diagnostics-shown-on-startup-error-screens-accurate-and-actionable-by-reliably-determining-and-displaying-the-backend-canister-id-network-and-host-the-frontend-is-targeting-using-window-env-where-available-with-safe-fallbacks",
+      "title": "Make backend connectivity diagnostics shown on startup error screens accurate and actionable by reliably determining and displaying the backend canister ID, network, and host the frontend is targeting (using window.__ENV__ where available, with safe fallbacks).",
       "reqIds": [
-        "REQ-3"
+        "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-every-modal-dialog-panel-content-background-is-fully-opaque-solid-white-not-semi-transparent-by-auditing-all-dialog-components-and-removing-replacing-any-tailwind-opacity-translucent-background-utilities-applied-to-dialog-containers",
-      "title": "Ensure every modal dialog panel/content background is fully opaque solid white (not semi-transparent), by auditing all dialog components and removing/replacing any Tailwind opacity/translucent background utilities applied to dialog containers.",
+      "id": "feature-fix-the-startup-gating-flow-so-that-once-the-backend-actor-is-successfully-created-and-the-caller-profile-is-missing-the-app-reliably-reaches-the-profile-setup-screen-instead-of-being-blocked-by-access-control-initialization-errors-or-profile-query-failures",
+      "title": "Fix the startup gating flow so that once the backend actor is successfully created and the caller profile is missing, the app reliably reaches the Profile Setup screen instead of being blocked by access-control initialization errors or profile query failures.",
       "reqIds": [
         "REQ-4"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-the-global-print-stylesheet-to-force-a-consistent-desktop-style-print-viewport-on-all-devices-desktop-mobile-tablet-by-locking-the-printed-layout-to-a-fixed-width-inside-media-print",
-      "title": "Update the global print stylesheet to force a consistent desktop-style print viewport on all devices (desktop, mobile, tablet) by locking the printed layout to a fixed width inside `@media print`.",
+      "id": "feature-detect-and-surface-backend-canister-is-stopped-failures-during-profile-load-and-actor-calls-by-improving-frontend-error-normalization-and-error-screen-messaging-to-explicitly-indicate-the-canister-is-stopped-and-show-the-targeted-canister-id-from-diagnostics",
+      "title": "Detect and surface “backend canister is stopped” failures during profile load and actor calls by improving frontend error normalization and error-screen messaging to explicitly indicate the canister is stopped and show the targeted canister ID from diagnostics.",
       "reqIds": [
-        "REQ-8"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-audit-all-report-print-render-paths-in-the-ui-and-ensure-each-report-s-printable-root-container-opts-into-the-shared-print-styles-so-the-fixed-width-print-override-applies-consistently-resident-profile-report-mar-report-adl-report-and-any-other-report-print-views-already-present",
-      "title": "Audit all report print render paths in the UI and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
-      "reqIds": [
-        "REQ-9"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-implement-a-combined-print-report-for-a-resident-that-includes-1-resident-profile-information-and-2-separate-table-sections-for-active-medications-and-discontinued-medications-using-the-resident-s-existing-medication-status-values-to-determine-which-table-each-medication-appears-in",
-      "title": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
-      "reqIds": [
-        "REQ-10"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-an-on-screen-checkbox-or-toggle-available-before-printing-that-controls-whether-the-combined-print-report-includes-blank-underline-fields-for-physician-name-and-physician-signature-intended-for-manual-completion",
-      "title": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
-      "reqIds": [
-        "REQ-11"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-the-combined-print-report-uses-the-existing-shared-print-stylesheet-conventions-e-g-the-existing-print-root-container-and-print-utility-classes-so-the-fixed-width-media-print-override-applies-consistently-across-desktop-and-mobile-tablet-printing",
-      "title": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
-      "reqIds": [
-        "REQ-12"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-dashboard-resident-list-ux-to-distinguish-between-no-residents-exist-and-failed-to-load-residents-by-handling-react-query-error-states-for-resident-list-queries-and-providing-a-clear-retry-action",
-      "title": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
-      "reqIds": [
-        "REQ-16"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-dashboard-resident-cards-to-provide-explicit-row-level-actions-for-discharge-and-delete-soft-archive-as-requested-including-a-confirmation-dialog-for-delete-archive",
-      "title": "Update the Dashboard resident cards to provide explicit row-level actions for Discharge and Delete (soft archive) as requested, including a confirmation dialog for Delete (archive).",
-      "reqIds": [
-        "REQ-20"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-react-query-hooks-and-typing-to-call-the-new-backend-apis-for-discharge-and-soft-archive-delete-from-the-dashboard-while-keeping-existing-resident-list-queries-working-with-the-new-archived-behavior",
-      "title": "Update React Query hooks and typing to call the new backend APIs for discharge and soft-archive delete from the Dashboard, while keeping existing resident list queries working with the new archived behavior.",
-      "reqIds": [
-        "REQ-21"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-publish-the-current-reviewed-build-version-89-to-the-live-production-environment-with-no-additional-feature-changes",
-      "title": "Publish the current reviewed build (Version 89) to the live/production environment with no additional feature changes.",
-      "reqIds": [
-        "REQ-22"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-fix-the-dashboard-discharge-resident-action-so-that-it-reliably-updates-the-resident-status-to-discharged-and-the-ui-immediately-reflects-the-change-resident-moves-out-of-active-list-and-appears-in-discharged-list-after-the-mutation-succeeds",
-      "title": "Fix the Dashboard “Discharge” resident action so that it reliably updates the resident status to Discharged and the UI immediately reflects the change (resident moves out of Active list and appears in Discharged list) after the mutation succeeds.",
-      "reqIds": [
-        "REQ-23"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-explicit-error-handling-for-the-dashboard-discharge-action-so-failures-are-visible-to-the-user-and-include-a-clear-message-when-the-caller-is-not-authorized-admin-only-operation",
-      "title": "Add explicit error handling for the Dashboard “Discharge” action so failures are visible to the user and include a clear message when the caller is not authorized (admin-only operation).",
-      "reqIds": [
-        "REQ-24"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-dashboard-resident-card-action-visibility-availability-to-prevent-non-admin-users-from-attempting-admin-only-actions-discharge-and-archive-while-keeping-view-profile-available-to-all-authenticated-users",
-      "title": "Update the Dashboard resident card action visibility/availability to prevent non-admin users from attempting admin-only actions (Discharge and Archive), while keeping View Profile available to all authenticated users.",
-      "reqIds": [
-        "REQ-25"
+        "REQ-5"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [
     {
-      "id": "AR-1",
-      "summary": "Remove all transparency/opacity from UI; make all pop-out dialog backgrounds solid white including the overlay (no translucency).",
-      "reqIds": [],
-      "status": "in_progress"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Identify and fix the backend cause of resident profiles “disappearing” by auditing all resident persistence and retrieval paths (create/update/delete/query) to ensure resident records cannot be unintentionally removed, overwritten with partial data, or become unreachable.",
-      "reqIds": [
-        "REQ-5"
-      ],
-      "status": "pending"
-    },
-    {
       "id": "AR-3",
-      "summary": "Ensure resident data (and any required related state such as ID counters and user profiles) persists reliably across canister upgrades by implementing stable-state upgrade handling (preupgrade/postupgrade) and adding/using a conditional migration in the backend migration file if the stable layout changes.",
+      "summary": "Add a public, unauthenticated backend method `healthCheck()` that is compatible with the existing frontend `performHealthCheck()` implementation (anonymous actor calling `healthCheck()` expecting an object with `message` and optional `timestamp`).",
       "reqIds": [
-        "REQ-6"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Add an admin-only backend diagnostics query to support verifying data integrity in production without exposing sensitive resident data (e.g., return counts and next-ID counters, and optionally a small sample of resident IDs/room numbers).",
-      "reqIds": [
-        "REQ-7"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-5",
-      "summary": "Make print layouts for Resident Profile Report, MAR Report, and ADL Report consistent across desktop and mobile/tablet by enforcing a fixed desktop-style width in @media print CSS.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-6",
-      "summary": "Create a combined print report that includes the resident profile plus separate tables for active medications and discontinued medications, with an on-screen toggle to optionally include blank Physician Name and Physician Signature underline fields for manual completion.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-7",
-      "summary": "Identify and fix the root cause of resident records becoming unavailable after login by auditing backend resident persistence and retrieval paths so resident data cannot be unintentionally lost, overwritten with partial data, or become unreachable after deployments/upgrades.",
-      "reqIds": [
-        "REQ-13"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-8",
-      "summary": "Ensure resident data and required related state persists reliably across canister upgrades by implementing stable-state upgrade handling (e.g., preupgrade/postupgrade) for residents, user profiles, and all relevant next-ID counters; add a conditional migration if the stable layout changes.",
-      "reqIds": [
-        "REQ-14"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-9",
-      "summary": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
-      "reqIds": [
-        "REQ-15"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-10",
-      "summary": "Add Discharge and soft Delete (archive) actions directly on each resident row/card in the Dashboard; Discharge sets status to Discharged and auto-archives the resident after 1 month; Delete performs a soft/archive delete (not a hard delete).",
-      "reqIds": [],
-      "status": "in_progress"
-    },
-    {
-      "id": "AR-11",
-      "summary": "Update backend resident data model to support soft-archiving residents (instead of hard delete) and to support auto-archiving 1 month after a resident is discharged.",
-      "reqIds": [
-        "REQ-17"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-12",
-      "summary": "Replace the current hard-delete behavior of `removeResident` with a soft-archive operation, and add explicit backend APIs to (a) discharge a resident and (b) archive a resident, so the Dashboard can offer separate Discharge and Delete (archive) actions without relying on a status toggle.",
-      "reqIds": [
-        "REQ-18"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-13",
-      "summary": "Implement backend auto-archive behavior: a discharged resident must automatically become archived after 1 month, without requiring a manual action in the UI.",
-      "reqIds": [
-        "REQ-19"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-14",
-      "summary": "Review and fix backend issue causing the Dashboard resident list to show “failed to load residents” (investigate residents query/fetch errors and restore reliable loading).",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-15",
-      "summary": "Identify and fix the backend cause of the Dashboard showing “failed to load residents” by auditing the resident list query endpoints (at minimum `getAllResidents`, `getActiveResidents`, `getDischargedResidents`) for traps and authorization failures, and ensuring that authenticated users who should have `#user` access can reliably fetch residents after login and after deployments/upgrades.",
-      "reqIds": [
-        "REQ-26"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-16",
-      "summary": "Ensure resident data and required related backend state persists reliably across canister upgrades by implementing `system preupgrade`/`system postupgrade` handling in `backend/main.mo` for all resident-related state (residents map contents, all next-ID counters, and any user/access-control state required for resident reads). Add/update `backend/migration.mo` only if a stable layout migration is required by the chosen stable representation, following the project’s conditional migration policy.",
-      "reqIds": [
-        "REQ-27"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-17",
-      "summary": "Add an admin-only backend diagnostics query that supports production verification of resident data integrity without exposing sensitive resident data. The diagnostics response must include aggregate counts (e.g., total residents, active/discharged/archived) and next-ID counter values, and may optionally include a small non-sensitive sample of resident identifiers (e.g., resident IDs and room numbers only).",
-      "reqIds": [
-        "REQ-28"
+        "REQ-3"
       ],
       "status": "pending"
     }
   ],
-  "gameProjectType": "none",
-  "projectName": "Moritz Care Home",
-  "clarification_mode": "pro",
+  "projectName": "Harden startup against stopped backend canister + add public backend health check",
+  "clarification_mode": "instant",
   "clarification_rounds": 0
 }

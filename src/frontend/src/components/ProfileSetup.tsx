@@ -1,65 +1,78 @@
 import { useState } from 'react';
-import { useSaveCallerUserProfile } from '../hooks/useQueries';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Heart, Loader2 } from 'lucide-react';
+import { Loader2, UserCircle, AlertCircle } from 'lucide-react';
+import { useSaveCallerUserProfileStartup } from '../hooks/useQueries';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [employeeId, setEmployeeId] = useState('');
 
-  const saveProfile = useSaveCallerUserProfile();
+  const saveProfileMutation = useSaveCallerUserProfileStartup();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !role || !employeeId) return;
 
-    await saveProfile.mutateAsync({
-      name,
-      role,
-      employeeId,
-    });
+    if (!name.trim() || !role || !employeeId.trim()) {
+      return;
+    }
+
+    try {
+      await saveProfileMutation.mutateAsync({
+        name: name.trim(),
+        role,
+        employeeId: employeeId.trim(),
+      });
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+    }
   };
 
+  const isFormValid = name.trim() !== '' && role !== '' && employeeId.trim() !== '';
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 via-blue-50 to-teal-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-blue-600 shadow-lg">
-            <Heart className="h-8 w-8 text-white" fill="white" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-100">
+            <UserCircle className="h-8 w-8 text-teal-600" />
           </div>
           <CardTitle className="text-2xl">Welcome to Moritz Care Home</CardTitle>
-          <CardDescription>Please complete your profile to continue</CardDescription>
+          <CardDescription>Please set up your profile to continue</CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
+                type="text"
                 placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                disabled={saveProfileMutation.isPending}
                 required
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select value={role} onValueChange={setRole} required>
+              <Select value={role} onValueChange={setRole} disabled={saveProfileMutation.isPending}>
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Administrator">Administrator</SelectItem>
                   <SelectItem value="Nurse">Nurse</SelectItem>
                   <SelectItem value="Caregiver">Caregiver</SelectItem>
-                  <SelectItem value="Medical Staff">Medical Staff</SelectItem>
-                  <SelectItem value="Support Staff">Support Staff</SelectItem>
+                  <SelectItem value="Administrator">Administrator</SelectItem>
+                  <SelectItem value="Doctor">Doctor</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -68,22 +81,33 @@ export default function ProfileSetup() {
               <Label htmlFor="employeeId">Employee ID</Label>
               <Input
                 id="employeeId"
+                type="text"
                 placeholder="Enter your employee ID"
                 value={employeeId}
                 onChange={(e) => setEmployeeId(e.target.value)}
+                disabled={saveProfileMutation.isPending}
                 required
               />
             </div>
 
+            {saveProfileMutation.isError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {saveProfileMutation.error?.message || 'Failed to save profile. Please try again.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700"
-              disabled={saveProfile.isPending || !name || !role || !employeeId}
+              className="w-full"
+              disabled={!isFormValid || saveProfileMutation.isPending}
             >
-              {saveProfile.isPending ? (
+              {saveProfileMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Saving Profile...
                 </>
               ) : (
                 'Complete Setup'

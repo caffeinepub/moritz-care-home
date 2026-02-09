@@ -1,20 +1,119 @@
 {
   "kind": "build_request",
-  "title": "Enable resident discharge and deletion (archive) actions from the Dashboard",
+  "title": "Harden startup against stopped backend canister + add public backend health check",
   "priority": "normal",
-  "requirements": [],
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Ensure the app cannot remain on the “Connecting to backend...” screen indefinitely by guaranteeing that backend actor creation always either succeeds (actor available) or transitions to the existing StartupErrorScreen within the configured startup time limits.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-1"
+        ],
+        "quotes": [
+          "App remains stuck on \"Connecting to Backend\" indefinitely (no timeout)"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When authenticated and actor creation does not complete, the UI transitions to StartupErrorScreen within 45 seconds (STARTUP_TIMEOUT_MS) and does not remain on the connecting screen indefinitely.",
+        "The Retry Connection action clears relevant React Query caches and re-attempts actor creation + profile loading without requiring a page refresh."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Make backend connectivity diagnostics shown on startup error screens accurate and actionable by reliably determining and displaying the backend canister ID, network, and host the frontend is targeting (using window.__ENV__ where available, with safe fallbacks).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-1"
+        ],
+        "quotes": [
+          "Make the backend connectivity diagnostics shown by the frontend accurate and actionable... (e.g., via `window.__ENV__` as already read by `getBackendDiagnostics()`)."
+        ]
+      },
+      "acceptanceCriteria": [
+        "StartupErrorScreen always shows a canister ID, network, and host value (either derived from window.__ENV__ or a clearly labeled fallback).",
+        "No secrets (e.g., admin tokens) are displayed in diagnostics."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Add a public, unauthenticated backend method `healthCheck()` that is compatible with the existing frontend `performHealthCheck()` implementation (anonymous actor calling `healthCheck()` expecting an object with `message` and optional `timestamp`).",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "recent-1"
+        ],
+        "quotes": [
+          "Add a public, unauthenticated backend health check method compatible with the existing frontend `performHealthCheck()` implementation (expects `healthCheck()` on an anonymous actor) so the frontend can distinguish “backend unreachable” vs other issues."
+        ]
+      },
+      "acceptanceCriteria": [
+        "`backend/main.mo` exports a `public query func healthCheck() : async { message : Text; timestamp : ?Int }` (or equivalent shape that includes `message` and supports an optional timestamp).",
+        "The method is callable without authentication/permissions and never traps for anonymous callers.",
+        "Frontend `performHealthCheck()` succeeds against a running canister and displays a passing Health Check result on StartupErrorScreen when invoked."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Fix the startup gating flow so that once the backend actor is successfully created and the caller profile is missing, the app reliably reaches the Profile Setup screen instead of being blocked by access-control initialization errors or profile query failures.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-1"
+        ],
+        "quotes": [
+          "Fix the startup gating flow so that once the backend actor is successfully created and the caller profile is missing, the app reliably reaches the Profile Setup screen."
+        ]
+      },
+      "acceptanceCriteria": [
+        "If `getCallerUserProfile()` returns null (no profile), the app navigates to / renders ProfileSetup reliably after actor creation.",
+        "Non-fatal access control initialization issues (e.g., “already initialized”) do not prevent reaching ProfileSetup or the main app."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Detect and surface “backend canister is stopped” failures during profile load and actor calls by improving frontend error normalization and error-screen messaging to explicitly indicate the canister is stopped and show the targeted canister ID from diagnostics.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "recent-2"
+        ],
+        "quotes": [
+          "Reject text: Canister rj6i2-3aaaa-aaaai-q46cq-cai is stopped and therefore does not have a CallContextManager",
+          "Profile Load Failed"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When an error message contains the stopped-canister pattern (e.g., includes \"is stopped\" and/or \"CallContextManager\"), the displayed StartupErrorScreen message explicitly states that the backend canister is stopped.",
+        "The error screen continues to show backend diagnostics (including canister ID) so the stopped canister can be identified.",
+        "Retry Connection re-runs the health check and retries actor/profile queries; if the canister remains stopped, the error screen reappears with the stopped-canister message (no infinite loading)."
+      ]
+    }
+  ],
   "constraints": [
-    "Do not create new features that duplicate existing Dashboard discharge and archive resident actions (already implemented in frontend/src/pages/Dashboard.tsx using useDischargeResident and useArchiveResident).",
-    "Use English for any user-facing text.",
-    "Frontend immutable paths must not be edited: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
-    "Backend must remain single-actor with all Motoko logic in backend/main.mo; only introduce backend/migration.mo changes if a stable-state layout migration is required (conditional migration policy)."
+    "Do not edit any frontend files under the immutable paths listed in SYSTEM_CONTEXT (e.g., frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui).",
+    "Backend changes must remain within the single-actor architecture in backend/main.mo; only add backend/migration.mo if a state upgrade is required."
   ],
   "nonGoals": [
-    "Adding a hard-delete resident operation (current design uses soft archive).",
-    "Adding any new authentication provider beyond Internet Identity."
+    "Automating canister restart/redeployment from within the app UI (frontend cannot start a stopped canister).",
+    "Adding third-party monitoring, logging services, or external databases."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [
+      "Use English for all user-facing text."
+    ],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }
