@@ -1,4 +1,45 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-update-the-global-print-stylesheet-to-force-a-consistent-desktop-style-print-viewport-on-all-devices-desktop-mobile-tablet-by-locking-the-printed-layout-to-a-fixed-width-inside-media-print",
+      "featureTitle": "Update the global print stylesheet to force a consistent desktop-style print viewport on all devices (desktop, mobile, tablet) by locking the printed layout to a fixed width inside `@media print`.",
+      "files": [
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-8"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-audit-all-report-print-render-paths-in-the-ui-and-ensure-each-report-s-printable-root-container-opts-into-the-shared-print-styles-so-the-fixed-width-print-override-applies-consistently-resident-profile-report-mar-report-adl-report-and-any-other-report-print-views-already-present",
+      "featureTitle": "Audit all report print render paths in the UI and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
+      "files": [
+        "frontend/src/index.css"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-9"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

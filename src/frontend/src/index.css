@@ -96,6 +96,22 @@
     margin: 0.5in;
   }
 
+  /* Fixed-width print layout override for consistent rendering across all devices */
+  html, body {
+    width: 1000px !important;
+    max-width: 1000px !important;
+    margin: 0 auto !important;
+  }
+
+  * {
+    box-sizing: border-box !important;
+  }
+
+  .container {
+    width: 1000px !important;
+    max-width: 1000px !important;
+  }
+
   body {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;

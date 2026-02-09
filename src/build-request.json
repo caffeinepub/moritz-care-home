@@ -1,86 +1,57 @@
 {
   "kind": "build_request",
-  "title": "Fix backend data loss: resident profiles intermittently disappear",
-  "priority": "high",
+  "title": "Apply fixed-width mobile/desktop print layout fix across all reports",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-5",
-      "text": "Identify and fix the backend cause of resident profiles “disappearing” by auditing all resident persistence and retrieval paths (create/update/delete/query) to ensure resident records cannot be unintentionally removed, overwritten with partial data, or become unreachable.",
-      "target": "backend",
+      "id": "REQ-8",
+      "text": "Update the global print stylesheet to force a consistent desktop-style print viewport on all devices (desktop, mobile, tablet) by locking the printed layout to a fixed width inside `@media print`.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-user-1"
         ],
         "quotes": [
-          "review and fix backend. resident's profiles disappear"
+          "Apply the print fix to all reports"
         ]
       },
       "acceptanceCriteria": [
-        "Reproduction steps are documented (what action(s) cause residents to disappear, e.g., canister upgrade, specific mutation, or authorization/init flow).",
-        "After applying the fix, repeating the previously documented reproduction steps no longer causes resident records to disappear.",
-        "All resident-mutating functions preserve existing nested arrays/fields unless explicitly intended (e.g., medication edits must not drop MAR/ADL/vitals/weight history).",
-        "If a resident is missing, backend returns a consistent not-found behavior (no silent failure), and logs/diagnostics (if added) indicate why."
+        "In `frontend/src/index.css` under `@media print`, `html` and `body` are forced to a fixed desktop-style width (e.g., 1000px) with centered margins so mobile/tablet printing no longer triggers narrow responsive layout.",
+        "The fixed-width print override does not affect non-print (screen) rendering.",
+        "Printing from a mobile browser produces the same multi-column report layout as desktop for the Resident Profile Report, MAR Report, and ADL Report."
       ]
     },
     {
-      "id": "REQ-6",
-      "text": "Ensure resident data (and any required related state such as ID counters and user profiles) persists reliably across canister upgrades by implementing stable-state upgrade handling (preupgrade/postupgrade) and adding/using a conditional migration in the backend migration file if the stable layout changes.",
-      "target": "backend",
+      "id": "REQ-9",
+      "text": "Audit all report print render paths in the UI and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-user-1"
         ],
         "quotes": [
-          "resident's profiles disappear"
+          "Apply the print fix to all reports"
         ]
       },
       "acceptanceCriteria": [
-        "After a canister upgrade, `getAllResidents()` returns the same residents as before the upgrade (no loss of resident records).",
-        "After a canister upgrade, creating new residents continues with correct non-colliding IDs (ID counters are restored correctly).",
-        "If migration is required, it is implemented in the designated migration file (per project architecture) and is conditional (only runs when upgrading existing state).",
-        "Upgrade flow does not trap for existing deployments that already have data."
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "text": "Add an admin-only backend diagnostics query to support verifying data integrity in production without exposing sensitive resident data (e.g., return counts and next-ID counters, and optionally a small sample of resident IDs/room numbers).",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ],
-        "quotes": [
-          "review and fix backend. resident's profiles disappear"
-        ]
-      },
-      "acceptanceCriteria": [
-        "A new admin-only query exists that returns: total resident count, counts for active/discharged, and the next-id counters relevant to residents and embedded records.",
-        "The diagnostics endpoint does not return full resident PHI/PII fields (no names, DOB, insurance numbers, notes, etc.).",
-        "Non-admin callers receive an authorization error when calling the diagnostics endpoint.",
-        "Endpoint can be used to confirm (before/after upgrade) that resident counts are unchanged."
+        "Each existing report print view uses a common printable root class (existing `print-profile` or a new shared class) so the global `@media print` rules apply uniformly.",
+        "No report print view relies on responsive Tailwind breakpoint classes in a way that reverts to a single-column mobile layout during printing.",
+        "From the Resident Profile page, printing the Resident Profile Report, MAR Report, and ADL Report yields consistent widths, table/grid alignment, and header spacing across desktop and mobile/tablet."
       ]
     }
   ],
   "constraints": [
-    "Respect the single-actor backend architecture: all Motoko logic remains in backend/main.mo (migration code only in the designated backend migration file if needed).",
-    "Do not introduce additional backend services, external databases, or non-Motoko backend code."
+    "Do not modify files under `frontend/src/components/ui` (shadcn/ui components are read-only).",
+    "Do not edit any frontend paths listed as immutable in SYSTEM_CONTEXT.",
+    "Keep all user-facing text in English."
   ],
   "nonGoals": [
-    "Frontend/UI changes (unless strictly necessary to surface a backend error state already returned).",
-    "Adding new resident features or changing the resident data model beyond what is required to prevent data loss."
+    "Adding new report types or new report data endpoints.",
+    "Changing report content/fields or backend report generation logic.",
+    "Introducing third-party printing libraries."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

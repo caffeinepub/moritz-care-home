@@ -1,12 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Stop intermittent backend resident-profile data loss by fixing persistence/retrieval logic and ensuring state survives canister upgrades.
+**Goal:** Ensure all report print views use a consistent fixed-width, desktop-style layout when printing from any device (desktop, mobile, tablet).
 
 **Planned changes:**
-- Audit and fix all backend resident persistence and retrieval paths (create/update/delete/query) to prevent unintended removal, partial overwrites, or unreachable records.
-- Document clear reproduction steps for the disappearing-residents issue and verify the fix prevents recurrence.
-- Implement reliable stable-state handling for canister upgrades (preupgrade/postupgrade) and add a conditional migration (in the designated migration file) if stable layout changes are needed.
-- Add an admin-only backend diagnostics query that returns non-sensitive integrity info (resident counts and next-ID counters, optionally a small non-PHI sample such as resident IDs/room numbers) with proper authorization errors for non-admin callers.
+- Update the global print stylesheet in `frontend/src/index.css` under `@media print` to force `html` and `body` to a fixed desktop-style width (e.g., ~1000px) and center the printed page layout.
+- Audit all existing report print views and ensure each printable root container uses a shared printable root class so the global `@media print` rules apply uniformly.
+- Remove or avoid responsive breakpoint-dependent layout behavior in print render paths that could collapse reports to a single-column mobile layout during printing.
 
-**User-visible outcome:** Residents no longer “disappear” after the previously identified triggers (including upgrades), and admins can run a safe diagnostics query to confirm resident counts and ID counters remain consistent.
+**User-visible outcome:** Printing the Resident Profile Report, MAR Report, ADL Report (and other existing report print views) from mobile/tablet produces the same multi-column, aligned desktop-style print layout as printing from desktop, without affecting normal on-screen rendering.

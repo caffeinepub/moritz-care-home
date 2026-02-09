@@ -1,6 +1,44 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Frontend scope check: backend-only resident persistence fixes",
-  "requirements": []
+  "title": "Fixed-width print layout override across all report print views",
+  "requirements": [
+    {
+      "id": "REQ-8",
+      "summary": "Lock print rendering to a consistent desktop-style fixed width for all devices via global @media print overrides.",
+      "acceptanceCriteria": [
+        "In `frontend/src/index.css` under `@media print`, `html` and `body` are forced to a fixed desktop-style width (e.g., 1000px) with centered margins so mobile/tablet printing no longer triggers narrow responsive layout.",
+        "The fixed-width print override does not affect non-print (screen) rendering.",
+        "Printing from a mobile browser produces the same multi-column report layout as desktop for the Resident Profile Report, MAR Report, and ADL Report."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Update `@media print` rules to force a fixed desktop-style print viewport by setting `html`/`body` to a fixed width (e.g., 1000px), centering via margins, and preventing mobile responsive shrink behaviors during printing; ensure changes are scoped to print only and do not affect screen rendering."
+        }
+      ]
+    },
+    {
+      "id": "REQ-9",
+      "summary": "Ensure every existing report print view uses a common printable root container/class and avoids responsive breakpoint-dependent layout when printing.",
+      "acceptanceCriteria": [
+        "Each existing report print view uses a common printable root class (existing `print-profile` or a new shared class) so the global `@media print` rules apply uniformly.",
+        "No report print view relies on responsive Tailwind breakpoint classes in a way that reverts to a single-column mobile layout during printing.",
+        "From the Resident Profile page, printing the Resident Profile Report, MAR Report, and ADL Report yields consistent widths, table/grid alignment, and header spacing across desktop and mobile/tablet."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/ResidentProfile.tsx",
+          "operation": "modify",
+          "description": "Audit and update all report print render paths reachable from the Resident Profile page (Resident Profile Report, MAR Report, ADL Report) so each printable view is wrapped in the same shared printable root class (reuse `print-profile` or introduce a shared class applied consistently), and ensure print-only markup uses the shared print classes (e.g., `.print-grid`, `.print-table`) rather than responsive Tailwind breakpoint classes that could collapse to single-column during printing."
+        },
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Align global print styling with the chosen shared printable root class (keep/extend existing `.print-profile` and, if introducing a new shared class, alias it to the same print rules) so all report print views opt in uniformly."
+        }
+      ]
+    }
+  ]
 }

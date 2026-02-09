@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 65,
+  "projectStateVersion": 67,
   "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
   "architectural_notes": [
     "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
@@ -23,7 +23,8 @@
     "MAR entry stores a full Medication object provided by the client; if medication details change later, historical MAR records may not reflect the original administered values consistently.",
     "Some backend functions (e.g., addPhysician/addPharmacy/addInsurance/addResponsiblePerson) exist but are not surfaced in the shown UI flows.",
     "Resident deletion removes the resident record but does not explicitly reclaim or clean up any associated blob storage resources (if added later).",
-    "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable)."
+    "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable).",
+    "Report print layouts may differ between desktop and mobile/tablet due to responsive CSS/print viewport behavior; needs a fixed-width @media print override for consistent output."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -277,6 +278,22 @@
         "REQ-4"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-global-print-stylesheet-to-force-a-consistent-desktop-style-print-viewport-on-all-devices-desktop-mobile-tablet-by-locking-the-printed-layout-to-a-fixed-width-inside-media-print",
+      "title": "Update the global print stylesheet to force a consistent desktop-style print viewport on all devices (desktop, mobile, tablet) by locking the printed layout to a fixed width inside `@media print`.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-audit-all-report-print-render-paths-in-the-ui-and-ensure-each-report-s-printable-root-container-opts-into-the-shared-print-styles-so-the-fixed-width-print-override-applies-consistently-resident-profile-report-mar-report-adl-report-and-any-other-report-print-views-already-present",
+      "title": "Audit all report print render paths in the UI and ensure each report’s printable root container opts into the shared print styles so the fixed-width print override applies consistently (Resident Profile Report, MAR Report, ADL Report, and any other report print views already present).",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -308,6 +325,12 @@
       "reqIds": [
         "REQ-7"
       ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Make print layouts for Resident Profile Report, MAR Report, and ADL Report consistent across desktop and mobile/tablet by enforcing a fixed desktop-style width in @media print CSS.",
+      "reqIds": [],
       "status": "pending"
     }
   ],
