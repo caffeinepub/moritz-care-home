@@ -1,6 +1,6 @@
+import Principal "mo:core/Principal";
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
-import Array "mo:core/Array";
 
 module {
   type Resident = {
@@ -9,9 +9,15 @@ module {
     lastName : Text;
     dateOfBirth : Int;
     admissionDate : Int;
-    status : { #active; #discharged };
+    status : {
+      #active;
+      #discharged;
+    };
     roomNumber : Text;
-    roomType : { #solo; #sharedRoom };
+    roomType : {
+      #solo;
+      #sharedRoom;
+    };
     bed : ?Text;
     physicians : [Physician];
     pharmacy : ?Pharmacy;
@@ -77,7 +83,10 @@ module {
     };
     dosageQuantity : Text;
     notes : Text;
-    status : { #active; #discontinued };
+    status : {
+      #active;
+      #discontinued;
+    };
   };
 
   type MedicationAdministrationRecord = {
@@ -129,41 +138,17 @@ module {
   type OldActor = {
     residents : Map.Map<Nat, Resident>;
     nextResidentId : Nat;
-    physicians : Map.Map<Nat, Physician>;
-    nextPhysicianId : Nat;
-    pharmacies : Map.Map<Nat, Pharmacy>;
-    nextPharmacyId : Nat;
-    insuranceCompanies : Map.Map<Nat, Insurance>;
-    nextInsuranceId : Nat;
-    responsiblePersons : Map.Map<Nat, ResponsiblePerson>;
-    nextResponsiblePersonId : Nat;
-    nextMedicationId : Nat;
-    nextMarId : Nat;
-    nextAdlId : Nat;
-    nextDailyVitalsId : Nat;
-    nextWeightEntryId : Nat;
     userProfiles : Map.Map<Principal, UserProfile>;
   };
 
-  type NewActor = OldActor;
-
-  public func run(old : OldActor) : NewActor {
-    let sanitizedResidents = old.residents.filter(
-      func(_id, resident) { isValidResident(resident) }
-    );
-    { old with residents = sanitizedResidents };
+  type NewActor = {
+    residents : Map.Map<Nat, Resident>;
+    nextResidentId : Nat;
+    userProfiles : Map.Map<Principal, UserProfile>;
   };
 
-  func isValidResident(resident : Resident) : Bool {
-    let updatedMeds = resident.medications.filter(
-      func(med) {
-        switch (med.status) {
-          case (#active) { true };
-          case (#discontinued) { true };
-        };
-      }
-    );
-    ignore updatedMeds;
-    true;
+  public func run(old : OldActor) : NewActor {
+    // No data transformations needed
+    old;
   };
 };

@@ -68,7 +68,7 @@ export function useGetAllResidents() {
   return useQuery<Resident[]>({
     queryKey: ['residents', 'all'],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor) throw new Error('Actor not available');
       return actor.getAllResidents();
     },
     enabled: !!actor && !actorFetching,
@@ -81,7 +81,7 @@ export function useGetActiveResidents() {
   return useQuery<Resident[]>({
     queryKey: ['residents', 'active'],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor) throw new Error('Actor not available');
       return actor.getActiveResidents();
     },
     enabled: !!actor && !actorFetching,
@@ -94,7 +94,7 @@ export function useGetDischargedResidents() {
   return useQuery<Resident[]>({
     queryKey: ['residents', 'discharged'],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor) throw new Error('Actor not available');
       return actor.getDischargedResidents();
     },
     enabled: !!actor && !actorFetching,
@@ -110,7 +110,7 @@ export function useGetFilteredAndSortedResidents(
   return useQuery<Resident[]>({
     queryKey: ['residents', 'filtered', status, sortBy],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor) throw new Error('Actor not available');
       return actor.getFilteredAndSortedResidents(status, sortBy);
     },
     enabled: !!actor && !actorFetching,

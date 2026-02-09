@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Users, UserPlus, LogOut, Heart, Loader2, UserCheck, UserX, Trash2, Eye, DoorOpen, Filter, ArrowUpDown } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Users, UserPlus, LogOut, Loader2, UserCheck, UserX, Trash2, Eye, DoorOpen, Filter, ArrowUpDown, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import AddResidentDialog from '../components/AddResidentDialog';
 import BrandLogo from '@/components/BrandLogo';
@@ -27,9 +28,29 @@ export default function Dashboard() {
   const [selectedRoom, setSelectedRoom] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortCriteria>('roomNumber');
 
-  const { data: allResidents = [], isLoading: loadingAll } = useGetAllResidents();
-  const { data: activeResidents = [], isLoading: loadingActive } = useGetActiveResidents();
-  const { data: dischargedResidents = [], isLoading: loadingDischarged } = useGetDischargedResidents();
+  const { 
+    data: allResidents = [], 
+    isLoading: loadingAll, 
+    isError: errorAll, 
+    error: allError,
+    refetch: refetchAll 
+  } = useGetAllResidents();
+  
+  const { 
+    data: activeResidents = [], 
+    isLoading: loadingActive, 
+    isError: errorActive, 
+    error: activeError,
+    refetch: refetchActive 
+  } = useGetActiveResidents();
+  
+  const { 
+    data: dischargedResidents = [], 
+    isLoading: loadingDischarged, 
+    isError: errorDischarged, 
+    error: dischargedError,
+    refetch: refetchDischarged 
+  } = useGetDischargedResidents();
 
   const toggleStatus = useToggleResidentStatus();
   const removeResident = useRemoveResident();
@@ -237,6 +258,25 @@ export default function Dashboard() {
     );
   };
 
+  const ErrorAlert = ({ error, onRetry }: { error: Error; onRetry: () => void }) => (
+    <Alert variant="destructive" className="mb-4">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Failed to load residents</AlertTitle>
+      <AlertDescription className="flex items-center justify-between">
+        <span>{error.message || 'An error occurred while loading resident data.'}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          className="ml-4 gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Retry
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-teal-50">
       {/* Header */}
@@ -371,11 +411,12 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
+            {errorAll && <ErrorAlert error={allError as Error} onRetry={() => refetchAll()} />}
             {loadingAll ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               </div>
-            ) : filteredAllResidents.length === 0 ? (
+            ) : !errorAll && filteredAllResidents.length === 0 ? (
               <Card className="py-12">
                 <CardContent className="text-center">
                   <Users className="mx-auto h-12 w-12 text-gray-400" />
@@ -389,7 +430,7 @@ export default function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : !errorAll && (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredAllResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
@@ -399,11 +440,12 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="active" className="space-y-4">
+            {errorActive && <ErrorAlert error={activeError as Error} onRetry={() => refetchActive()} />}
             {loadingActive ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               </div>
-            ) : filteredActiveResidents.length === 0 ? (
+            ) : !errorActive && filteredActiveResidents.length === 0 ? (
               <Card className="py-12">
                 <CardContent className="text-center">
                   <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
@@ -415,7 +457,7 @@ export default function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : !errorActive && (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredActiveResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
@@ -425,11 +467,12 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="discharged" className="space-y-4">
+            {errorDischarged && <ErrorAlert error={dischargedError as Error} onRetry={() => refetchDischarged()} />}
             {loadingDischarged ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               </div>
-            ) : filteredDischargedResidents.length === 0 ? (
+            ) : !errorDischarged && filteredDischargedResidents.length === 0 ? (
               <Card className="py-12">
                 <CardContent className="text-center">
                   <UserX className="mx-auto h-12 w-12 text-gray-400" />
@@ -441,7 +484,7 @@ export default function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : !errorDischarged && (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredDischargedResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
@@ -452,28 +495,11 @@ export default function Dashboard() {
         </Tabs>
       </main>
 
-      {/* Footer */}
-      <footer className="mt-16 border-t bg-white py-6">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-600">
-          <p className="flex items-center justify-center gap-1">
-            © 2026. Built with <Heart className="h-4 w-4 fill-red-500 text-red-500" /> using{' '}
-            <a
-              href="https://caffeine.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-teal-600 hover:text-teal-700"
-            >
-              caffeine.ai
-            </a>
-          </p>
-        </div>
-      </footer>
-
       {/* Add Resident Dialog */}
       <AddResidentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={residentToDelete !== null} onOpenChange={() => setResidentToDelete(null)}>
+      <AlertDialog open={!!residentToDelete} onOpenChange={() => setResidentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>

@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 69,
+  "projectStateVersion": 71,
   "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
   "architectural_notes": [
     "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
@@ -26,7 +26,7 @@
     "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable).",
     "Report print layouts may differ between desktop and mobile/tablet due to responsive CSS/print viewport behavior; needs a fixed-width @media print override for consistent output."
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
       "id": "IF-1",
@@ -318,6 +318,14 @@
         "REQ-12"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-dashboard-resident-list-ux-to-distinguish-between-no-residents-exist-and-failed-to-load-residents-by-handling-react-query-error-states-for-resident-list-queries-and-providing-a-clear-retry-action",
+      "title": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -361,6 +369,30 @@
       "id": "AR-6",
       "summary": "Create a combined print report that includes the resident profile plus separate tables for active medications and discontinued medications, with an on-screen toggle to optionally include blank Physician Name and Physician Signature underline fields for manual completion.",
       "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Identify and fix the root cause of resident records becoming unavailable after login by auditing backend resident persistence and retrieval paths so resident data cannot be unintentionally lost, overwritten with partial data, or become unreachable after deployments/upgrades.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Ensure resident data and required related state persists reliably across canister upgrades by implementing stable-state upgrade handling (e.g., preupgrade/postupgrade) for residents, user profiles, and all relevant next-ID counters; add a conditional migration if the stable layout changes.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
+      "reqIds": [
+        "REQ-15"
+      ],
       "status": "pending"
     }
   ],

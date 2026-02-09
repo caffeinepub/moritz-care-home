@@ -232,7 +232,7 @@ export interface _SERVICE {
   'calculateAge' : ActorMethod<[bigint], bigint>,
   'checkUpgradeHealth' : ActorMethod<
     [],
-    { 'residents' : bigint, 'userProfiles' : bigint }
+    { 'residents' : bigint, 'nextResidentId' : bigint, 'userProfiles' : bigint }
   >,
   'editMedication' : ActorMethod<
     [

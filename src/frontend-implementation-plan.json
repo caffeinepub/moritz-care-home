@@ -1,53 +1,26 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Combined resident medication print report with optional physician signature lines",
+  "title": "Dashboard resident list: explicit load-failure UI with retry (React Query error states)",
   "requirements": [
     {
-      "id": "REQ-10",
-      "summary": "Update the resident print flow to output a combined report that includes resident profile information plus separate Active/Discontinued medication tables derived from existing medication status values.",
+      "id": "REQ-16",
+      "summary": "Show explicit resident list load errors (vs empty state) on Dashboard for all/active/discharged queries, with a user-invokable retry that refetches the relevant query.",
       "acceptanceCriteria": [
-        "When printing the combined report for a resident, the print output includes a Resident Information/profile section.",
-        "The print output includes an “Active Medications” section rendered as a table, containing only medications with status = active.",
-        "The print output includes a “Discontinued Medications” section rendered as a separate table, containing only medications with status = discontinued.",
-        "If there are no medications in a section, the section renders a clear empty-state message (e.g., “No active medications prescribed” / “No discontinued medications”)."
+        "If any resident list query (all/active/discharged) fails, the Dashboard displays an explicit error message in English (instead of showing “No residents found”).",
+        "The error UI includes a user-invokable retry control that triggers refetching/invalidation of the relevant resident queries.",
+        "When the backend returns an actual empty list successfully, the existing “No residents found” empty state continues to display."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/ResidentProfile.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Refactor the existing print-mode render into a dedicated combined medication print report: ensure the Resident Information/profile section is present and keep Active Medications and Discontinued Medications as separate table sections, each filtered strictly by the existing medication status values. Ensure each section includes an explicit empty-state message when its filtered list is empty."
-        }
-      ]
-    },
-    {
-      "id": "REQ-11",
-      "summary": "Add an on-screen toggle that controls whether the printed combined report includes blank physician name and signature underline fields.",
-      "acceptanceCriteria": [
-        "On the resident screen where the print action is initiated, there is a clearly labeled toggle/checkbox (English text) that controls inclusion of physician signature fields in the printed report.",
-        "When the toggle is OFF, the printed report does not show physician name/signature underline fields.",
-        "When the toggle is ON, the printed report includes two blank lines/underline fields labeled “Physician Name” and “Physician Signature” (no prefilled values)."
-      ],
-      "file_operations": [
+          "description": "Adjust resident list React Query hooks (useGetAllResidents/useGetActiveResidents/useGetDischargedResidents) so failures surface as query errors (rather than being masked as successful empty arrays), enabling the Dashboard to reliably distinguish load failure vs true-empty results."
+        },
         {
-          "path": "frontend/src/pages/ResidentProfile.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Add a clearly labeled on-screen toggle next to/near the print action to control inclusion of signature lines (use the existing state `includeSignature`). Use the shadcn-ui Switch and Label components to provide the toggle UI. Verify the component's usage instructions before implementing. In print-mode rendering, conditionally include a signature block containing two blank underline fields labeled “Physician Name” and “Physician Signature” only when the toggle is enabled, using the existing print signature utility classes."
-        }
-      ]
-    },
-    {
-      "id": "REQ-12",
-      "summary": "Ensure the combined print report opts into the existing shared print root container and utility classes so the fixed-width print override applies consistently across devices.",
-      "acceptanceCriteria": [
-        "The combined print report’s printable root container opts into the shared print styles so that the global fixed-width print override applies.",
-        "Printing from mobile/tablet produces the same fixed-width desktop-style layout as desktop printing (no responsive reflow in the printed output)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/ResidentProfile.tsx",
-          "operation": "modify",
-          "description": "Ensure the combined print report uses the existing shared print conventions by keeping the printable root container on the established `.print-profile` wrapper and using existing print utility classes (`print-header`, `print-section`, `print-grid`, `print-table`, `print-empty`, and the signature-related classes) rather than introducing responsive Tailwind layout classes in the print-only tree."
+          "description": "Update the Dashboard resident list rendering for the All/Active/Discharged tabs to handle React Query error states (isError/error) distinctly from empty successful results, and add a clear Retry control that triggers refetching/invalidation for the specific failed resident query."
         }
       ]
     }

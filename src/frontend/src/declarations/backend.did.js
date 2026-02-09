@@ -261,7 +261,13 @@ export const idlService = IDL.Service({
   'calculateAge' : IDL.Func([IDL.Int], [IDL.Int], ['query']),
   'checkUpgradeHealth' : IDL.Func(
       [],
-      [IDL.Record({ 'residents' : IDL.Nat, 'userProfiles' : IDL.Nat })],
+      [
+        IDL.Record({
+          'residents' : IDL.Nat,
+          'nextResidentId' : IDL.Nat,
+          'userProfiles' : IDL.Nat,
+        }),
+      ],
       ['query'],
     ),
   'editMedication' : IDL.Func(
@@ -628,7 +634,13 @@ export const idlFactory = ({ IDL }) => {
     'calculateAge' : IDL.Func([IDL.Int], [IDL.Int], ['query']),
     'checkUpgradeHealth' : IDL.Func(
         [],
-        [IDL.Record({ 'residents' : IDL.Nat, 'userProfiles' : IDL.Nat })],
+        [
+          IDL.Record({
+            'residents' : IDL.Nat,
+            'nextResidentId' : IDL.Nat,
+            'userProfiles' : IDL.Nat,
+          }),
+        ],
         ['query'],
       ),
     'editMedication' : IDL.Func(

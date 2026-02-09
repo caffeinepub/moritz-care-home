@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-implement-a-combined-print-report-for-a-resident-that-includes-1-resident-profile-information-and-2-separate-table-sections-for-active-medications-and-discontinued-medications-using-the-resident-s-existing-medication-status-values-to-determine-which-table-each-medication-appears-in",
-      "featureTitle": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
+      "featureId": "feature-update-the-dashboard-resident-list-ux-to-distinguish-between-no-residents-exist-and-failed-to-load-residents-by-handling-react-query-error-states-for-resident-list-queries-and-providing-a-clear-retry-action",
+      "featureTitle": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
       "files": [
-        "frontend/src/pages/ResidentProfile.tsx"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -17,47 +18,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-10"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-an-on-screen-checkbox-or-toggle-available-before-printing-that-controls-whether-the-combined-print-report-includes-blank-underline-fields-for-physician-name-and-physician-signature-intended-for-manual-completion",
-      "featureTitle": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
-      "files": [
-        "frontend/src/pages/ResidentProfile.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "blob-storage@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-11"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-ensure-the-combined-print-report-uses-the-existing-shared-print-stylesheet-conventions-e-g-the-existing-print-root-container-and-print-utility-classes-so-the-fixed-width-media-print-override-applies-consistently-across-desktop-and-mobile-tablet-printing",
-      "featureTitle": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
-      "files": [
-        "frontend/src/pages/ResidentProfile.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "blob-storage@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-12"
+        "REQ-16"
       ],
       "confidence": "high"
     }

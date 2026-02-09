@@ -1,12 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Add a combined resident print report that includes resident profile details plus separate Active and Discontinued medication tables, with an optional physician name/signature line section.
+**Goal:** Fix missing resident profiles after login by ensuring resident data persists correctly in the backend (including across canister upgrades) and improving the Dashboard UX to clearly show load failures vs true empty states.
 
 **Planned changes:**
-- Create/update a combined resident print layout that includes a Resident Information/profile section.
-- Split the resident’s medications into two table sections in the print output: “Active Medications” (status = active) and “Discontinued Medications” (status = discontinued), each with an empty-state message when no items exist.
-- Add an on-screen checkbox/toggle on the resident screen (before printing) to include/exclude blank underline fields labeled “Physician Name” and “Physician Signature” in the printed report.
-- Ensure the combined print report uses the existing shared print root container and print utility classes so the fixed-width print styling applies consistently across devices.
+- Audit and fix backend resident persistence/retrieval so resident lists (all/active/discharged) do not become empty when residents exist, and ensure nested resident update flows don’t partially overwrite/drop unrelated fields.
+- Implement reliable stable-state upgrade handling (preupgrade/postupgrade) to preserve residents, user profiles, and next-ID counters across canister upgrades; add a conditional migration only if required by state layout changes.
+- Add an admin-only backend diagnostics query that returns non-sensitive aggregate resident counts and ID/counter metadata for production verification.
+- Update the Dashboard resident list UI to handle React Query error states: show an explicit “failed to load residents” message with a user-invokable retry, while keeping the existing “No residents found” UI for successful empty lists.
 
-**User-visible outcome:** Staff can print a single resident report showing profile info plus separate active/discontinued medication tables, and optionally include blank physician name/signature lines for manual completion.
+**User-visible outcome:** After logging in, authorized users see the expected resident profiles when they exist; upgrades no longer clear resident data; and if loading residents fails, the Dashboard shows a clear error with a retry option instead of incorrectly implying there are no residents.

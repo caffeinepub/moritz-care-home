@@ -1,56 +1,64 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T03:33:28.749Z",
+  "generatedAt": "2026-02-09T04:07:03.103Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 4,
+    "implemented": 1,
     "items": [
       {
-        "id": "REQ-10",
-        "summary": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx"
-        ]
+        "id": "REQ-13",
+        "summary": "Identify and fix the root cause of resident records becoming unavailable after login by auditing backend resident persistence and retrieval paths so resident data cannot be unintentionally lost, overwritten with partial data, or become unreachable after deployments/upgrades.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
-        "id": "REQ-11",
-        "summary": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx"
-        ]
+        "id": "REQ-14",
+        "summary": "Ensure resident data and required related state persists reliably across canister upgrades by implementing stable-state upgrade handling (e.g., preupgrade/postupgrade) for residents, user profiles, and all relevant next-ID counters; add a conditional migration if the stable layout changes.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
-        "id": "REQ-12",
-        "summary": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
+        "id": "REQ-15",
+        "summary": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-16",
+        "summary": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Dashboard.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/ResidentProfile.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Dashboard.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/pages/ResidentProfile.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

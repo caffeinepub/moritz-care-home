@@ -258,6 +258,7 @@ export interface backendInterface {
     calculateAge(_dateOfBirth: bigint): Promise<bigint>;
     checkUpgradeHealth(): Promise<{
         residents: bigint;
+        nextResidentId: bigint;
         userProfiles: bigint;
     }>;
     editMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string): Promise<void>;
@@ -559,6 +560,7 @@ export class Backend implements backendInterface {
     }
     async checkUpgradeHealth(): Promise<{
         residents: bigint;
+        nextResidentId: bigint;
         userProfiles: bigint;
     }> {
         if (this.processError) {

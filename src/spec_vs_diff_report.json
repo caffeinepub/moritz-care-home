@@ -1,23 +1,72 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T03:33:28.746Z",
-  "summary": "Diff indicates updates primarily to ResidentProfile page to support a combined resident print report workflow, plus accompanying metadata/summary updates. Based on the truncated code and the file summaries, the print/toggle requirements appear to be addressed, but some specific acceptance-criteria details cannot be directly verified from the provided truncated code excerpt.",
-  "missing_requirements": [],
-  "hallucinated_features": [
+  "generatedAt": "2026-02-09T04:07:03.100Z",
+  "summary": "Backend: added a migration module and wired `main.mo` to use `with migration = Migration.run`, but the diff excerpt does not show the required stable-state (preupgrade/postupgrade) persistence or the new admin-only diagnostics query, nor does it demonstrate fixes to resident data loss/partial overwrite paths. Frontend: Dashboard and query hooks were updated to surface query errors and expose retry/refetch controls, aligning with the requested “failed to load vs empty state” distinction. Several additional frontend UI/styling changes appear unrelated to the BuildRequest.",
+  "missing_requirements": [
     {
-      "description": "Additional 'bulletproof' resident ID parsing/validation and expanded error-handling/loading-state logic on the ResidentProfile page beyond the requested print-report/toggle behavior.",
-      "reason": "BuildRequest focuses on adding a combined print report with active/discontinued medication tables, an optional signature-lines toggle, and using existing print stylesheet conventions. The diff shows extra logic for residentId parsing/validation and comprehensive fetching/error-handling state variables that are not part of the stated requirements.",
+      "id": "REQ-13",
+      "requirement": "Fix root cause of resident records becoming unavailable after login by auditing/fixing backend resident persistence/retrieval so data is not lost/overwritten/unreachable; ensure nested-update flows do not drop unrelated fields; ensure removal only via existing admin-only path.",
+      "reason": "The diff summary shows type definitions and migration wiring but does not provide evidence of changes to resident retrieval functions (`getAllResidents`/`getActiveResidents`/`getDischargedResidents`) or to resident mutation/update code paths that would prevent partial overwrites or unintended deletion. The shown portion of `backend/main.mo` is truncated before any of these functions/flows are visible.",
       "evidence": [
-        "frontend/src/pages/ResidentProfile.tsx",
-        "frontend-file-summaries.txt"
+        "backend/main.mo (truncated; only shows types/comparers and migration wiring)"
+      ]
+    },
+    {
+      "id": "REQ-14",
+      "requirement": "Implement stable-state upgrade handling (preupgrade/postupgrade) so residents, user profiles, and next-ID counters persist across upgrades; add conditional migration only if layout changes.",
+      "reason": "While `backend/migration.mo` was added and `main.mo` references `with migration = Migration.run`, the diff excerpt does not show any `system func preupgrade` / `system func postupgrade` (or equivalent stable var persistence) that actually preserves residents/userProfiles/ID counters across upgrades. Also, the migration shown performs no conditional logic and no transformations, but the requirement is specifically about reliable upgrade persistence and conditional migrations when layout changes.",
+      "evidence": [
+        "backend/main.mo (truncated; no preupgrade/postupgrade shown)",
+        "backend/migration.mo (defines OldActor/NewActor identical; `run` returns `old` unconditionally)"
+      ]
+    },
+    {
+      "id": "REQ-15",
+      "requirement": "Add a new admin-only backend diagnostics query returning aggregate counts (total/active/discharged) and next resident ID counter (and optionally non-sensitive sample like IDs/room numbers), rejecting non-admin callers, without exposing sensitive resident details.",
+      "reason": "No diagnostics query is shown in the backend diff excerpt. The only visible backend changes are type definitions, ordering helpers, and migration wiring; nothing evidences a new admin-only query or its authorization/sanitization behavior.",
+      "evidence": [
+        "backend/main.mo (truncated; no diagnostics query shown)"
       ]
     }
   ],
-  "confidence": 0.62,
+  "hallucinated_features": [
+    {
+      "description": "Frontend Login page visual/styling changes (opaque backgrounds, teal overlay, logo aspect handling).",
+      "reason": "Not requested by REQ-13/14/15/16; BuildRequest scope explicitly focuses on resident persistence and Dashboard resident list load/error visibility.",
+      "evidence": [
+        "frontend-file-summaries.txt (mentions changes to `frontend/src/pages/LoginPage.tsx`)"
+      ]
+    },
+    {
+      "description": "Resident Profile report/printing enhancements (combined print report, physician signature line toggle, print style changes, fixed-width layout overrides).",
+      "reason": "Not requested; outside the stated non-goals (no new resident management features beyond missing data fix and load/error visibility).",
+      "evidence": [
+        "frontend-file-summaries.txt (mentions `frontend/src/pages/ResidentProfile.tsx` and `frontend/src/index.css` print/layout changes)"
+      ]
+    },
+    {
+      "description": "Widespread dialog/UI styling changes enforcing solid white backgrounds across many components (Add/Edit resident, MAR/ADL/Medication dialogs, etc.).",
+      "reason": "Not requested by the BuildRequest; REQ-16 only asked for Dashboard resident list error-state handling with retry.",
+      "evidence": [
+        "frontend-file-summaries.txt (mentions `frontend/src/components/AddResidentDialog.tsx`, `EditResidentDialog.tsx`, `AddMarRecordDialog.tsx`, `AddAdlRecordDialog.tsx`, `AddMedicationDialog.tsx`, `EditMedicationDialog.tsx`, `frontend/src/index.css`)"
+      ]
+    },
+    {
+      "description": "Resilient actor initialization changes and additional app-level routing/auth flow behavior beyond resident list error UX.",
+      "reason": "Not requested; REQ-16 targets Dashboard resident list query error handling specifically, not broader app initialization behavior.",
+      "evidence": [
+        "frontend-file-summaries.txt (mentions `frontend/src/App.tsx` changes: resilient actor initialization with retry mechanism, additional error handling)"
+      ]
+    }
+  ],
+  "confidence": 0.64,
   "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/pages/ResidentProfile.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]
 }

@@ -7,13 +7,14 @@ import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
 import Time "mo:core/Time";
-
+import Principal "mo:core/Principal";
 
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
+import Migration "migration";
 
-
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -258,7 +259,7 @@ actor {
   // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view profiles");
     };
     userProfiles.get(caller);
   };
@@ -406,21 +407,21 @@ actor {
 
   public query ({ caller }) func getResident(id : Nat) : async ?Resident {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view residents");
     };
     residents.get(id);
   };
 
   public query ({ caller }) func getAllResidents() : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view residents");
     };
     sortResidentsByBed(residents.values().toArray());
   };
 
   public query ({ caller }) func getResidentsByRoom(roomNumber : Text) : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view residents");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.roomNumber == roomNumber }
@@ -430,7 +431,7 @@ actor {
 
   public query ({ caller }) func getActiveResidents() : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view residents");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.status == #active }
@@ -440,7 +441,7 @@ actor {
 
   public query ({ caller }) func getDischargedResidents() : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view residents");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.status == #discharged }
@@ -450,7 +451,7 @@ actor {
 
   public query ({ caller }) func getResidentsByRoomType(roomType : RoomType) : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view residents");
     };
     let filtered = residents.values().toArray().filter(
       func(r) { r.roomType == roomType }
@@ -994,22 +995,23 @@ actor {
 
   public query ({ caller : Principal }) func getAllRoomNumbers() : async [Text] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can view room numbers");
     };
     residents.values().toArray().map(func(r) { r.roomNumber });
   };
 
   public query ({ caller : Principal }) func findResidentByRoom(roomNumber : Text) : async ?Resident {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+      Runtime.trap("Unauthorized: Only users can search residents");
     };
     residents.values().toArray().find(func(r) { r.roomNumber == roomNumber });
   };
 
-  // Upgrade Testing (returns number of records, not PII)
+  // Admin-only diagnostics for upgrade verification
   public query ({ caller }) func checkUpgradeHealth() : async {
     residents : Nat;
     userProfiles : Nat;
+    nextResidentId : Nat;
   } {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can access upgrade health check");
@@ -1017,6 +1019,7 @@ actor {
     {
       residents = residents.size();
       userProfiles = userProfiles.size();
+      nextResidentId;
     };
   };
 };

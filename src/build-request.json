@@ -1,77 +1,104 @@
 {
   "kind": "build_request",
-  "title": "Add combined resident print report with active/discontinued medication tables and optional physician signature lines",
-  "priority": "normal",
+  "title": "Fix missing resident profiles after login (data persistence + UI error handling)",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-10",
-      "text": "Implement a combined print report for a resident that includes (1) resident profile information and (2) separate table sections for Active Medications and Discontinued Medications, using the resident’s existing medication status values to determine which table each medication appears in.",
-      "target": "frontend",
+      "id": "REQ-13",
+      "text": "Identify and fix the root cause of resident records becoming unavailable after login by auditing backend resident persistence and retrieval paths so resident data cannot be unintentionally lost, overwritten with partial data, or become unreachable after deployments/upgrades.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-6"
         ],
         "quotes": [
-          "print report must show resident profile, active medications and discontinued medications (in tables format separately)"
+          "resident profiles are now missing after logging in"
         ]
       },
       "acceptanceCriteria": [
-        "When printing the combined report for a resident, the print output includes a Resident Information/profile section.",
-        "The print output includes an “Active Medications” section rendered as a table, containing only medications with status = active.",
-        "The print output includes a “Discontinued Medications” section rendered as a separate table, containing only medications with status = discontinued.",
-        "If there are no medications in a section, the section renders a clear empty-state message (e.g., “No active medications prescribed” / “No discontinued medications”)."
+        "After logging in as an authorized user, `getAllResidents`, `getActiveResidents`, and `getDischargedResidents` return the expected residents (not an empty list) when residents exist in canister state.",
+        "Backend update flows that modify nested resident data (e.g., medication/vitals/MAR/ADL/weight updates) do not drop unrelated resident fields (no partial overwrite bugs).",
+        "Resident removal is only possible via the existing admin-only path and cannot be triggered indirectly by other mutations."
       ]
     },
     {
-      "id": "REQ-11",
-      "text": "Add an on-screen checkbox or toggle available before printing that controls whether the combined print report includes blank underline fields for “Physician Name” and “Physician Signature” intended for manual completion.",
-      "target": "frontend",
+      "id": "REQ-14",
+      "text": "Ensure resident data and required related state persists reliably across canister upgrades by implementing stable-state upgrade handling (e.g., preupgrade/postupgrade) for residents, user profiles, and all relevant next-ID counters; add a conditional migration if the stable layout changes.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-6"
         ],
         "quotes": [
-          "toggle to print with Physician's Name and Signature",
-          "on-screen checkbox or toggle before printing",
-          "just blank underline that they can manual write"
+          "resident profiles are now missing after logging in"
         ]
       },
       "acceptanceCriteria": [
-        "On the resident screen where the print action is initiated, there is a clearly labeled toggle/checkbox (English text) that controls inclusion of physician signature fields in the printed report.",
-        "When the toggle is OFF, the printed report does not show physician name/signature underline fields.",
-        "When the toggle is ON, the printed report includes two blank lines/underline fields labeled “Physician Name” and “Physician Signature” (no prefilled values)."
+        "Upgrading the backend canister does not reset or clear residents, user profiles, or ID counters; resident lists remain intact after upgrade.",
+        "New residents created after an upgrade continue using correct incrementing IDs (no ID reuse/collisions).",
+        "If a migration is required due to a state layout change, it runs conditionally and preserves existing data."
       ]
     },
     {
-      "id": "REQ-12",
-      "text": "Ensure the combined print report uses the existing shared print stylesheet conventions (e.g., the existing print root container and print utility classes) so the fixed-width @media print override applies consistently across desktop and mobile/tablet printing.",
-      "target": "frontend",
+      "id": "REQ-15",
+      "text": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-6"
         ],
         "quotes": [
-          "combined print report"
+          "resident profiles are now missing after logging in"
         ]
       },
       "acceptanceCriteria": [
-        "The combined print report’s printable root container opts into the shared print styles so that the global fixed-width print override applies.",
-        "Printing from mobile/tablet produces the same fixed-width desktop-style layout as desktop printing (no responsive reflow in the printed output)."
+        "There is a new admin-only query that returns at least: total resident count, active count, discharged count, and the next resident ID counter value.",
+        "The diagnostics query does not return resident names, DOB, notes, medication details, or other sensitive fields.",
+        "Non-admin callers are rejected (trap/unauthorized) when invoking the diagnostics query."
+      ]
+    },
+    {
+      "id": "REQ-16",
+      "text": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "resident profiles are now missing after logging in"
+        ]
+      },
+      "acceptanceCriteria": [
+        "If any resident list query (all/active/discharged) fails, the Dashboard displays an explicit error message in English (instead of showing “No residents found”).",
+        "The error UI includes a user-invokable retry control that triggers refetching/invalidation of the relevant resident queries.",
+        "When the backend returns an actual empty list successfully, the existing “No residents found” empty state continues to display."
       ]
     }
   ],
   "constraints": [
-    "Frontend must not modify files under frontend/immutablePaths (compose existing hooks and shadcn/ui components instead).",
-    "Backend must remain a single Motoko actor; only add migration handling if state layout changes (not expected for this request).",
-    "Use English for any user-facing text."
+    "Backend must remain a single Motoko actor with all logic in backend/main.mo (no additional backend services).",
+    "Create/modify backend/migration.mo only when needed by state layout changes, and keep migrations conditional per the project migration policy.",
+    "Do not edit frontend files under frontend/src/components/ui or any other frontend immutable paths listed in SYSTEM_CONTEXT.",
+    "Use English for all user-facing text."
   ],
   "nonGoals": [
-    "Do not add new backend fields to store physician name/signature; the signature fields must be blank lines for manual completion.",
-    "Do not change medication data models or statuses; only use existing active/discontinued status to split tables.",
-    "Do not add a third-party e-signature or digital signing workflow."
+    "Adding new resident management features beyond fixing missing data and improving load/error visibility.",
+    "Introducing external databases or non-Motoko backend components.",
+    "Implementing third-party auth providers beyond Internet Identity."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }
