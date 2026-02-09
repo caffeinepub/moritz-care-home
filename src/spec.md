@@ -1,12 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Ensure the app fails fast during startup when the backend is reachable but slow, showing an actionable error screen instead of waiting on long/infinite loading states.
+**Goal:** Fix backend user-profile handling so first-time authenticated users can load a missing profile as `null` and complete Profile Setup without pre-registration.
 
 **Planned changes:**
-- Add shorter, configurable startup timeouts (separate from the 45s watchdog) so actor creation and profile loading fail fast when they stall.
-- Wrap startup-critical requests (including `getCallerUserProfile` / `useGetCallerUserProfileStartup` and similar) with per-step `withTimeout` so slow/hanging calls transition into the existing error flow quickly.
-- Trigger `performHealthCheck` earlier during startup if loading exceeds a short threshold, so the UI can distinguish “backend unreachable” vs “backend reachable but slow” and tailor the error messaging and fallback timing.
-- Ensure “Retry Connection” clears any timed-out startup state and re-attempts actor creation and profile loading; “Logout” remains available from the startup error screen.
+- Update `getCallerUserProfile` to return Motoko `null` when the authenticated caller has no saved profile, instead of throwing/trapping or returning an error (e.g., "User is not registered").
+- Adjust backend authorization/guards so a newly authenticated principal can call `saveCallerUserProfile(profile)` to create their first profile without requiring an admin pre-registration or role assignment.
+- Preserve existing single-actor Motoko structure in `backend/main.mo`, adding migration code only if a state/schema upgrade is strictly required.
 
-**User-visible outcome:** When the backend is slow, users see a clear startup error screen within ~10–15 seconds (with Retry Connection and Logout) rather than being stuck on “Connecting to backend...” / “Loading your profile...” until the full 45 seconds elapse.
+**User-visible outcome:** A newly authenticated user will no longer hit “User is not registered” on initial profile load, and can proceed through Profile Setup and save their profile successfully.

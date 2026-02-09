@@ -291,8 +291,10 @@ actor {
 
   // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
+    // Allow any authenticated (non-anonymous) caller to check their profile
+    // This enables first-time users to see they have no profile (returns null)
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Anonymous users cannot access profiles");
     };
     userProfiles.get(caller);
   };
@@ -305,8 +307,10 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+    // Allow any authenticated (non-anonymous) caller to save their profile
+    // This enables first-time users to create their profile without admin pre-registration
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Anonymous users cannot save profiles");
     };
     userProfiles.add(caller, profile);
   };
@@ -1322,3 +1326,4 @@ actor {
     };
   };
 };
+

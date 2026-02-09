@@ -1,72 +1,40 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T19:53:43.476Z",
+  "generatedAt": "2026-02-09T21:29:21.332Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 0,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Update startup connection logic to fail fast (show StartupErrorScreen) when the backend is reachable but actor creation or profile loading is slow, instead of staying on the infinite \"Connecting to backend...\" / \"Loading your profile...\" screens until the full 45s watchdog expires.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/lib/startupTimings.ts",
-          "frontend/src/App.tsx",
-          "frontend/src/hooks/useResilientActor.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/lib/startupTimings.ts",
-          "frontend/src/App.tsx",
-          "frontend/src/hooks/useResilientActor.ts"
-        ]
+        "summary": "Update the backend user-profile lookup so a first-time (unregistered) authenticated caller does not receive an error for profile load. The `getCallerUserProfile` call must return `null`/`?UserProfile = null` when the caller has no saved profile, rather than throwing/trapping or returning an error like \"User is not registered\".",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Add explicit per-step timeouts to startup calls that can hang even when the backend is reachable, including the startup profile fetch (getCallerUserProfile) and any other startup-critical requests, using the existing timeout utility (withTimeout) so they error quickly and trigger the existing error UI flow.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/App.tsx",
-          "frontend/src/lib/startupTimings.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/App.tsx",
-          "frontend/src/lib/startupTimings.ts"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Run performHealthCheck earlier during slow startup (not only after an error/timeout), so the UI can distinguish \"backend unreachable\" vs \"backend reachable but slow\" and present the faster fallback accordingly.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/App.tsx",
-          "frontend/src/lib/startupTimings.ts",
-          "frontend/src/lib/startupDiagnostics.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/App.tsx",
-          "frontend/src/lib/startupTimings.ts",
-          "frontend/src/lib/startupDiagnostics.ts"
-        ]
+        "summary": "Ensure that a newly authenticated principal can complete initial profile setup without requiring prior registration/role assignment. Specifically, backend authorization must allow a first-time caller to (a) call `getCallerUserProfile()` and receive `null`, and (b) call `saveCallerUserProfile(profile)` successfully to create their profile (without an admin needing to pre-register them).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
-    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/hooks/useResilientActor.ts",
-    "frontend/src/lib/startupDiagnostics.ts",
-    "frontend/src/lib/startupTimings.ts",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

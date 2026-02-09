@@ -1,33 +1,38 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T19:53:43.473Z",
-  "summary": "The diff implements the requested fast-fail startup behavior via centralized timing constants, per-step timeouts for actor creation and startup profile loading, and an early background health check to distinguish reachable-but-slow backends. No clear required items appear unimplemented based on the provided diff summary, though some unrelated metadata/summary content was also changed.",
-  "missing_requirements": [],
-  "hallucinated_features": [
+  "generatedAt": "2026-02-09T21:29:21.330Z",
+  "summary": "The diff summary does not show any changes to the backend user-profile lookup/authorization logic (the displayed portion of `backend/main.mo` is unrelated type definitions), so REQ-1 and REQ-2 cannot be verified as implemented. The only clearly evidenced functional change is an update to `project_state.json`, which is not part of the BuildRequest requirements.",
+  "missing_requirements": [
     {
-      "description": "Unrelated UI/feature changes described (e.g., LoginPage opaque backgrounds/logo mode, Dashboard admin-only actions, ResidentProfile print toggles, dialog solid white backgrounds, global CSS print/layout overrides, date utils changes).",
-      "reason": "These changes are not requested by the BuildRequest (which is exclusively about startup/timeout/health-check logic). The only concrete evidence is that these unrelated changes are asserted inside a modified summary file rather than shown as actual code diffs.",
+      "id": "REQ-1",
+      "requirement": "Update `getCallerUserProfile` so that for a first-time (unregistered) authenticated caller it returns `null` (`?UserProfile = null`) instead of trapping/throwing/returning an error like \"User is not registered\".",
+      "reason": "The provided diff excerpt of `backend/main.mo` does not include `getCallerUserProfile` or any profile lookup/error handling logic, so there is no evidence that the return behavior or the \"User is not registered\" error path was changed.",
       "evidence": [
-        "frontend-file-summaries.txt"
+        "backend/main.mo (truncated; no getCallerUserProfile shown)"
       ]
     },
     {
-      "description": "Project tracking/state updates (new_feature_requests entries AR-1..AR-4, summary/known issues text).",
-      "reason": "Not requested as part of the functional requirements; appears to be repo metadata/state management rather than implementing startup behavior.",
+      "id": "REQ-2",
+      "requirement": "Allow a newly authenticated principal to complete initial profile setup without prior registration/role assignment: (a) `getCallerUserProfile()` returns null for new users, and (b) `saveCallerUserProfile(profile)` succeeds for first-time callers to create their profile.",
+      "reason": "The diff excerpt does not show any authorization or profile-save logic changes (no `saveCallerUserProfile` function or related authorization checks are visible), so there is no evidence that first-time callers can save a profile without admin pre-registration.",
+      "evidence": [
+        "backend/main.mo (truncated; no saveCallerUserProfile/authorization changes shown)"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "Project metadata/state tracking update (added/updated entries like AR-1/AR-2/AR-3 and issue notes) in `project_state.json`.",
+      "reason": "The BuildRequest only specifies backend Motoko behavior changes; it does not request adding/updating project tracking metadata.",
       "evidence": [
         "project_state.json"
       ]
     }
   ],
-  "confidence": 0.72,
+  "confidence": 0.38,
   "changed_files": [
-    "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/hooks/useResilientActor.ts",
-    "frontend/src/lib/startupDiagnostics.ts",
-    "frontend/src/lib/startupTimings.ts",
+    "backend/main.mo",
     "project_state.json"
   ]
 }

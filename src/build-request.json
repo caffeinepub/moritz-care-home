@@ -1,71 +1,50 @@
 {
   "kind": "build_request",
-  "title": "Force faster startup fallback when backend is reachable but slow",
+  "title": "Backend fix: allow unregistered users to fetch null profile and reach Profile Setup",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update startup connection logic to fail fast (show StartupErrorScreen) when the backend is reachable but actor creation or profile loading is slow, instead of staying on the infinite \"Connecting to backend...\" / \"Loading your profile...\" screens until the full 45s watchdog expires.",
-      "target": "frontend",
+      "text": "Update the backend user-profile lookup so a first-time (unregistered) authenticated caller does not receive an error for profile load. The `getCallerUserProfile` call must return `null`/`?UserProfile = null` when the caller has no saved profile, rather than throwing/trapping or returning an error like \"User is not registered\".",
+      "target": "backend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "apply a code fix that forces faster fallback when the backend is reachable but slow"
+          "please spply backend fix"
         ]
       },
       "acceptanceCriteria": [
-        "When authenticated and the backend is slow, the app shows an actionable error screen within a shorter, configurable timeframe (<= 15 seconds) rather than waiting the full STARTUP_TIMEOUT_MS (45s).",
-        "The error screen clearly indicates that the backend is reachable but responding slowly (based on health check), and offers Retry Connection and Logout actions.",
-        "The app does not remain indefinitely on a loading screen (\"Connecting to backend...\" or \"Loading your profile...\") in any of the startup paths."
+        "Calling `getCallerUserProfile()` for a principal with no profile returns `null` (Motoko `null`) and does not trap.",
+        "The backend no longer produces the error message \"User is not registered\" for the first-time profile lookup path."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add explicit per-step timeouts to startup calls that can hang even when the backend is reachable, including the startup profile fetch (getCallerUserProfile) and any other startup-critical requests, using the existing timeout utility (withTimeout) so they error quickly and trigger the existing error UI flow.",
-      "target": "frontend",
+      "text": "Ensure that a newly authenticated principal can complete initial profile setup without requiring prior registration/role assignment. Specifically, backend authorization must allow a first-time caller to (a) call `getCallerUserProfile()` and receive `null`, and (b) call `saveCallerUserProfile(profile)` successfully to create their profile (without an admin needing to pre-register them).",
+      "target": "backend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "forces faster fallback when the backend is reachable but slow"
+          "please spply backend fix"
         ]
       },
       "acceptanceCriteria": [
-        "The startup profile query (useGetCallerUserProfileStartup) times out and transitions to the Profile Load Failed error state within a defined timeout (<= 10–15 seconds) if the call does not resolve.",
-        "Timeout errors are normalized into user-facing messages consistent with existing error handling (normalizeError patterns).",
-        "Retry Connection from the error screen resets the timed-out state and re-attempts actor creation and profile load."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Run performHealthCheck earlier during slow startup (not only after an error/timeout), so the UI can distinguish \"backend unreachable\" vs \"backend reachable but slow\" and present the faster fallback accordingly.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "backend is reachable but slow"
-        ]
-      },
-      "acceptanceCriteria": [
-        "During startup loading, if actor/profile is still pending beyond a short threshold (<= 5 seconds), the app triggers performHealthCheck in the background (without blocking UI).",
-        "If the health check succeeds while startup is still pending, the app uses that reachability signal to drive the faster fallback behavior and messaging.",
-        "Health check calls remain protected by the existing timeouts in performHealthCheck and do not introduce new infinite waits."
+        "A principal that has never interacted with the canister can call `saveCallerUserProfile` once to create their profile without hitting an authorization trap.",
+        "After saving, `getCallerUserProfile()` returns the saved profile for that principal."
       ]
     }
   ],
   "constraints": [
-    "Do not edit any files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui (immutable paths).",
-    "Keep backend architecture unchanged (single Motoko actor); this request should be implemented purely via frontend startup/timeout logic unless a backend change is strictly required."
+    "Keep all Motoko logic within the existing single-actor backend (backend/main.mo).",
+    "Only add a migration (backend/migration.mo) if the change requires state/schema upgrade; otherwise, do not add migration code."
   ],
   "nonGoals": [
-    "Adding real-time connectivity (WebSockets) or push-based status updates.",
-    "Changing authentication provider (must remain Internet Identity).",
-    "Implementing new backend endpoints beyond what is required for the existing healthCheck-based diagnostics."
+    "No UI/UX changes to the Profile Setup screen or startup error screen.",
+    "No changes to resident/physician/pharmacy/insurance domain logic beyond what is necessary to fix the user profile registration flow."
   ],
   "imageRequirements": {
     "required": [],
