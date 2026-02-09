@@ -274,16 +274,60 @@ export interface backendInterface {
     generateMedicationReport(residentId: bigint): Promise<Array<Medication>>;
     generateResidentProfileReport(residentId: bigint): Promise<Resident | null>;
     getActiveResidents(): Promise<Array<Resident>>;
+    getAllInsuranceCompanies(): Promise<Array<Insurance>>;
+    getAllPharmacies(): Promise<Array<Pharmacy>>;
+    getAllPhysicians(): Promise<Array<Physician>>;
     getAllResidents(): Promise<Array<Resident>>;
+    getAllResponsiblePersons(): Promise<Array<ResponsiblePerson>>;
     getAllRoomNumbers(): Promise<Array<string>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDailyVitals(residentId: bigint): Promise<Array<DailyVitals>>;
     getDischargedResidents(): Promise<Array<Resident>>;
     getFilteredAndSortedResidents(status: ResidentStatus | null, sortBy: SortCriteria | null): Promise<Array<Resident>>;
+    getInsurance(id: bigint): Promise<Insurance | null>;
+    getNonArchivedResidents(): Promise<Array<Resident>>;
+    getPharmacy(id: bigint): Promise<Pharmacy | null>;
+    getPhysician(id: bigint): Promise<Physician | null>;
     getResident(id: bigint): Promise<Resident | null>;
+    getResidentCounts(): Promise<{
+        activeResidents: bigint;
+        archivedResidents: bigint;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    }>;
+    getResidentRoomMap(): Promise<Array<[bigint, string]>>;
+    getResidentStatistics(): Promise<{
+        residentsByRoom: Array<[bigint, string, string]>;
+        activeResidents: bigint;
+        residentsByRoomType: Array<[bigint, string, RoomType]>;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    }>;
     getResidentsByRoom(roomNumber: string): Promise<Array<Resident>>;
     getResidentsByRoomType(roomType: RoomType): Promise<Array<Resident>>;
+    getResponsiblePerson(id: bigint): Promise<ResponsiblePerson | null>;
+    getSystemDiagnostics(includeSample: boolean): Promise<{
+        nextIdCounters: {
+            nextPharmacyId: bigint;
+            nextResponsiblePersonId: bigint;
+            nextResidentId: bigint;
+            nextPhysicianId: bigint;
+            nextInsuranceId: bigint;
+            nextMedicationId: bigint;
+            nextWeightEntryId: bigint;
+            nextMarId: bigint;
+            nextAdlId: bigint;
+            nextDailyVitalsId: bigint;
+        };
+        sampleData?: Array<[bigint, string]>;
+        aggregateCounts: {
+            activeResidents: bigint;
+            archivedResidents: bigint;
+            dischargedResidents: bigint;
+            totalResidents: bigint;
+        };
+    }>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
     isCallerAdmin(): Promise<boolean>;
@@ -733,6 +777,48 @@ export class Backend implements backendInterface {
             return from_candid_vec_n49(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getAllInsuranceCompanies(): Promise<Array<Insurance>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllInsuranceCompanies();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllInsuranceCompanies();
+            return result;
+        }
+    }
+    async getAllPharmacies(): Promise<Array<Pharmacy>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllPharmacies();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllPharmacies();
+            return result;
+        }
+    }
+    async getAllPhysicians(): Promise<Array<Physician>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllPhysicians();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllPhysicians();
+            return result;
+        }
+    }
     async getAllResidents(): Promise<Array<Resident>> {
         if (this.processError) {
             try {
@@ -745,6 +831,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getAllResidents();
             return from_candid_vec_n49(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAllResponsiblePersons(): Promise<Array<ResponsiblePerson>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllResponsiblePersons();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllResponsiblePersons();
+            return result;
         }
     }
     async getAllRoomNumbers(): Promise<Array<string>> {
@@ -831,6 +931,62 @@ export class Backend implements backendInterface {
             return from_candid_vec_n49(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getInsurance(arg0: bigint): Promise<Insurance | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getInsurance(arg0);
+                return from_candid_opt_n40(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getInsurance(arg0);
+            return from_candid_opt_n40(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getNonArchivedResidents(): Promise<Array<Resident>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getNonArchivedResidents();
+                return from_candid_vec_n49(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getNonArchivedResidents();
+            return from_candid_vec_n49(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getPharmacy(arg0: bigint): Promise<Pharmacy | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPharmacy(arg0);
+                return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPharmacy(arg0);
+            return from_candid_opt_n42(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getPhysician(arg0: bigint): Promise<Physician | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getPhysician(arg0);
+                return from_candid_opt_n37(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getPhysician(arg0);
+            return from_candid_opt_n37(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getResident(arg0: bigint): Promise<Resident | null> {
         if (this.processError) {
             try {
@@ -843,6 +999,59 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getResident(arg0);
             return from_candid_opt_n24(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getResidentCounts(): Promise<{
+        activeResidents: bigint;
+        archivedResidents: bigint;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getResidentCounts();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getResidentCounts();
+            return result;
+        }
+    }
+    async getResidentRoomMap(): Promise<Array<[bigint, string]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getResidentRoomMap();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getResidentRoomMap();
+            return result;
+        }
+    }
+    async getResidentStatistics(): Promise<{
+        residentsByRoom: Array<[bigint, string, string]>;
+        activeResidents: bigint;
+        residentsByRoomType: Array<[bigint, string, RoomType]>;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getResidentStatistics();
+                return from_candid_record_n59(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getResidentStatistics();
+            return from_candid_record_n59(this._uploadFile, this._downloadFile, result);
         }
     }
     async getResidentsByRoom(arg0: string): Promise<Array<Resident>> {
@@ -871,6 +1080,54 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getResidentsByRoomType(to_candid_RoomType_n16(this._uploadFile, this._downloadFile, arg0));
             return from_candid_vec_n49(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getResponsiblePerson(arg0: bigint): Promise<ResponsiblePerson | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getResponsiblePerson(arg0);
+                return from_candid_opt_n62(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getResponsiblePerson(arg0);
+            return from_candid_opt_n62(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getSystemDiagnostics(arg0: boolean): Promise<{
+        nextIdCounters: {
+            nextPharmacyId: bigint;
+            nextResponsiblePersonId: bigint;
+            nextResidentId: bigint;
+            nextPhysicianId: bigint;
+            nextInsuranceId: bigint;
+            nextMedicationId: bigint;
+            nextWeightEntryId: bigint;
+            nextMarId: bigint;
+            nextAdlId: bigint;
+            nextDailyVitalsId: bigint;
+        };
+        sampleData?: Array<[bigint, string]>;
+        aggregateCounts: {
+            activeResidents: bigint;
+            archivedResidents: bigint;
+            dischargedResidents: bigint;
+            totalResidents: bigint;
+        };
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getSystemDiagnostics(arg0);
+                return from_candid_record_n63(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getSystemDiagnostics(arg0);
+            return from_candid_record_n63(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
@@ -1024,6 +1281,12 @@ function from_candid_opt_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n62(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ResponsiblePerson]): ResponsiblePerson | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n64(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [Array<[bigint, string]>]): Array<[bigint, string]> | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
@@ -1206,6 +1469,81 @@ function from_candid_record_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint
         topped_up_amount: record_opt_to_undefined(from_candid_opt_n7(_uploadFile, _downloadFile, value.topped_up_amount))
     };
 }
+function from_candid_record_n59(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    residentsByRoom: Array<[bigint, string, string]>;
+    activeResidents: bigint;
+    residentsByRoomType: Array<[bigint, string, _RoomType]>;
+    dischargedResidents: bigint;
+    totalResidents: bigint;
+}): {
+    residentsByRoom: Array<[bigint, string, string]>;
+    activeResidents: bigint;
+    residentsByRoomType: Array<[bigint, string, RoomType]>;
+    dischargedResidents: bigint;
+    totalResidents: bigint;
+} {
+    return {
+        residentsByRoom: value.residentsByRoom,
+        activeResidents: value.activeResidents,
+        residentsByRoomType: from_candid_vec_n60(_uploadFile, _downloadFile, value.residentsByRoomType),
+        dischargedResidents: value.dischargedResidents,
+        totalResidents: value.totalResidents
+    };
+}
+function from_candid_record_n63(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    nextIdCounters: {
+        nextPharmacyId: bigint;
+        nextResponsiblePersonId: bigint;
+        nextResidentId: bigint;
+        nextPhysicianId: bigint;
+        nextInsuranceId: bigint;
+        nextMedicationId: bigint;
+        nextWeightEntryId: bigint;
+        nextMarId: bigint;
+        nextAdlId: bigint;
+        nextDailyVitalsId: bigint;
+    };
+    sampleData: [] | [Array<[bigint, string]>];
+    aggregateCounts: {
+        activeResidents: bigint;
+        archivedResidents: bigint;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    };
+}): {
+    nextIdCounters: {
+        nextPharmacyId: bigint;
+        nextResponsiblePersonId: bigint;
+        nextResidentId: bigint;
+        nextPhysicianId: bigint;
+        nextInsuranceId: bigint;
+        nextMedicationId: bigint;
+        nextWeightEntryId: bigint;
+        nextMarId: bigint;
+        nextAdlId: bigint;
+        nextDailyVitalsId: bigint;
+    };
+    sampleData?: Array<[bigint, string]>;
+    aggregateCounts: {
+        activeResidents: bigint;
+        archivedResidents: bigint;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    };
+} {
+    return {
+        nextIdCounters: value.nextIdCounters,
+        sampleData: record_opt_to_undefined(from_candid_opt_n64(_uploadFile, _downloadFile, value.sampleData)),
+        aggregateCounts: value.aggregateCounts
+    };
+}
+function from_candid_tuple_n61(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [bigint, string, _RoomType]): [bigint, string, RoomType] {
+    return [
+        value[0],
+        value[1],
+        from_candid_RoomType_n47(_uploadFile, _downloadFile, value[2])
+    ];
+}
 function from_candid_variant_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     active: null;
 } | {
@@ -1272,6 +1610,9 @@ function from_candid_vec_n43(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
 }
 function from_candid_vec_n49(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_Resident>): Array<Resident> {
     return value.map((x)=>from_candid_Resident_n25(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n60(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<[bigint, string, _RoomType]>): Array<[bigint, string, RoomType]> {
+    return value.map((x)=>from_candid_tuple_n61(_uploadFile, _downloadFile, x));
 }
 function to_candid_AdministrationRoute_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AdministrationRoute): _AdministrationRoute {
     return to_candid_variant_n14(_uploadFile, _downloadFile, value);

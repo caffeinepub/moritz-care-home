@@ -174,16 +174,60 @@ export interface backendInterface {
     generateMedicationReport(residentId: bigint): Promise<Array<Medication>>;
     generateResidentProfileReport(residentId: bigint): Promise<Resident | null>;
     getActiveResidents(): Promise<Array<Resident>>;
+    getAllInsuranceCompanies(): Promise<Array<Insurance>>;
+    getAllPharmacies(): Promise<Array<Pharmacy>>;
+    getAllPhysicians(): Promise<Array<Physician>>;
     getAllResidents(): Promise<Array<Resident>>;
+    getAllResponsiblePersons(): Promise<Array<ResponsiblePerson>>;
     getAllRoomNumbers(): Promise<Array<string>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDailyVitals(residentId: bigint): Promise<Array<DailyVitals>>;
     getDischargedResidents(): Promise<Array<Resident>>;
     getFilteredAndSortedResidents(status: ResidentStatus | null, sortBy: SortCriteria | null): Promise<Array<Resident>>;
+    getInsurance(id: bigint): Promise<Insurance | null>;
+    getNonArchivedResidents(): Promise<Array<Resident>>;
+    getPharmacy(id: bigint): Promise<Pharmacy | null>;
+    getPhysician(id: bigint): Promise<Physician | null>;
     getResident(id: bigint): Promise<Resident | null>;
+    getResidentCounts(): Promise<{
+        activeResidents: bigint;
+        archivedResidents: bigint;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    }>;
+    getResidentRoomMap(): Promise<Array<[bigint, string]>>;
+    getResidentStatistics(): Promise<{
+        residentsByRoom: Array<[bigint, string, string]>;
+        activeResidents: bigint;
+        residentsByRoomType: Array<[bigint, string, RoomType]>;
+        dischargedResidents: bigint;
+        totalResidents: bigint;
+    }>;
     getResidentsByRoom(roomNumber: string): Promise<Array<Resident>>;
     getResidentsByRoomType(roomType: RoomType): Promise<Array<Resident>>;
+    getResponsiblePerson(id: bigint): Promise<ResponsiblePerson | null>;
+    getSystemDiagnostics(includeSample: boolean): Promise<{
+        nextIdCounters: {
+            nextPharmacyId: bigint;
+            nextResponsiblePersonId: bigint;
+            nextResidentId: bigint;
+            nextPhysicianId: bigint;
+            nextInsuranceId: bigint;
+            nextMedicationId: bigint;
+            nextWeightEntryId: bigint;
+            nextMarId: bigint;
+            nextAdlId: bigint;
+            nextDailyVitalsId: bigint;
+        };
+        sampleData?: Array<[bigint, string]>;
+        aggregateCounts: {
+            activeResidents: bigint;
+            archivedResidents: bigint;
+            dischargedResidents: bigint;
+            totalResidents: bigint;
+        };
+    }>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
     isCallerAdmin(): Promise<boolean>;

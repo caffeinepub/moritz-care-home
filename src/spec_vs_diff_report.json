@@ -1,38 +1,36 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T14:07:18.213Z",
-  "summary": "The diff appears to implement the requested Dashboard Discharge fixes by adding an admin-check query hook, updating Dashboard to use per-resident discharge loading state, adding user-facing error handling (including admin-only messaging), and ensuring resident list queries are invalidated so the UI reflects Discharged status without refresh. The diff also includes additional generalized actor/connection error utilities that were not explicitly requested.",
-  "missing_requirements": [],
-  "hallucinated_features": [
+  "generatedAt": "2026-02-09T14:51:12.418Z",
+  "summary": "The BuildRequest is to enable resident discharge and archive (deletion) actions from the Dashboard, with a constraint not to duplicate existing Dashboard actions already implemented in frontend/src/pages/Dashboard.tsx. The diff only modifies backend/main.mo and project_state.json; there are no frontend Dashboard changes shown, so the requested Dashboard enablement is not evidenced in this diff. The diff also includes backend/type/state changes and project metadata updates that are not requested by the BuildRequest.",
+  "missing_requirements": [
     {
-      "description": "Added/expanded generic backend connection utilities (promise timeout wrapper) beyond the specific Dashboard Discharge fix scope.",
-      "reason": "BuildRequest focuses on fixing Discharge UI behavior, error handling, and admin-only visibility on resident cards; a generic timeout wrapper is not mentioned.",
+      "requirement": "Enable resident discharge and archive (soft delete) actions from the Dashboard.",
+      "reason": "No changes are shown to any frontend Dashboard code (e.g., frontend/src/pages/Dashboard.tsx). The only modified files are backend/main.mo and project_state.json, which do not evidence enabling Dashboard actions.",
       "evidence": [
-        "frontend/src/lib/actorInit.ts"
-      ]
-    },
-    {
-      "description": "Added/expanded generalized error normalization and classification helpers (network/timeout/canister-not-found, non-fatal detection, authorization detection) not specifically limited to the Discharge action.",
-      "reason": "REQ-24 asks for explicit user-facing error handling for the Discharge action (including admin-only messaging). The diff adds a broad error utility likely used across the app, which is more than what was requested.",
-      "evidence": [
-        "frontend/src/lib/actorInit.ts"
-      ]
-    },
-    {
-      "description": "Introduced a new authorization query hook (useIsCallerAdmin) as a standalone reusable query.",
-      "reason": "REQ-25 requires preventing non-admin users from attempting admin-only actions; it does not explicitly require adding a dedicated reusable hook (though it may be a reasonable implementation choice).",
-      "evidence": [
-        "frontend/src/hooks/useQueries.ts"
+        "MODIFIED FILES list shows only: backend/main.mo, project_state.json"
       ]
     }
   ],
-  "confidence": 0.62,
+  "hallucinated_features": [
+    {
+      "description": "Backend/main.mo modifications (type/state logic changes) unrelated to enabling Dashboard discharge/archive actions.",
+      "reason": "The BuildRequest is about enabling actions from the Dashboard (frontend behavior). The diff shows changes only in backend/main.mo with type definitions and modules, without any explicit linkage to Dashboard UI actions in the provided summary.",
+      "evidence": [
+        "backend/main.mo"
+      ]
+    },
+    {
+      "description": "Project metadata/state update (project_state.json projectStateVersion/summary/features edits).",
+      "reason": "Updating project_state.json is not part of the BuildRequest and does not contribute to enabling discharge/archive actions from the Dashboard.",
+      "evidence": [
+        "project_state.json"
+      ]
+    }
+  ],
+  "confidence": 0.68,
   "changed_files": [
-    "frontend-file-summaries.txt",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/lib/actorInit.ts",
-    "frontend/src/pages/Dashboard.tsx",
+    "backend/main.mo",
     "project_state.json"
   ]
 }

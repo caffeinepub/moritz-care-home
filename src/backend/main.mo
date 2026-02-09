@@ -3,25 +3,23 @@ import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
 import Text "mo:core/Text";
 import Nat "mo:core/Nat";
-import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
-
+import List "mo:core/List";
 
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
 
-// migration clause
+// data migration clause for stable types only, not array
 
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   include MixinStorage();
 
-  // Types
   public type Resident = {
     id : Nat;
     firstName : Text;
@@ -532,6 +530,20 @@ actor {
     nextPhysicianId += 1;
   };
 
+  public query ({ caller }) func getAllPhysicians() : async [Physician] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view physicians");
+    };
+    physicians.values().toArray();
+  };
+
+  public query ({ caller }) func getPhysician(id : Nat) : async ?Physician {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view physicians");
+    };
+    physicians.get(id);
+  };
+
   // Pharmacy Management
   public shared ({ caller }) func addPharmacy(
     name : Text,
@@ -551,6 +563,20 @@ actor {
 
     pharmacies.add(nextPharmacyId, pharmacy);
     nextPharmacyId += 1;
+  };
+
+  public query ({ caller }) func getAllPharmacies() : async [Pharmacy] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view pharmacies");
+    };
+    pharmacies.values().toArray();
+  };
+
+  public query ({ caller }) func getPharmacy(id : Nat) : async ?Pharmacy {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view pharmacies");
+    };
+    pharmacies.get(id);
   };
 
   // Insurance Management
@@ -576,6 +602,20 @@ actor {
     nextInsuranceId += 1;
   };
 
+  public query ({ caller }) func getAllInsuranceCompanies() : async [Insurance] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view insurance companies");
+    };
+    insuranceCompanies.values().toArray();
+  };
+
+  public query ({ caller }) func getInsurance(id : Nat) : async ?Insurance {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view insurance companies");
+    };
+    insuranceCompanies.get(id);
+  };
+
   // Responsible Person Management
   public shared ({ caller }) func addResponsiblePerson(
     name : Text,
@@ -597,6 +637,20 @@ actor {
 
     responsiblePersons.add(nextResponsiblePersonId, person);
     nextResponsiblePersonId += 1;
+  };
+
+  public query ({ caller }) func getAllResponsiblePersons() : async [ResponsiblePerson] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view responsible persons");
+    };
+    responsiblePersons.values().toArray();
+  };
+
+  public query ({ caller }) func getResponsiblePerson(id : Nat) : async ?ResponsiblePerson {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view responsible persons");
+    };
+    responsiblePersons.get(id);
   };
 
   // Medication Management
@@ -1058,7 +1112,60 @@ actor {
     residents.values().toArray().find(func(r) { r.roomNumber == roomNumber });
   };
 
-  // Admin-only diagnostics for upgrade verification
+  public query ({ caller }) func getResidentCounts() : async {
+    totalResidents : Nat;
+    activeResidents : Nat;
+    dischargedResidents : Nat;
+    archivedResidents : Nat;
+  } {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can view resident counts");
+    };
+
+    var total = 0;
+    var active = 0;
+    var discharged = 0;
+    var archived = 0;
+
+    for ((_, resident) in residents.entries()) {
+      total += 1;
+      if (resident.isArchived) {
+        archived += 1;
+      } else {
+        switch (resident.status) {
+          case (#active) { active += 1 };
+          case (#discharged) { discharged += 1 };
+        };
+      };
+    };
+
+    {
+      totalResidents = total;
+      activeResidents = active;
+      dischargedResidents = discharged;
+      archivedResidents = archived;
+    };
+  };
+
+  public query ({ caller }) func getResidentRoomMap() : async [(Nat, Text)] {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can view resident room map");
+    };
+
+    residents.toArray().map(
+      func((id, resident)) { (id, resident.roomNumber) }
+    );
+  };
+
+  public query ({ caller }) func getNonArchivedResidents() : async [Resident] {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can view residents");
+    };
+    residents.values().toArray().filter(
+      func(r) { not r.isArchived }
+    );
+  };
+
   public query ({ caller }) func checkUpgradeHealth() : async {
     residents : Nat;
     userProfiles : Nat;
@@ -1071,6 +1178,123 @@ actor {
       residents = residents.size();
       userProfiles = userProfiles.size();
       nextResidentId;
+    };
+  };
+
+  // Admin-only comprehensive diagnostics endpoint
+  public query ({ caller }) func getSystemDiagnostics(includeSample : Bool) : async {
+    aggregateCounts : {
+      totalResidents : Nat;
+      activeResidents : Nat;
+      dischargedResidents : Nat;
+      archivedResidents : Nat;
+    };
+    nextIdCounters : {
+      nextResidentId : Nat;
+      nextPhysicianId : Nat;
+      nextPharmacyId : Nat;
+      nextInsuranceId : Nat;
+      nextResponsiblePersonId : Nat;
+      nextMedicationId : Nat;
+      nextMarId : Nat;
+      nextAdlId : Nat;
+      nextDailyVitalsId : Nat;
+      nextWeightEntryId : Nat;
+    };
+    sampleData : ?[(Nat, Text)];
+  } {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can access system diagnostics");
+    };
+
+    var total = 0;
+    var active = 0;
+    var discharged = 0;
+    var archived = 0;
+
+    for ((_, resident) in residents.entries()) {
+      total += 1;
+      if (resident.isArchived) {
+        archived += 1;
+      } else {
+        switch (resident.status) {
+          case (#active) { active += 1 };
+          case (#discharged) { discharged += 1 };
+        };
+      };
+    };
+
+    let sample : ?[(Nat, Text)] = if (includeSample) {
+      let allResidents = residents.toArray();
+      let sampleSize = Nat.min(10, allResidents.size());
+      let sampleArray = Array.tabulate(
+        sampleSize,
+        func(i) {
+          let (id, resident) = allResidents[i];
+          (id, resident.roomNumber);
+        }
+      );
+      ?sampleArray;
+    } else {
+      null;
+    };
+
+    {
+      aggregateCounts = {
+        totalResidents = total;
+        activeResidents = active;
+        dischargedResidents = discharged;
+        archivedResidents = archived;
+      };
+      nextIdCounters = {
+        nextResidentId;
+        nextPhysicianId;
+        nextPharmacyId;
+        nextInsuranceId;
+        nextResponsiblePersonId;
+        nextMedicationId;
+        nextMarId;
+        nextAdlId;
+        nextDailyVitalsId;
+        nextWeightEntryId;
+      };
+      sampleData = sample;
+    };
+  };
+
+  public query ({ caller }) func getResidentStatistics() : async {
+    totalResidents : Nat;
+    activeResidents : Nat;
+    dischargedResidents : Nat;
+    residentsByRoom : [(Nat, Text, Text)];
+    residentsByRoomType : [(Nat, Text, RoomType)];
+  } {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: Only users can view resident statistics");
+    };
+
+    var total = 0;
+    var active = 0;
+    var discharged = 0;
+    let residentsByRoom = List.empty<(Nat, Text, Text)>();
+    let residentsByRoomType = List.empty<(Nat, Text, RoomType)>();
+
+    for ((_, resident) in residents.entries()) {
+      total += 1;
+      switch (resident.status) {
+        case (#active) { active += 1 };
+        case (#discharged) { discharged += 1 };
+      };
+      residentsByRoom.add((resident.id, resident.roomNumber, resident.firstName));
+      residentsByRoomType.add((resident.id, resident.roomNumber, resident.roomType));
+    };
+
+    {
+      totalResidents = total;
+      activeResidents = active;
+      dischargedResidents = discharged;
+      residentsByRoom = residentsByRoom.toArray();
+      residentsByRoomType = residentsByRoomType.toArray();
     };
   };
 };

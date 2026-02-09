@@ -313,7 +313,15 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getActiveResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
+  'getAllInsuranceCompanies' : IDL.Func([], [IDL.Vec(Insurance)], ['query']),
+  'getAllPharmacies' : IDL.Func([], [IDL.Vec(Pharmacy)], ['query']),
+  'getAllPhysicians' : IDL.Func([], [IDL.Vec(Physician)], ['query']),
   'getAllResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
+  'getAllResponsiblePersons' : IDL.Func(
+      [],
+      [IDL.Vec(ResponsiblePerson)],
+      ['query'],
+    ),
   'getAllRoomNumbers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -324,11 +332,79 @@ export const idlService = IDL.Service({
       [IDL.Vec(Resident)],
       ['query'],
     ),
+  'getInsurance' : IDL.Func([IDL.Nat], [IDL.Opt(Insurance)], ['query']),
+  'getNonArchivedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
+  'getPharmacy' : IDL.Func([IDL.Nat], [IDL.Opt(Pharmacy)], ['query']),
+  'getPhysician' : IDL.Func([IDL.Nat], [IDL.Opt(Physician)], ['query']),
   'getResident' : IDL.Func([IDL.Nat], [IDL.Opt(Resident)], ['query']),
+  'getResidentCounts' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'activeResidents' : IDL.Nat,
+          'archivedResidents' : IDL.Nat,
+          'dischargedResidents' : IDL.Nat,
+          'totalResidents' : IDL.Nat,
+        }),
+      ],
+      ['query'],
+    ),
+  'getResidentRoomMap' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))],
+      ['query'],
+    ),
+  'getResidentStatistics' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'residentsByRoom' : IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text, IDL.Text)),
+          'activeResidents' : IDL.Nat,
+          'residentsByRoomType' : IDL.Vec(
+            IDL.Tuple(IDL.Nat, IDL.Text, RoomType)
+          ),
+          'dischargedResidents' : IDL.Nat,
+          'totalResidents' : IDL.Nat,
+        }),
+      ],
+      ['query'],
+    ),
   'getResidentsByRoom' : IDL.Func([IDL.Text], [IDL.Vec(Resident)], ['query']),
   'getResidentsByRoomType' : IDL.Func(
       [RoomType],
       [IDL.Vec(Resident)],
+      ['query'],
+    ),
+  'getResponsiblePerson' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Opt(ResponsiblePerson)],
+      ['query'],
+    ),
+  'getSystemDiagnostics' : IDL.Func(
+      [IDL.Bool],
+      [
+        IDL.Record({
+          'nextIdCounters' : IDL.Record({
+            'nextPharmacyId' : IDL.Nat,
+            'nextResponsiblePersonId' : IDL.Nat,
+            'nextResidentId' : IDL.Nat,
+            'nextPhysicianId' : IDL.Nat,
+            'nextInsuranceId' : IDL.Nat,
+            'nextMedicationId' : IDL.Nat,
+            'nextWeightEntryId' : IDL.Nat,
+            'nextMarId' : IDL.Nat,
+            'nextAdlId' : IDL.Nat,
+            'nextDailyVitalsId' : IDL.Nat,
+          }),
+          'sampleData' : IDL.Opt(IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))),
+          'aggregateCounts' : IDL.Record({
+            'activeResidents' : IDL.Nat,
+            'archivedResidents' : IDL.Nat,
+            'dischargedResidents' : IDL.Nat,
+            'totalResidents' : IDL.Nat,
+          }),
+        }),
+      ],
       ['query'],
     ),
   'getUserProfile' : IDL.Func(
@@ -689,7 +765,15 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getActiveResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
+    'getAllInsuranceCompanies' : IDL.Func([], [IDL.Vec(Insurance)], ['query']),
+    'getAllPharmacies' : IDL.Func([], [IDL.Vec(Pharmacy)], ['query']),
+    'getAllPhysicians' : IDL.Func([], [IDL.Vec(Physician)], ['query']),
     'getAllResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
+    'getAllResponsiblePersons' : IDL.Func(
+        [],
+        [IDL.Vec(ResponsiblePerson)],
+        ['query'],
+      ),
     'getAllRoomNumbers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -700,11 +784,79 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Resident)],
         ['query'],
       ),
+    'getInsurance' : IDL.Func([IDL.Nat], [IDL.Opt(Insurance)], ['query']),
+    'getNonArchivedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
+    'getPharmacy' : IDL.Func([IDL.Nat], [IDL.Opt(Pharmacy)], ['query']),
+    'getPhysician' : IDL.Func([IDL.Nat], [IDL.Opt(Physician)], ['query']),
     'getResident' : IDL.Func([IDL.Nat], [IDL.Opt(Resident)], ['query']),
+    'getResidentCounts' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'activeResidents' : IDL.Nat,
+            'archivedResidents' : IDL.Nat,
+            'dischargedResidents' : IDL.Nat,
+            'totalResidents' : IDL.Nat,
+          }),
+        ],
+        ['query'],
+      ),
+    'getResidentRoomMap' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))],
+        ['query'],
+      ),
+    'getResidentStatistics' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'residentsByRoom' : IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text, IDL.Text)),
+            'activeResidents' : IDL.Nat,
+            'residentsByRoomType' : IDL.Vec(
+              IDL.Tuple(IDL.Nat, IDL.Text, RoomType)
+            ),
+            'dischargedResidents' : IDL.Nat,
+            'totalResidents' : IDL.Nat,
+          }),
+        ],
+        ['query'],
+      ),
     'getResidentsByRoom' : IDL.Func([IDL.Text], [IDL.Vec(Resident)], ['query']),
     'getResidentsByRoomType' : IDL.Func(
         [RoomType],
         [IDL.Vec(Resident)],
+        ['query'],
+      ),
+    'getResponsiblePerson' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Opt(ResponsiblePerson)],
+        ['query'],
+      ),
+    'getSystemDiagnostics' : IDL.Func(
+        [IDL.Bool],
+        [
+          IDL.Record({
+            'nextIdCounters' : IDL.Record({
+              'nextPharmacyId' : IDL.Nat,
+              'nextResponsiblePersonId' : IDL.Nat,
+              'nextResidentId' : IDL.Nat,
+              'nextPhysicianId' : IDL.Nat,
+              'nextInsuranceId' : IDL.Nat,
+              'nextMedicationId' : IDL.Nat,
+              'nextWeightEntryId' : IDL.Nat,
+              'nextMarId' : IDL.Nat,
+              'nextAdlId' : IDL.Nat,
+              'nextDailyVitalsId' : IDL.Nat,
+            }),
+            'sampleData' : IDL.Opt(IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))),
+            'aggregateCounts' : IDL.Record({
+              'activeResidents' : IDL.Nat,
+              'archivedResidents' : IDL.Nat,
+              'dischargedResidents' : IDL.Nat,
+              'totalResidents' : IDL.Nat,
+            }),
+          }),
+        ],
         ['query'],
       ),
     'getUserProfile' : IDL.Func(

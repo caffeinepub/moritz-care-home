@@ -1,64 +1,25 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T14:07:18.217Z",
+  "generatedAt": "2026-02-09T14:51:12.421Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
-    "items": [
-      {
-        "id": "REQ-23",
-        "summary": "Fix the Dashboard “Discharge” resident action so that it reliably updates the resident status to Discharged and the UI immediately reflects the change (resident moves out of Active list and appears in Discharged list) after the mutation succeeds.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
-      },
-      {
-        "id": "REQ-24",
-        "summary": "Add explicit error handling for the Dashboard “Discharge” action so failures are visible to the user and include a clear message when the caller is not authorized (admin-only operation).",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/lib/actorInit.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/lib/actorInit.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
-      },
-      {
-        "id": "REQ-25",
-        "summary": "Update the Dashboard resident card action visibility/availability to prevent non-admin users from attempting admin-only actions (Discharge and Archive), while keeping View Profile available to all authenticated users.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
-      }
-    ]
+    "total": 0,
+    "implemented": 0,
+    "items": []
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
-    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/lib/actorInit.ts",
-    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

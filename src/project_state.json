@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 77,
+  "projectStateVersion": 81,
   "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
   "architectural_notes": [
     "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
@@ -26,7 +26,7 @@
     "Resident profiles intermittently disappear (backend issue causing resident records to become missing/not retrievable).",
     "Report print layouts may differ between desktop and mobile/tablet due to responsive CSS/print viewport behavior; needs a fixed-width @media print override for consistent output."
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "IF-1",
@@ -470,6 +470,36 @@
       "summary": "Implement backend auto-archive behavior: a discharged resident must automatically become archived after 1 month, without requiring a manual action in the UI.",
       "reqIds": [
         "REQ-19"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Review and fix backend issue causing the Dashboard resident list to show “failed to load residents” (investigate residents query/fetch errors and restore reliable loading).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Identify and fix the backend cause of the Dashboard showing “failed to load residents” by auditing the resident list query endpoints (at minimum `getAllResidents`, `getActiveResidents`, `getDischargedResidents`) for traps and authorization failures, and ensuring that authenticated users who should have `#user` access can reliably fetch residents after login and after deployments/upgrades.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Ensure resident data and required related backend state persists reliably across canister upgrades by implementing `system preupgrade`/`system postupgrade` handling in `backend/main.mo` for all resident-related state (residents map contents, all next-ID counters, and any user/access-control state required for resident reads). Add/update `backend/migration.mo` only if a stable layout migration is required by the chosen stable representation, following the project’s conditional migration policy.",
+      "reqIds": [
+        "REQ-27"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Add an admin-only backend diagnostics query that supports production verification of resident data integrity without exposing sensitive resident data. The diagnostics response must include aggregate counts (e.g., total residents, active/discharged/archived) and next-ID counter values, and may optionally include a small non-sensitive sample of resident identifiers (e.g., resident IDs and room numbers only).",
+      "reqIds": [
+        "REQ-28"
       ],
       "status": "pending"
     }

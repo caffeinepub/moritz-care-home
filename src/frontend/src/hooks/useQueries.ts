@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useResilientActor } from './useResilientActor';
+import { useActor } from './useActor';
 import type {
   Resident,
   UserProfile,
@@ -24,7 +24,7 @@ import type {
 // ============================================================================
 
 export function useGetCallerUserProfile() {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   const query = useQuery<UserProfile | null>({
     queryKey: ['currentUserProfile'],
@@ -44,7 +44,7 @@ export function useGetCallerUserProfile() {
 }
 
 export function useSaveCallerUserProfile() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -63,7 +63,7 @@ export function useSaveCallerUserProfile() {
 // ============================================================================
 
 export function useIsCallerAdmin() {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<boolean>({
     queryKey: ['isCallerAdmin'],
@@ -81,7 +81,7 @@ export function useIsCallerAdmin() {
 // ============================================================================
 
 export function useGetAllResidents() {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<Resident[]>({
     queryKey: ['residents', 'all'],
@@ -94,7 +94,7 @@ export function useGetAllResidents() {
 }
 
 export function useGetActiveResidents() {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<Resident[]>({
     queryKey: ['residents', 'active'],
@@ -107,7 +107,7 @@ export function useGetActiveResidents() {
 }
 
 export function useGetDischargedResidents() {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<Resident[]>({
     queryKey: ['residents', 'discharged'],
@@ -123,7 +123,7 @@ export function useGetFilteredAndSortedResidents(
   status: ResidentStatus | null,
   sortBy: SortCriteria | null
 ) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<Resident[]>({
     queryKey: ['residents', 'filtered', status, sortBy],
@@ -136,7 +136,7 @@ export function useGetFilteredAndSortedResidents(
 }
 
 export function useGetResident(id: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<Resident | null>({
     queryKey: ['resident', id?.toString()],
@@ -164,7 +164,7 @@ export function useGetResident(id: bigint | null) {
 }
 
 export function useAddResident() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -209,7 +209,7 @@ export function useAddResident() {
 }
 
 export function useUpdateResident() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -259,7 +259,7 @@ export function useUpdateResident() {
 }
 
 export function useDischargeResident() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -278,7 +278,7 @@ export function useDischargeResident() {
 }
 
 export function useArchiveResident() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -297,7 +297,7 @@ export function useArchiveResident() {
 
 // Legacy hooks - kept for backward compatibility but not used in Dashboard
 export function useToggleResidentStatus() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -315,7 +315,7 @@ export function useToggleResidentStatus() {
 }
 
 export function useRemoveResident() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -336,7 +336,7 @@ export function useRemoveResident() {
 // ============================================================================
 
 export function useAddMedication() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -370,7 +370,7 @@ export function useAddMedication() {
 }
 
 export function useEditMedication() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -406,7 +406,7 @@ export function useEditMedication() {
 }
 
 export function useUpdateMedicationStatus() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -434,7 +434,7 @@ export function useUpdateMedicationStatus() {
 // ============================================================================
 
 export function useAddMarRecord() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -461,7 +461,7 @@ export function useAddMarRecord() {
 }
 
 export function useGenerateMarReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<MedicationAdministrationRecord[]>({
     queryKey: ['marReport', residentId?.toString()],
@@ -478,7 +478,7 @@ export function useGenerateMarReport(residentId: bigint | null) {
 // ============================================================================
 
 export function useAddAdlRecord() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -505,7 +505,7 @@ export function useAddAdlRecord() {
 }
 
 export function useGenerateAdlReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<ADLRecord[]>({
     queryKey: ['adlReport', residentId?.toString()],
@@ -522,7 +522,7 @@ export function useGenerateAdlReport(residentId: bigint | null) {
 // ============================================================================
 
 export function useAddDailyVitals() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -560,7 +560,7 @@ export function useAddDailyVitals() {
 }
 
 export function useGetDailyVitals(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<DailyVitals[]>({
     queryKey: ['dailyVitals', residentId?.toString()],
@@ -577,7 +577,7 @@ export function useGetDailyVitals(residentId: bigint | null) {
 // ============================================================================
 
 export function useAddWeightEntry() {
-  const { actor } = useResilientActor();
+  const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -605,13 +605,43 @@ export function useAddWeightEntry() {
 }
 
 export function useGetWeightLog(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
+  const { actor, isFetching: actorFetching } = useActor();
 
   return useQuery<WeightEntry[]>({
     queryKey: ['weightLog', residentId?.toString()],
     queryFn: async () => {
       if (!actor || !residentId) return [];
       return actor.getWeightLog(residentId);
+    },
+    enabled: !!actor && !actorFetching && residentId !== null,
+  });
+}
+
+// ============================================================================
+// Medication Reports
+// ============================================================================
+
+export function useGenerateMedicationReport(residentId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Medication[]>({
+    queryKey: ['medicationReport', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.generateMedicationReport(residentId);
+    },
+    enabled: !!actor && !actorFetching && residentId !== null,
+  });
+}
+
+export function useGenerateFullMedicationReport(residentId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Medication[]>({
+    queryKey: ['fullMedicationReport', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.generateFullMedicationReport(residentId);
     },
     enabled: !!actor && !actorFetching && residentId !== null,
   });

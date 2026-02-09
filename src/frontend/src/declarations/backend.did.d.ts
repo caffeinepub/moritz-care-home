@@ -263,7 +263,11 @@ export interface _SERVICE {
   'generateMedicationReport' : ActorMethod<[bigint], Array<Medication>>,
   'generateResidentProfileReport' : ActorMethod<[bigint], [] | [Resident]>,
   'getActiveResidents' : ActorMethod<[], Array<Resident>>,
+  'getAllInsuranceCompanies' : ActorMethod<[], Array<Insurance>>,
+  'getAllPharmacies' : ActorMethod<[], Array<Pharmacy>>,
+  'getAllPhysicians' : ActorMethod<[], Array<Physician>>,
   'getAllResidents' : ActorMethod<[], Array<Resident>>,
+  'getAllResponsiblePersons' : ActorMethod<[], Array<ResponsiblePerson>>,
   'getAllRoomNumbers' : ActorMethod<[], Array<string>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -273,9 +277,58 @@ export interface _SERVICE {
     [[] | [ResidentStatus], [] | [SortCriteria]],
     Array<Resident>
   >,
+  'getInsurance' : ActorMethod<[bigint], [] | [Insurance]>,
+  'getNonArchivedResidents' : ActorMethod<[], Array<Resident>>,
+  'getPharmacy' : ActorMethod<[bigint], [] | [Pharmacy]>,
+  'getPhysician' : ActorMethod<[bigint], [] | [Physician]>,
   'getResident' : ActorMethod<[bigint], [] | [Resident]>,
+  'getResidentCounts' : ActorMethod<
+    [],
+    {
+      'activeResidents' : bigint,
+      'archivedResidents' : bigint,
+      'dischargedResidents' : bigint,
+      'totalResidents' : bigint,
+    }
+  >,
+  'getResidentRoomMap' : ActorMethod<[], Array<[bigint, string]>>,
+  'getResidentStatistics' : ActorMethod<
+    [],
+    {
+      'residentsByRoom' : Array<[bigint, string, string]>,
+      'activeResidents' : bigint,
+      'residentsByRoomType' : Array<[bigint, string, RoomType]>,
+      'dischargedResidents' : bigint,
+      'totalResidents' : bigint,
+    }
+  >,
   'getResidentsByRoom' : ActorMethod<[string], Array<Resident>>,
   'getResidentsByRoomType' : ActorMethod<[RoomType], Array<Resident>>,
+  'getResponsiblePerson' : ActorMethod<[bigint], [] | [ResponsiblePerson]>,
+  'getSystemDiagnostics' : ActorMethod<
+    [boolean],
+    {
+      'nextIdCounters' : {
+        'nextPharmacyId' : bigint,
+        'nextResponsiblePersonId' : bigint,
+        'nextResidentId' : bigint,
+        'nextPhysicianId' : bigint,
+        'nextInsuranceId' : bigint,
+        'nextMedicationId' : bigint,
+        'nextWeightEntryId' : bigint,
+        'nextMarId' : bigint,
+        'nextAdlId' : bigint,
+        'nextDailyVitalsId' : bigint,
+      },
+      'sampleData' : [] | [Array<[bigint, string]>],
+      'aggregateCounts' : {
+        'activeResidents' : bigint,
+        'archivedResidents' : bigint,
+        'dischargedResidents' : bigint,
+        'totalResidents' : bigint,
+      },
+    }
+  >,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getWeightLog' : ActorMethod<[bigint], Array<WeightEntry>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
