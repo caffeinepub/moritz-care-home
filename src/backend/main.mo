@@ -9,12 +9,13 @@ import Iter "mo:core/Iter";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
 
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
-import Migration "migration";
 
-(with migration = Migration.run)
+// migration clause
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -42,6 +43,8 @@ actor {
     adlRecords : [ADLRecord];
     dailyVitals : [DailyVitals];
     weightLog : [WeightEntry];
+    dischargeTimestamp : ?Int;
+    isArchived : Bool;
   };
 
   public type ResidentStatus = { #active; #discharged };
@@ -256,6 +259,40 @@ actor {
   var nextDailyVitalsId = 1;
   var nextWeightEntryId = 1;
 
+  // Archive Helper - now as a shared function that can be called periodically
+  public shared ({ caller }) func autoArchiveDischargedResidents() : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can trigger auto-archive");
+    };
+
+    let now = Time.now();
+    let archiveThreshold : Int = 30 * 24 * 60 * 60 * 1_000_000_000;
+
+    let archivedResidents = residents.map<Nat, Resident, Resident>(
+      func(_id, resident) {
+        switch (resident.status, resident.dischargeTimestamp) {
+          case (#discharged, ?dischargeTime) {
+            if (now - dischargeTime > archiveThreshold) {
+              { resident with isArchived = true };
+            } else { resident };
+          };
+          case (_, _) { resident };
+        };
+      }
+    );
+
+    residents.clear();
+    let archivedEntries = archivedResidents.entries();
+    for ((id, resident) in archivedEntries) {
+      residents.add(id, resident);
+    };
+  };
+
+  // Helper function to filter non-archived residents (read-only)
+  func filterNonArchived(residentsList : [Resident]) : [Resident] {
+    residentsList.filter(func(resident) { not resident.isArchived });
+  };
+
   // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
@@ -295,8 +332,8 @@ actor {
     responsiblePersonsData : [ResponsiblePerson],
     medications : [Medication],
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can add residents");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can add residents");
     };
 
     let resident : Resident = {
@@ -320,6 +357,8 @@ actor {
       adlRecords = [];
       dailyVitals = [];
       weightLog = [];
+      dischargeTimestamp = null;
+      isArchived = false;
     };
 
     residents.add(nextResidentId, resident);
@@ -344,8 +383,8 @@ actor {
     responsiblePersons : [ResponsiblePerson],
     medications : [Medication],
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can update residents");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can update residents");
     };
 
     let existing = switch (residents.get(id)) {
@@ -374,9 +413,9 @@ actor {
     residents.add(id, updatedResident);
   };
 
-  public shared ({ caller }) func toggleResidentStatus(id : Nat) : async () {
+  public shared ({ caller }) func dischargeResident(id : Nat) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
-      Runtime.trap("Unauthorized: Only admins can toggle resident status");
+      Runtime.trap("Unauthorized: Only admins can discharge residents");
     };
 
     let existing = switch (residents.get(id)) {
@@ -384,79 +423,91 @@ actor {
       case (?resident) { resident };
     };
 
-    let newStatus : ResidentStatus = switch (existing.status) {
-      case (#active) { #discharged };
-      case (#discharged) { #active };
+    let updatedResident : Resident = {
+      existing with
+      status = #discharged;
+      dischargeTimestamp = ?Time.now();
     };
-
-    let updatedResident : Resident = { existing with status = newStatus };
 
     residents.add(id, updatedResident);
   };
 
-  public shared ({ caller }) func removeResident(id : Nat) : async () {
+  public shared ({ caller }) func archiveResident(id : Nat) : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
-      Runtime.trap("Unauthorized: Only admins can remove residents");
+      Runtime.trap("Unauthorized: Only admins can archive residents");
     };
 
-    switch (residents.get(id)) {
-      case (null) { Runtime.trap("Resident not found (already removed)") };
-      case (?_) { residents.remove(id) };
+    let existing = switch (residents.get(id)) {
+      case (null) { Runtime.trap("Resident not found") };
+      case (?resident) { resident };
     };
+
+    let updatedResident : Resident = { existing with isArchived = true };
+    residents.add(id, updatedResident);
   };
 
   public query ({ caller }) func getResident(id : Nat) : async ?Resident {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");
     };
-    residents.get(id);
+    switch (residents.get(id)) {
+      case (?resident) { if (not resident.isArchived) { return ?resident } };
+      case (null) {};
+    };
+    null;
   };
 
   public query ({ caller }) func getAllResidents() : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");
     };
-    sortResidentsByBed(residents.values().toArray());
+    sortResidentsByBed(
+      filterNonArchived(residents.values().toArray())
+    );
   };
 
   public query ({ caller }) func getResidentsByRoom(roomNumber : Text) : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");
     };
-    let filtered = residents.values().toArray().filter(
-      func(r) { r.roomNumber == roomNumber }
+    sortResidentsByBed(
+      residents.values().toArray().filter(
+        func(r) { r.roomNumber == roomNumber and not r.isArchived }
+      )
     );
-    sortResidentsByBed(filtered);
   };
 
   public query ({ caller }) func getActiveResidents() : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");
     };
-    let filtered = residents.values().toArray().filter(
-      func(r) { r.status == #active }
+    sortResidentsByBed(
+      residents.values().toArray().filter(
+        func(r) { r.status == #active and not r.isArchived }
+      )
     );
-    sortResidentsByBed(filtered);
   };
 
   public query ({ caller }) func getDischargedResidents() : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");
     };
-    let filtered = residents.values().toArray().filter(
-      func(r) { r.status == #discharged }
+    sortResidentsByBed(
+      residents.values().toArray().filter(
+        func(r) { r.status == #discharged and not r.isArchived }
+      )
     );
-    sortResidentsByBed(filtered);
   };
 
   public query ({ caller }) func getResidentsByRoomType(roomType : RoomType) : async [Resident] {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");
     };
-    let filtered = residents.values().toArray().filter(
-      func(r) { r.roomType == roomType }
+    sortResidentsByBed(
+      residents.values().toArray().filter(
+        func(r) { r.roomType == roomType and not r.isArchived }
+      )
     );
-    sortResidentsByBed(filtered);
   };
 
   // Physician Management
@@ -559,8 +610,8 @@ actor {
     dosageQuantity : Text,
     notes : Text
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can add medications");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can add medications");
     };
 
     let resident = switch (residents.get(residentId)) {
@@ -594,8 +645,8 @@ actor {
     medicationId : Nat,
     status : MedicationStatus
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can modify medication status");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can modify medication status");
     };
 
     let resident : Resident = switch (residents.get(residentId)) {
@@ -630,8 +681,8 @@ actor {
     dosageQuantity : Text,
     notes : Text
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can edit medications");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can edit medications");
     };
 
     let resident : Resident = switch (residents.get(residentId)) {
@@ -674,8 +725,8 @@ actor {
     notes : Text,
     status : MedicationStatus,
   ) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only authorized users can update medications");
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can update medications");
     };
 
     let resident : Resident = switch (residents.get(residentId)) {

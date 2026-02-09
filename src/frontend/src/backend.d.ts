@@ -27,12 +27,14 @@ export interface Resident {
     admissionDate: bigint;
     marRecords: Array<MedicationAdministrationRecord>;
     adlRecords: Array<ADLRecord>;
+    isArchived: boolean;
     roomNumber: string;
     insurance?: Insurance;
     medications: Array<Medication>;
     pharmacy?: Pharmacy;
     dailyVitals: Array<DailyVitals>;
     responsiblePersons: Array<ResponsiblePerson>;
+    dischargeTimestamp?: bigint;
     medicaidNumber: string;
     physicians: Array<Physician>;
     lastName: string;
@@ -154,13 +156,16 @@ export interface backendInterface {
     addResident(firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, roomNumber: string, roomType: RoomType, bed: string | null, physiciansData: Array<Physician>, pharmacyData: Pharmacy | null, insuranceData: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersonsData: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<void>;
     addResponsiblePerson(name: string, relationship: string, contactNumber: string, address: string): Promise<void>;
     addWeightEntry(residentId: bigint, weight: number, weightUnit: string, measurementDate: bigint, notes: string): Promise<void>;
+    archiveResident(id: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    autoArchiveDischargedResidents(): Promise<void>;
     calculateAge(_dateOfBirth: bigint): Promise<bigint>;
     checkUpgradeHealth(): Promise<{
         residents: bigint;
         nextResidentId: bigint;
         userProfiles: bigint;
     }>;
+    dischargeResident(id: bigint): Promise<void>;
     editMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string): Promise<void>;
     findResidentByRoom(roomNumber: string): Promise<Resident | null>;
     generateAdlReport(residentId: bigint): Promise<Array<ADLRecord>>;
@@ -182,9 +187,7 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
     isCallerAdmin(): Promise<boolean>;
-    removeResident(id: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    toggleResidentStatus(id: bigint): Promise<void>;
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;
     updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<void>;

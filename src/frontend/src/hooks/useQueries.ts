@@ -59,6 +59,24 @@ export function useSaveCallerUserProfile() {
 }
 
 // ============================================================================
+// Authorization Queries
+// ============================================================================
+
+export function useIsCallerAdmin() {
+  const { actor, isFetching: actorFetching } = useResilientActor();
+
+  return useQuery<boolean>({
+    queryKey: ['isCallerAdmin'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.isCallerAdmin();
+    },
+    enabled: !!actor && !actorFetching,
+    retry: false,
+  });
+}
+
+// ============================================================================
 // Resident Queries
 // ============================================================================
 
@@ -240,6 +258,44 @@ export function useUpdateResident() {
   });
 }
 
+export function useDischargeResident() {
+  const { actor } = useResilientActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.dischargeResident(id);
+    },
+    onSuccess: (_, id) => {
+      // Invalidate all resident list queries to ensure UI consistency
+      queryClient.invalidateQueries({ queryKey: ['residents', 'all'] });
+      queryClient.invalidateQueries({ queryKey: ['residents', 'active'] });
+      queryClient.invalidateQueries({ queryKey: ['residents', 'discharged'] });
+      queryClient.invalidateQueries({ queryKey: ['resident', id.toString()] });
+    },
+  });
+}
+
+export function useArchiveResident() {
+  const { actor } = useResilientActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.archiveResident(id);
+    },
+    onSuccess: () => {
+      // Invalidate all resident list queries
+      queryClient.invalidateQueries({ queryKey: ['residents', 'all'] });
+      queryClient.invalidateQueries({ queryKey: ['residents', 'active'] });
+      queryClient.invalidateQueries({ queryKey: ['residents', 'discharged'] });
+    },
+  });
+}
+
+// Legacy hooks - kept for backward compatibility but not used in Dashboard
 export function useToggleResidentStatus() {
   const { actor } = useResilientActor();
   const queryClient = useQueryClient();
@@ -247,7 +303,9 @@ export function useToggleResidentStatus() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.toggleResidentStatus(id);
+      // Note: toggleResidentStatus is not in the backend interface
+      // This is kept for backward compatibility but should not be used
+      throw new Error('toggleResidentStatus is deprecated. Use dischargeResident or archiveResident instead.');
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -263,7 +321,9 @@ export function useRemoveResident() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.removeResident(id);
+      // Note: removeResident is not in the backend interface
+      // This is kept for backward compatibility but should not be used
+      throw new Error('removeResident is deprecated. Use archiveResident instead.');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -552,36 +612,6 @@ export function useGetWeightLog(residentId: bigint | null) {
     queryFn: async () => {
       if (!actor || !residentId) return [];
       return actor.getWeightLog(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
-// ============================================================================
-// Reports
-// ============================================================================
-
-export function useGenerateMedicationReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
-
-  return useQuery<Medication[]>({
-    queryKey: ['medicationReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateMedicationReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
-export function useGenerateFullMedicationReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useResilientActor();
-
-  return useQuery<Medication[]>({
-    queryKey: ['fullMedicationReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateFullMedicationReport(residentId);
     },
     enabled: !!actor && !actorFetching && residentId !== null,
   });

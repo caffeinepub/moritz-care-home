@@ -1,104 +1,74 @@
 {
   "kind": "build_request",
-  "title": "Fix missing resident profiles after login (data persistence + UI error handling)",
+  "title": "Fix Dashboard resident discharge action not working",
   "priority": "high",
   "requirements": [
     {
-      "id": "REQ-13",
-      "text": "Identify and fix the root cause of resident records becoming unavailable after login by auditing backend resident persistence and retrieval paths so resident data cannot be unintentionally lost, overwritten with partial data, or become unreachable after deployments/upgrades.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ],
-        "quotes": [
-          "resident profiles are now missing after logging in"
-        ]
-      },
-      "acceptanceCriteria": [
-        "After logging in as an authorized user, `getAllResidents`, `getActiveResidents`, and `getDischargedResidents` return the expected residents (not an empty list) when residents exist in canister state.",
-        "Backend update flows that modify nested resident data (e.g., medication/vitals/MAR/ADL/weight updates) do not drop unrelated resident fields (no partial overwrite bugs).",
-        "Resident removal is only possible via the existing admin-only path and cannot be triggered indirectly by other mutations."
-      ]
-    },
-    {
-      "id": "REQ-14",
-      "text": "Ensure resident data and required related state persists reliably across canister upgrades by implementing stable-state upgrade handling (e.g., preupgrade/postupgrade) for residents, user profiles, and all relevant next-ID counters; add a conditional migration if the stable layout changes.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ],
-        "quotes": [
-          "resident profiles are now missing after logging in"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Upgrading the backend canister does not reset or clear residents, user profiles, or ID counters; resident lists remain intact after upgrade.",
-        "New residents created after an upgrade continue using correct incrementing IDs (no ID reuse/collisions).",
-        "If a migration is required due to a state layout change, it runs conditionally and preserves existing data."
-      ]
-    },
-    {
-      "id": "REQ-15",
-      "text": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ],
-        "quotes": [
-          "resident profiles are now missing after logging in"
-        ]
-      },
-      "acceptanceCriteria": [
-        "There is a new admin-only query that returns at least: total resident count, active count, discharged count, and the next resident ID counter value.",
-        "The diagnostics query does not return resident names, DOB, notes, medication details, or other sensitive fields.",
-        "Non-admin callers are rejected (trap/unauthorized) when invoking the diagnostics query."
-      ]
-    },
-    {
-      "id": "REQ-16",
-      "text": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
+      "id": "REQ-23",
+      "text": "Fix the Dashboard “Discharge” resident action so that it reliably updates the resident status to Discharged and the UI immediately reflects the change (resident moves out of Active list and appears in Discharged list) after the mutation succeeds.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-6"
         ],
         "quotes": [
-          "resident profiles are now missing after logging in"
+          "discharge option not working"
         ]
       },
       "acceptanceCriteria": [
-        "If any resident list query (all/active/discharged) fails, the Dashboard displays an explicit error message in English (instead of showing “No residents found”).",
-        "The error UI includes a user-invokable retry control that triggers refetching/invalidation of the relevant resident queries.",
-        "When the backend returns an actual empty list successfully, the existing “No residents found” empty state continues to display."
+        "From the Dashboard, clicking “Discharge” on an Active resident results in the resident showing as Discharged in the UI (badge updates and resident appears in the Discharged tab) without requiring a manual page refresh.",
+        "The Active, All, and Discharged resident queries are refreshed/invalidated in a way that guarantees the updated resident appears in the correct tab(s) after discharge completes successfully.",
+        "The Discharge button shows an in-progress state only for the resident being discharged (or otherwise does not block unrelated resident actions unnecessarily)."
+      ]
+    },
+    {
+      "id": "REQ-24",
+      "text": "Add explicit error handling for the Dashboard “Discharge” action so failures are visible to the user and include a clear message when the caller is not authorized (admin-only operation).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "discharge option not working"
+        ]
+      },
+      "acceptanceCriteria": [
+        "If discharging fails, the UI shows a user-facing error message in English (e.g., toast or inline alert) instead of failing silently.",
+        "If the backend returns an unauthorized/admin-only error, the user-facing message explicitly indicates that only admins can discharge residents.",
+        "After a discharge failure, the UI remains usable and the resident lists remain consistent (no incorrect tab movement)."
+      ]
+    },
+    {
+      "id": "REQ-25",
+      "text": "Update the Dashboard resident card action visibility/availability to prevent non-admin users from attempting admin-only actions (Discharge and Archive), while keeping View Profile available to all authenticated users.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "discharge option not working"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When the logged-in user is not an admin, the Discharge and Archive actions are not shown (or are shown disabled with clear admin-only labeling) on resident cards.",
+        "When the logged-in user is an admin, the Discharge and Archive actions remain available and function as expected.",
+        "User-facing text for any disabled/admin-only state is in English."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor with all logic in backend/main.mo (no additional backend services).",
-    "Create/modify backend/migration.mo only when needed by state layout changes, and keep migrations conditional per the project migration policy.",
-    "Do not edit frontend files under frontend/src/components/ui or any other frontend immutable paths listed in SYSTEM_CONTEXT.",
-    "Use English for all user-facing text."
+    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or anything in frontend/src/components/ui (compose these components instead).",
+    "Backend must remain a single Motoko actor in backend/main.mo; only add migration logic if a stable state layout change is required."
   ],
   "nonGoals": [
-    "Adding new resident management features beyond fixing missing data and improving load/error visibility.",
-    "Introducing external databases or non-Motoko backend components.",
-    "Implementing third-party auth providers beyond Internet Identity."
+    "Do not change the business rule that discharging residents is an admin-only operation unless explicitly requested.",
+    "Do not add new resident lifecycle features (e.g., changing the 1-month auto-archive policy) as part of this fix.",
+    "Do not redesign the Dashboard UI beyond what is necessary to make Discharge work and to communicate errors/permissions clearly."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

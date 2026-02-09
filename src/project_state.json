@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 71,
+  "projectStateVersion": 77,
   "summary": "Moritz Care Home is an Assisted Living Management System built on the Internet Computer. It provides staff authentication via Internet Identity, role-based authorization (admin/user/guest), and resident management workflows including resident intake/editing, room/bed tracking, medication management (with routes and active/discontinued status), MAR and ADL logging, and clinical tracking such as daily vitals (including optional blood glucose) and weight entries. The frontend is a React SPA (TanStack Router + React Query + shadcn/ui + Tailwind) with robust data-fetching/error handling, print-friendly resident profile reports, and consistent opaque healthcare-themed UI styling. The backend is a Motoko canister storing residents and related records in in-canister maps and includes mixins for access control and Caffeine blob-storage maintenance operations. The repo now also includes a reusable build/deploy template (Dockerfile, ICP canister YAMLs, scripts, and frontend lint rules) to standardize packaging and deployment.",
   "architectural_notes": [
     "Internet Computer architecture: Motoko canister backend (actor) + React SPA frontend using an agent-based actor interface.",
@@ -326,6 +326,54 @@
         "REQ-16"
       ],
       "version": 1
+    },
+    {
+      "id": "feature-update-the-dashboard-resident-cards-to-provide-explicit-row-level-actions-for-discharge-and-delete-soft-archive-as-requested-including-a-confirmation-dialog-for-delete-archive",
+      "title": "Update the Dashboard resident cards to provide explicit row-level actions for Discharge and Delete (soft archive) as requested, including a confirmation dialog for Delete (archive).",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-react-query-hooks-and-typing-to-call-the-new-backend-apis-for-discharge-and-soft-archive-delete-from-the-dashboard-while-keeping-existing-resident-list-queries-working-with-the-new-archived-behavior",
+      "title": "Update React Query hooks and typing to call the new backend APIs for discharge and soft-archive delete from the Dashboard, while keeping existing resident list queries working with the new archived behavior.",
+      "reqIds": [
+        "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-publish-the-current-reviewed-build-version-89-to-the-live-production-environment-with-no-additional-feature-changes",
+      "title": "Publish the current reviewed build (Version 89) to the live/production environment with no additional feature changes.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-dashboard-discharge-resident-action-so-that-it-reliably-updates-the-resident-status-to-discharged-and-the-ui-immediately-reflects-the-change-resident-moves-out-of-active-list-and-appears-in-discharged-list-after-the-mutation-succeeds",
+      "title": "Fix the Dashboard “Discharge” resident action so that it reliably updates the resident status to Discharged and the UI immediately reflects the change (resident moves out of Active list and appears in Discharged list) after the mutation succeeds.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-explicit-error-handling-for-the-dashboard-discharge-action-so-failures-are-visible-to-the-user-and-include-a-clear-message-when-the-caller-is-not-authorized-admin-only-operation",
+      "title": "Add explicit error handling for the Dashboard “Discharge” action so failures are visible to the user and include a clear message when the caller is not authorized (admin-only operation).",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-dashboard-resident-card-action-visibility-availability-to-prevent-non-admin-users-from-attempting-admin-only-actions-discharge-and-archive-while-keeping-view-profile-available-to-all-authenticated-users",
+      "title": "Update the Dashboard resident card action visibility/availability to prevent non-admin users from attempting admin-only actions (Discharge and Archive), while keeping View Profile available to all authenticated users.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
     }
   ],
   "new_feature_requests": [
@@ -392,6 +440,36 @@
       "summary": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
       "reqIds": [
         "REQ-15"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Add Discharge and soft Delete (archive) actions directly on each resident row/card in the Dashboard; Discharge sets status to Discharged and auto-archives the resident after 1 month; Delete performs a soft/archive delete (not a hard delete).",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Update backend resident data model to support soft-archiving residents (instead of hard delete) and to support auto-archiving 1 month after a resident is discharged.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Replace the current hard-delete behavior of `removeResident` with a soft-archive operation, and add explicit backend APIs to (a) discharge a resident and (b) archive a resident, so the Dashboard can offer separate Discharge and Delete (archive) actions without relying on a status toggle.",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Implement backend auto-archive behavior: a discharged resident must automatically become archived after 1 month, without requiring a manual action in the UI.",
+      "reqIds": [
+        "REQ-19"
       ],
       "status": "pending"
     }

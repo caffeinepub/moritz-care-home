@@ -1,71 +1,37 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T04:07:03.100Z",
-  "summary": "Backend: added a migration module and wired `main.mo` to use `with migration = Migration.run`, but the diff excerpt does not show the required stable-state (preupgrade/postupgrade) persistence or the new admin-only diagnostics query, nor does it demonstrate fixes to resident data loss/partial overwrite paths. Frontend: Dashboard and query hooks were updated to surface query errors and expose retry/refetch controls, aligning with the requested “failed to load vs empty state” distinction. Several additional frontend UI/styling changes appear unrelated to the BuildRequest.",
-  "missing_requirements": [
-    {
-      "id": "REQ-13",
-      "requirement": "Fix root cause of resident records becoming unavailable after login by auditing/fixing backend resident persistence/retrieval so data is not lost/overwritten/unreachable; ensure nested-update flows do not drop unrelated fields; ensure removal only via existing admin-only path.",
-      "reason": "The diff summary shows type definitions and migration wiring but does not provide evidence of changes to resident retrieval functions (`getAllResidents`/`getActiveResidents`/`getDischargedResidents`) or to resident mutation/update code paths that would prevent partial overwrites or unintended deletion. The shown portion of `backend/main.mo` is truncated before any of these functions/flows are visible.",
-      "evidence": [
-        "backend/main.mo (truncated; only shows types/comparers and migration wiring)"
-      ]
-    },
-    {
-      "id": "REQ-14",
-      "requirement": "Implement stable-state upgrade handling (preupgrade/postupgrade) so residents, user profiles, and next-ID counters persist across upgrades; add conditional migration only if layout changes.",
-      "reason": "While `backend/migration.mo` was added and `main.mo` references `with migration = Migration.run`, the diff excerpt does not show any `system func preupgrade` / `system func postupgrade` (or equivalent stable var persistence) that actually preserves residents/userProfiles/ID counters across upgrades. Also, the migration shown performs no conditional logic and no transformations, but the requirement is specifically about reliable upgrade persistence and conditional migrations when layout changes.",
-      "evidence": [
-        "backend/main.mo (truncated; no preupgrade/postupgrade shown)",
-        "backend/migration.mo (defines OldActor/NewActor identical; `run` returns `old` unconditionally)"
-      ]
-    },
-    {
-      "id": "REQ-15",
-      "requirement": "Add a new admin-only backend diagnostics query returning aggregate counts (total/active/discharged) and next resident ID counter (and optionally non-sensitive sample like IDs/room numbers), rejecting non-admin callers, without exposing sensitive resident details.",
-      "reason": "No diagnostics query is shown in the backend diff excerpt. The only visible backend changes are type definitions, ordering helpers, and migration wiring; nothing evidences a new admin-only query or its authorization/sanitization behavior.",
-      "evidence": [
-        "backend/main.mo (truncated; no diagnostics query shown)"
-      ]
-    }
-  ],
+  "generatedAt": "2026-02-09T14:07:18.213Z",
+  "summary": "The diff appears to implement the requested Dashboard Discharge fixes by adding an admin-check query hook, updating Dashboard to use per-resident discharge loading state, adding user-facing error handling (including admin-only messaging), and ensuring resident list queries are invalidated so the UI reflects Discharged status without refresh. The diff also includes additional generalized actor/connection error utilities that were not explicitly requested.",
+  "missing_requirements": [],
   "hallucinated_features": [
     {
-      "description": "Frontend Login page visual/styling changes (opaque backgrounds, teal overlay, logo aspect handling).",
-      "reason": "Not requested by REQ-13/14/15/16; BuildRequest scope explicitly focuses on resident persistence and Dashboard resident list load/error visibility.",
+      "description": "Added/expanded generic backend connection utilities (promise timeout wrapper) beyond the specific Dashboard Discharge fix scope.",
+      "reason": "BuildRequest focuses on fixing Discharge UI behavior, error handling, and admin-only visibility on resident cards; a generic timeout wrapper is not mentioned.",
       "evidence": [
-        "frontend-file-summaries.txt (mentions changes to `frontend/src/pages/LoginPage.tsx`)"
+        "frontend/src/lib/actorInit.ts"
       ]
     },
     {
-      "description": "Resident Profile report/printing enhancements (combined print report, physician signature line toggle, print style changes, fixed-width layout overrides).",
-      "reason": "Not requested; outside the stated non-goals (no new resident management features beyond missing data fix and load/error visibility).",
+      "description": "Added/expanded generalized error normalization and classification helpers (network/timeout/canister-not-found, non-fatal detection, authorization detection) not specifically limited to the Discharge action.",
+      "reason": "REQ-24 asks for explicit user-facing error handling for the Discharge action (including admin-only messaging). The diff adds a broad error utility likely used across the app, which is more than what was requested.",
       "evidence": [
-        "frontend-file-summaries.txt (mentions `frontend/src/pages/ResidentProfile.tsx` and `frontend/src/index.css` print/layout changes)"
+        "frontend/src/lib/actorInit.ts"
       ]
     },
     {
-      "description": "Widespread dialog/UI styling changes enforcing solid white backgrounds across many components (Add/Edit resident, MAR/ADL/Medication dialogs, etc.).",
-      "reason": "Not requested by the BuildRequest; REQ-16 only asked for Dashboard resident list error-state handling with retry.",
+      "description": "Introduced a new authorization query hook (useIsCallerAdmin) as a standalone reusable query.",
+      "reason": "REQ-25 requires preventing non-admin users from attempting admin-only actions; it does not explicitly require adding a dedicated reusable hook (though it may be a reasonable implementation choice).",
       "evidence": [
-        "frontend-file-summaries.txt (mentions `frontend/src/components/AddResidentDialog.tsx`, `EditResidentDialog.tsx`, `AddMarRecordDialog.tsx`, `AddAdlRecordDialog.tsx`, `AddMedicationDialog.tsx`, `EditMedicationDialog.tsx`, `frontend/src/index.css`)"
-      ]
-    },
-    {
-      "description": "Resilient actor initialization changes and additional app-level routing/auth flow behavior beyond resident list error UX.",
-      "reason": "Not requested; REQ-16 targets Dashboard resident list query error handling specifically, not broader app initialization behavior.",
-      "evidence": [
-        "frontend-file-summaries.txt (mentions `frontend/src/App.tsx` changes: resilient actor initialization with retry mechanism, additional error handling)"
+        "frontend/src/hooks/useQueries.ts"
       ]
     }
   ],
-  "confidence": 0.64,
+  "confidence": 0.62,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/actorInit.ts",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]

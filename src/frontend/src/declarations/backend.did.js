@@ -131,12 +131,14 @@ export const Resident = IDL.Record({
   'admissionDate' : IDL.Int,
   'marRecords' : IDL.Vec(MedicationAdministrationRecord),
   'adlRecords' : IDL.Vec(ADLRecord),
+  'isArchived' : IDL.Bool,
   'roomNumber' : IDL.Text,
   'insurance' : IDL.Opt(Insurance),
   'medications' : IDL.Vec(Medication),
   'pharmacy' : IDL.Opt(Pharmacy),
   'dailyVitals' : IDL.Vec(DailyVitals),
   'responsiblePersons' : IDL.Vec(ResponsiblePerson),
+  'dischargeTimestamp' : IDL.Opt(IDL.Int),
   'medicaidNumber' : IDL.Text,
   'physicians' : IDL.Vec(Physician),
   'lastName' : IDL.Text,
@@ -257,7 +259,9 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'archiveResident' : IDL.Func([IDL.Nat], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'autoArchiveDischargedResidents' : IDL.Func([], [], []),
   'calculateAge' : IDL.Func([IDL.Int], [IDL.Int], ['query']),
   'checkUpgradeHealth' : IDL.Func(
       [],
@@ -270,6 +274,7 @@ export const idlService = IDL.Service({
       ],
       ['query'],
     ),
+  'dischargeResident' : IDL.Func([IDL.Nat], [], []),
   'editMedication' : IDL.Func(
       [
         IDL.Nat,
@@ -333,9 +338,7 @@ export const idlService = IDL.Service({
     ),
   'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'removeResident' : IDL.Func([IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'toggleResidentStatus' : IDL.Func([IDL.Nat], [], []),
   'updateMedication' : IDL.Func(
       [
         IDL.Nat,
@@ -504,12 +507,14 @@ export const idlFactory = ({ IDL }) => {
     'admissionDate' : IDL.Int,
     'marRecords' : IDL.Vec(MedicationAdministrationRecord),
     'adlRecords' : IDL.Vec(ADLRecord),
+    'isArchived' : IDL.Bool,
     'roomNumber' : IDL.Text,
     'insurance' : IDL.Opt(Insurance),
     'medications' : IDL.Vec(Medication),
     'pharmacy' : IDL.Opt(Pharmacy),
     'dailyVitals' : IDL.Vec(DailyVitals),
     'responsiblePersons' : IDL.Vec(ResponsiblePerson),
+    'dischargeTimestamp' : IDL.Opt(IDL.Int),
     'medicaidNumber' : IDL.Text,
     'physicians' : IDL.Vec(Physician),
     'lastName' : IDL.Text,
@@ -630,7 +635,9 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'archiveResident' : IDL.Func([IDL.Nat], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'autoArchiveDischargedResidents' : IDL.Func([], [], []),
     'calculateAge' : IDL.Func([IDL.Int], [IDL.Int], ['query']),
     'checkUpgradeHealth' : IDL.Func(
         [],
@@ -643,6 +650,7 @@ export const idlFactory = ({ IDL }) => {
         ],
         ['query'],
       ),
+    'dischargeResident' : IDL.Func([IDL.Nat], [], []),
     'editMedication' : IDL.Func(
         [
           IDL.Nat,
@@ -706,9 +714,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'removeResident' : IDL.Func([IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'toggleResidentStatus' : IDL.Func([IDL.Nat], [], []),
     'updateMedication' : IDL.Func(
         [
           IDL.Nat,

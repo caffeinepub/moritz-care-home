@@ -1,39 +1,44 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T04:07:03.103Z",
+  "generatedAt": "2026-02-09T14:07:18.217Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 4,
-    "implemented": 1,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-13",
-        "summary": "Identify and fix the root cause of resident records becoming unavailable after login by auditing backend resident persistence and retrieval paths so resident data cannot be unintentionally lost, overwritten with partial data, or become unreachable after deployments/upgrades.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "id": "REQ-23",
+        "summary": "Fix the Dashboard “Discharge” resident action so that it reliably updates the resident status to Discharged and the UI immediately reflects the change (resident moves out of Active list and appears in Discharged list) after the mutation succeeds.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Dashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/pages/Dashboard.tsx"
+        ]
       },
       {
-        "id": "REQ-14",
-        "summary": "Ensure resident data and required related state persists reliably across canister upgrades by implementing stable-state upgrade handling (e.g., preupgrade/postupgrade) for residents, user profiles, and all relevant next-ID counters; add a conditional migration if the stable layout changes.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "id": "REQ-24",
+        "summary": "Add explicit error handling for the Dashboard “Discharge” action so failures are visible to the user and include a clear message when the caller is not authorized (admin-only operation).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/actorInit.ts",
+          "frontend/src/pages/Dashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/actorInit.ts",
+          "frontend/src/pages/Dashboard.tsx"
+        ]
       },
       {
-        "id": "REQ-15",
-        "summary": "Add an admin-only backend diagnostics query for production verification of resident data integrity without exposing sensitive resident details (return aggregate counts and ID/counter metadata, and optionally a small non-sensitive sample such as resident IDs and room numbers).",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-16",
-        "summary": "Update the Dashboard resident list UX to distinguish between “no residents exist” and “failed to load residents” by handling React Query error states for resident list queries and providing a clear retry action.",
+        "id": "REQ-25",
+        "summary": "Update the Dashboard resident card action visibility/availability to prevent non-admin users from attempting admin-only actions (Discharge and Archive), while keeping View Profile available to all authenticated users.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/hooks/useQueries.ts",
@@ -47,17 +52,12 @@
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/actorInit.ts",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",

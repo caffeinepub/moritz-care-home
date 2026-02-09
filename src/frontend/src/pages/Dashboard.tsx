@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useGetAllResidents, useGetActiveResidents, useGetDischargedResidents, useToggleResidentStatus, useRemoveResident } from '../hooks/useQueries';
+import { useGetAllResidents, useGetActiveResidents, useGetDischargedResidents, useDischargeResident, useArchiveResident, useIsCallerAdmin } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Users, UserPlus, LogOut, Loader2, UserCheck, UserX, Trash2, Eye, DoorOpen, Filter, ArrowUpDown, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, UserPlus, LogOut, Loader2, UserCheck, UserX, Archive, Eye, DoorOpen, Filter, ArrowUpDown, AlertCircle, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
+import { toast } from 'sonner';
 import AddResidentDialog from '../components/AddResidentDialog';
 import BrandLogo from '@/components/BrandLogo';
 import { calculateAge } from '../lib/dateUtils';
@@ -24,9 +25,10 @@ export default function Dashboard() {
   const { clear, identity } = useInternetIdentity();
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [residentToDelete, setResidentToDelete] = useState<bigint | null>(null);
+  const [residentToArchive, setResidentToArchive] = useState<bigint | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortCriteria>('roomNumber');
+  const [dischargingResidentId, setDischargingResidentId] = useState<bigint | null>(null);
 
   const { 
     data: allResidents = [], 
@@ -52,8 +54,10 @@ export default function Dashboard() {
     refetch: refetchDischarged 
   } = useGetDischargedResidents();
 
-  const toggleStatus = useToggleResidentStatus();
-  const removeResident = useRemoveResident();
+  const { data: isAdmin = false, isLoading: loadingAdmin } = useIsCallerAdmin();
+
+  const dischargeResident = useDischargeResident();
+  const archiveResident = useArchiveResident();
 
   // Extract unique room numbers from all residents
   const roomNumbers = useMemo(() => {
@@ -154,14 +158,66 @@ export default function Dashboard() {
     queryClient.clear();
   };
 
-  const handleToggleStatus = async (id: bigint) => {
-    await toggleStatus.mutateAsync(id);
+  const handleDischargeResident = async (id: bigint) => {
+    setDischargingResidentId(id);
+    try {
+      await dischargeResident.mutateAsync(id);
+      toast.success('Resident discharged successfully');
+    } catch (error: unknown) {
+      console.error('Discharge error:', error);
+      
+      // Check for authorization errors
+      if (error instanceof Error) {
+        const message = error.message.toLowerCase();
+        if (message.includes('unauthorized') || message.includes('admin')) {
+          toast.error('Only administrators can discharge residents', {
+            description: 'Please contact an administrator to perform this action.',
+            icon: <ShieldAlert className="h-5 w-5" />,
+          });
+        } else {
+          toast.error('Failed to discharge resident', {
+            description: error.message || 'An unexpected error occurred. Please try again.',
+          });
+        }
+      } else {
+        toast.error('Failed to discharge resident', {
+          description: 'An unexpected error occurred. Please try again.',
+        });
+      }
+    } finally {
+      setDischargingResidentId(null);
+    }
   };
 
-  const handleDeleteResident = async () => {
-    if (residentToDelete) {
-      await removeResident.mutateAsync(residentToDelete);
-      setResidentToDelete(null);
+  const handleArchiveResident = async () => {
+    if (residentToArchive) {
+      try {
+        await archiveResident.mutateAsync(residentToArchive);
+        toast.success('Resident archived successfully');
+        setResidentToArchive(null);
+      } catch (error: unknown) {
+        console.error('Archive error:', error);
+        
+        // Check for authorization errors
+        if (error instanceof Error) {
+          const message = error.message.toLowerCase();
+          if (message.includes('unauthorized') || message.includes('admin')) {
+            toast.error('Only administrators can archive residents', {
+              description: 'Please contact an administrator to perform this action.',
+              icon: <ShieldAlert className="h-5 w-5" />,
+            });
+          } else {
+            toast.error('Failed to archive resident', {
+              description: error.message || 'An unexpected error occurred. Please try again.',
+            });
+          }
+        } else {
+          toast.error('Failed to archive resident', {
+            description: 'An unexpected error occurred. Please try again.',
+          });
+        }
+        setResidentToArchive(null);
+      }
     }
   };
 
@@ -176,6 +232,7 @@ export default function Dashboard() {
   const ResidentCard = ({ resident }: { resident: Resident }) => {
     const age = calculateAge(resident.dateOfBirth);
     const isActive = resident.status === 'active';
+    const isDischarging = dischargingResidentId === resident.id;
 
     return (
       <Card className="group transition-all hover:shadow-lg">
@@ -235,23 +292,35 @@ export default function Dashboard() {
               <Eye className="mr-1 h-4 w-4" />
               View Profile
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleToggleStatus(resident.id)}
-              disabled={toggleStatus.isPending}
-            >
-              {isActive ? 'Discharge' : 'Activate'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setResidentToDelete(resident.id)}
-              disabled={removeResident.isPending}
-              className="text-red-600 hover:bg-red-50 hover:text-red-700"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {isActive && isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDischargeResident(resident.id)}
+                disabled={isDischarging}
+                className="text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+              >
+                {isDischarging ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <UserX className="mr-1 h-4 w-4" />
+                    Discharge
+                  </>
+                )}
+              </Button>
+            )}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setResidentToArchive(resident.id)}
+                disabled={archiveResident.isPending}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -303,13 +372,15 @@ export default function Dashboard() {
             <h2 className="text-3xl font-bold text-gray-900">Resident Management</h2>
             <p className="mt-1 text-gray-600">Manage and monitor all residents</p>
           </div>
-          <Button
-            onClick={() => setShowAddDialog(true)}
-            className="gap-2 bg-gradient-to-r from-teal-600 to-blue-600 shadow-lg hover:from-teal-700 hover:to-blue-700"
-          >
-            <UserPlus className="h-5 w-5" />
-            Add New Resident
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="gap-2 bg-gradient-to-r from-teal-600 to-blue-600 shadow-lg hover:from-teal-700 hover:to-blue-700"
+            >
+              <UserPlus className="h-5 w-5" />
+              Add New Resident
+            </Button>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -453,7 +524,9 @@ export default function Dashboard() {
                     {selectedRoom === 'all' ? 'No active residents' : `No active residents in Room ${selectedRoom}`}
                   </p>
                   <p className="mt-1 text-sm text-gray-600">
-                    {selectedRoom !== 'all' && 'Try selecting a different room or view all residents'}
+                    {selectedRoom === 'all' 
+                      ? 'All residents have been discharged' 
+                      : 'Try selecting a different room or view all residents'}
                   </p>
                 </CardContent>
               </Card>
@@ -480,7 +553,9 @@ export default function Dashboard() {
                     {selectedRoom === 'all' ? 'No discharged residents' : `No discharged residents in Room ${selectedRoom}`}
                   </p>
                   <p className="mt-1 text-sm text-gray-600">
-                    {selectedRoom !== 'all' && 'Try selecting a different room or view all residents'}
+                    {selectedRoom === 'all' 
+                      ? 'Discharged residents will appear here' 
+                      : 'Try selecting a different room or view all residents'}
                   </p>
                 </CardContent>
               </Card>
@@ -498,22 +573,30 @@ export default function Dashboard() {
       {/* Add Resident Dialog */}
       <AddResidentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!residentToDelete} onOpenChange={() => setResidentToDelete(null)}>
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog open={residentToArchive !== null} onOpenChange={(open) => !open && setResidentToArchive(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Archive Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the resident and all associated records.
+              Are you sure you want to archive this resident? Archived residents will no longer appear in the main lists.
+              This action can be reversed by an administrator if needed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteResident}
+              onClick={handleArchiveResident}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete
+              {archiveResident.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Archiving...
+                </>
+              ) : (
+                'Archive'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

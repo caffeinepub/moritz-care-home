@@ -90,12 +90,14 @@ export interface Resident {
   'admissionDate' : bigint,
   'marRecords' : Array<MedicationAdministrationRecord>,
   'adlRecords' : Array<ADLRecord>,
+  'isArchived' : boolean,
   'roomNumber' : string,
   'insurance' : [] | [Insurance],
   'medications' : Array<Medication>,
   'pharmacy' : [] | [Pharmacy],
   'dailyVitals' : Array<DailyVitals>,
   'responsiblePersons' : Array<ResponsiblePerson>,
+  'dischargeTimestamp' : [] | [bigint],
   'medicaidNumber' : string,
   'physicians' : Array<Physician>,
   'lastName' : string,
@@ -228,12 +230,15 @@ export interface _SERVICE {
     [bigint, number, string, bigint, string],
     undefined
   >,
+  'archiveResident' : ActorMethod<[bigint], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'autoArchiveDischargedResidents' : ActorMethod<[], undefined>,
   'calculateAge' : ActorMethod<[bigint], bigint>,
   'checkUpgradeHealth' : ActorMethod<
     [],
     { 'residents' : bigint, 'nextResidentId' : bigint, 'userProfiles' : bigint }
   >,
+  'dischargeResident' : ActorMethod<[bigint], undefined>,
   'editMedication' : ActorMethod<
     [
       bigint,
@@ -274,9 +279,7 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getWeightLog' : ActorMethod<[bigint], Array<WeightEntry>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'removeResident' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'toggleResidentStatus' : ActorMethod<[bigint], undefined>,
   'updateMedication' : ActorMethod<
     [
       bigint,

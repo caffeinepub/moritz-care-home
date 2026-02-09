@@ -48,8 +48,16 @@ export function normalizeError(error: unknown): string {
       return 'Backend canister not found. The application may not be properly deployed.';
     }
 
-    if (message.includes('Unauthorized') || message.includes('permission')) {
+    if (message.includes('Unauthorized')) {
+      // Extract more specific authorization error details
+      if (message.includes('admin')) {
+        return 'Unauthorized: Only administrators can perform this action';
+      }
       return 'Authorization error: ' + message;
+    }
+
+    if (message.includes('permission')) {
+      return 'Permission denied: You do not have the required permissions for this action';
     }
 
     if (message.includes('already initialized')) {
@@ -89,6 +97,23 @@ export function isNonFatalError(error: unknown): boolean {
     return (
       message.includes('already initialized') ||
       message.includes('already exists')
+    );
+  }
+  return false;
+}
+
+/**
+ * Checks if an error is an authorization/permission error
+ * @param error - The error to check
+ * @returns True if the error is related to authorization
+ */
+export function isAuthorizationError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('unauthorized') ||
+      message.includes('permission') ||
+      message.includes('admin')
     );
   }
   return false;

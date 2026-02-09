@@ -1,12 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Fix missing resident profiles after login by ensuring resident data persists correctly in the backend (including across canister upgrades) and improving the Dashboard UX to clearly show load failures vs true empty states.
+**Goal:** Make the Dashboard resident “Discharge” action work reliably, update the UI immediately after success, and clearly handle permissions/errors.
 
 **Planned changes:**
-- Audit and fix backend resident persistence/retrieval so resident lists (all/active/discharged) do not become empty when residents exist, and ensure nested resident update flows don’t partially overwrite/drop unrelated fields.
-- Implement reliable stable-state upgrade handling (preupgrade/postupgrade) to preserve residents, user profiles, and next-ID counters across canister upgrades; add a conditional migration only if required by state layout changes.
-- Add an admin-only backend diagnostics query that returns non-sensitive aggregate resident counts and ID/counter metadata for production verification.
-- Update the Dashboard resident list UI to handle React Query error states: show an explicit “failed to load residents” message with a user-invokable retry, while keeping the existing “No residents found” UI for successful empty lists.
+- Fix the Dashboard “Discharge” mutation flow so that, after a successful discharge, the resident status updates to Discharged and the UI reflects it immediately (badge/tab placement) without a page refresh.
+- Ensure the resident lists (Active, All, Discharged) are refreshed/invalidated after discharge so the resident appears in the correct tab(s).
+- Limit the discharge in-progress/loading state to only the resident being discharged (avoid blocking unrelated resident actions).
+- Add user-visible error handling for discharge failures, including a specific English message when the operation is unauthorized/admin-only.
+- Update resident card actions so non-admin users cannot attempt admin-only actions (Discharge, Archive), while “View Profile” remains available to all authenticated users.
 
-**User-visible outcome:** After logging in, authorized users see the expected resident profiles when they exist; upgrades no longer clear resident data; and if loading residents fails, the Dashboard shows a clear error with a retry option instead of incorrectly implying there are no residents.
+**User-visible outcome:** Admin users can discharge an active resident and immediately see them move to the Discharged list with the correct status badge; non-admin users won’t see (or can’t use) Discharge/Archive; any discharge errors (including admin-only authorization failures) are clearly shown without breaking the resident lists.
