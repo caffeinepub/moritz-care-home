@@ -2,12 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-the-app-cannot-remain-on-the-connecting-to-backend-screen-indefinitely-by-guaranteeing-that-backend-actor-creation-always-either-succeeds-actor-available-or-transitions-to-the-existing-startuperrorscreen-within-the-configured-startup-time-limits",
-      "featureTitle": "Ensure the app cannot remain on the “Connecting to backend...” screen indefinitely by guaranteeing that backend actor creation always either succeeds (actor available) or transitions to the existing StartupErrorScreen within the configured startup time limits.",
+      "featureId": "feature-update-startup-connection-logic-to-fail-fast-show-startuperrorscreen-when-the-backend-is-reachable-but-actor-creation-or-profile-loading-is-slow-instead-of-staying-on-the-infinite-connecting-to-backend-loading-your-profile-screens-until-the-full-45s-watchdog-expires",
+      "featureTitle": "Update startup connection logic to fail fast (show StartupErrorScreen) when the backend is reachable but actor creation or profile loading is slow, instead of staying on the infinite \"Connecting to backend...\" / \"Loading your profile...\" screens until the full 45s watchdog expires.",
       "files": [
         "frontend/src/App.tsx",
         "frontend/src/hooks/useResilientActor.ts",
-        "frontend/src/lib/startupDiagnostics.ts"
+        "frontend/src/lib/startupTimings.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -24,11 +24,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-make-backend-connectivity-diagnostics-shown-on-startup-error-screens-accurate-and-actionable-by-reliably-determining-and-displaying-the-backend-canister-id-network-and-host-the-frontend-is-targeting-using-window-env-where-available-with-safe-fallbacks",
-      "featureTitle": "Make backend connectivity diagnostics shown on startup error screens accurate and actionable by reliably determining and displaying the backend canister ID, network, and host the frontend is targeting (using window.__ENV__ where available, with safe fallbacks).",
+      "featureId": "feature-add-explicit-per-step-timeouts-to-startup-calls-that-can-hang-even-when-the-backend-is-reachable-including-the-startup-profile-fetch-getcalleruserprofile-and-any-other-startup-critical-requests-using-the-existing-timeout-utility-withtimeout-so-they-error-quickly-and-trigger-the-existing-error-ui-flow",
+      "featureTitle": "Add explicit per-step timeouts to startup calls that can hang even when the backend is reachable, including the startup profile fetch (getCallerUserProfile) and any other startup-critical requests, using the existing timeout utility (withTimeout) so they error quickly and trigger the existing error UI flow.",
       "files": [
         "frontend/src/App.tsx",
-        "frontend/src/lib/startupDiagnostics.ts"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/lib/startupTimings.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -45,13 +46,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-fix-the-startup-gating-flow-so-that-once-the-backend-actor-is-successfully-created-and-the-caller-profile-is-missing-the-app-reliably-reaches-the-profile-setup-screen-instead-of-being-blocked-by-access-control-initialization-errors-or-profile-query-failures",
-      "featureTitle": "Fix the startup gating flow so that once the backend actor is successfully created and the caller profile is missing, the app reliably reaches the Profile Setup screen instead of being blocked by access-control initialization errors or profile query failures.",
+      "featureId": "feature-run-performhealthcheck-earlier-during-slow-startup-not-only-after-an-error-timeout-so-the-ui-can-distinguish-backend-unreachable-vs-backend-reachable-but-slow-and-present-the-faster-fallback-accordingly",
+      "featureTitle": "Run performHealthCheck earlier during slow startup (not only after an error/timeout), so the UI can distinguish \"backend unreachable\" vs \"backend reachable but slow\" and present the faster fallback accordingly.",
       "files": [
         "frontend/src/App.tsx",
-        "frontend/src/components/ProfileSetup.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/hooks/useResilientActor.ts"
+        "frontend/src/lib/startupDiagnostics.ts",
+        "frontend/src/lib/startupTimings.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -63,29 +63,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-4"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-detect-and-surface-backend-canister-is-stopped-failures-during-profile-load-and-actor-calls-by-improving-frontend-error-normalization-and-error-screen-messaging-to-explicitly-indicate-the-canister-is-stopped-and-show-the-targeted-canister-id-from-diagnostics",
-      "featureTitle": "Detect and surface “backend canister is stopped” failures during profile load and actor calls by improving frontend error normalization and error-screen messaging to explicitly indicate the canister is stopped and show the targeted canister ID from diagnostics.",
-      "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/lib/actorInit.ts",
-        "frontend/src/lib/startupDiagnostics.ts"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "blob-storage@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-5"
+        "REQ-3"
       ],
       "confidence": "high"
     }

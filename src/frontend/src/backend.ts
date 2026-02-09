@@ -335,6 +335,7 @@ export interface backendInterface {
         timestamp?: bigint;
     }>;
     isCallerAdmin(): Promise<boolean>;
+    permanentlyDeleteResident(id: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;
@@ -1190,6 +1191,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.isCallerAdmin();
+            return result;
+        }
+    }
+    async permanentlyDeleteResident(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.permanentlyDeleteResident(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.permanentlyDeleteResident(arg0);
             return result;
         }
     }

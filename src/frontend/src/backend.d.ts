@@ -235,6 +235,7 @@ export interface backendInterface {
         timestamp?: bigint;
     }>;
     isCallerAdmin(): Promise<boolean>;
+    permanentlyDeleteResident(id: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;

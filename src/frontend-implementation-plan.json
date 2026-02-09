@@ -1,116 +1,83 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Harden startup flow with bounded timeouts, accurate diagnostics, and stopped-canister messaging",
+  "title": "Fast fail startup fallback for slow-but-reachable backend",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Guarantee startup never stays on “Connecting to backend...” indefinitely; always resolve to success or StartupErrorScreen within the configured startup timeout, and make Retry Connection fully restart startup without refresh.",
+      "summary": "Fail fast during startup when actor creation/profile load is slow but backend is reachable, showing StartupErrorScreen within a shorter configurable timeout instead of waiting 45s.",
       "acceptanceCriteria": [
-        "When authenticated and actor creation does not complete, the UI transitions to StartupErrorScreen within 45 seconds (STARTUP_TIMEOUT_MS) and does not remain on the connecting screen indefinitely.",
-        "The Retry Connection action clears relevant React Query caches and re-attempts actor creation + profile loading without requiring a page refresh."
+        "When authenticated and the backend is slow, the app shows an actionable error screen within a shorter, configurable timeframe (<= 15 seconds) rather than waiting the full STARTUP_TIMEOUT_MS (45s).",
+        "The error screen clearly indicates that the backend is reachable but responding slowly (based on health check), and offers Retry Connection and Logout actions.",
+        "The app does not remain indefinitely on a loading screen (\"Connecting to backend...\" or \"Loading your profile...\") in any of the startup paths."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Harden startup watchdog + retry behavior: ensure the STARTUP_TIMEOUT_MS watchdog always transitions away from the connecting state (including edge cases where actor/profile promises hang), and implement Retry Connection to (1) reset startup local state (startupTimeout, healthCheck state), (2) clear only startup-relevant React Query caches (actor + currentUserProfile + any startup gating queries) rather than global clear where possible, and (3) trigger a fresh actor creation + profile load attempt immediately (no refresh)."
+          "path": "frontend/src/lib/startupTimings.ts",
+          "operation": "create",
+          "description": "Add centralized, configurable startup timing constants (e.g., FAIL_FAST_MS <= 15000, HEALTHCHECK_EARLY_TRIGGER_MS <= 5000, PROFILE_STARTUP_TIMEOUT_MS <= 15000, ACTOR_CREATE_TIMEOUT_MS <= 15000) so startup behavior can be tuned without hunting through files."
         },
         {
-          "path": "frontend/src/lib/startupDiagnostics.ts",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Adjust performHealthCheck() behavior so Retry Connection can explicitly re-run the health check on demand (in addition to the existing automatic health check on failure), keeping health-check calls bounded by timeout and returning consistent success/failure results."
+          "description": "Update startup state machine to support a fail-fast timeout distinct from the existing 45s watchdog: (1) track a short fail-fast timer during authenticated startup loading, (2) if backend reachability is confirmed (health check success) while actor/profile is still pending, transition to StartupErrorScreen when the short timer elapses, and (3) update the timeout-screen messaging to explicitly state \"backend reachable but responding slowly\" when health check succeeded; keep Retry Connection and Logout actions wired to existing handlers."
         },
         {
           "path": "frontend/src/hooks/useResilientActor.ts",
           "operation": "modify",
-          "description": "Ensure actor creation is always time-bounded and retryable from the UI by aligning queryKey/refetch semantics with the startup Retry Connection flow (e.g., support an explicit refetch trigger signal from App so a retry guarantees a fresh attempt rather than reusing a stuck promise)."
+          "description": "Reduce and/or parameterize actor creation timeout using the new startup timing constants so slow actor creation fails within the configured fail-fast window (<= 15s) and naturally triggers the existing actor error UI flow; keep error normalization behavior intact."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Make StartupErrorScreen diagnostics always accurate and actionable by reliably determining backend canister ID, network, and host (prefer window.__ENV__, with safe fallbacks and no secrets).",
+      "summary": "Add explicit per-step timeouts (via withTimeout) to startup-critical calls like getCallerUserProfile so hangs resolve quickly into existing error handling and Retry resets state.",
       "acceptanceCriteria": [
-        "StartupErrorScreen always shows a canister ID, network, and host value (either derived from window.__ENV__ or a clearly labeled fallback).",
-        "No secrets (e.g., admin tokens) are displayed in diagnostics."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/lib/startupDiagnostics.ts",
-          "operation": "modify",
-          "description": "Update getBackendDiagnostics() to always return non-empty, clearly labeled fallback values (e.g., \"Unknown (fallback)\") for canisterId/network/host; prefer window.__ENV__ where present, then use safe fallbacks like import-time env values (if available) and window.location-derived host/network. Sanitize host values and explicitly ignore unrelated __ENV__ keys to avoid leaking secrets."
-        },
-        {
-          "path": "frontend/src/components/StartupErrorScreen.tsx",
-          "operation": "modify",
-          "description": "Ensure diagnostics rendering can accommodate labeled fallback values (no blank/\"Could not determine\"), and keep the UI from ever rendering sensitive values (only render canisterId/network/host fields from BackendDiagnostics). Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Wire the improved diagnostics into all startup error paths so the same canisterId/network/host are always shown consistently across timeout, actor errors, and profile errors."
-        }
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "summary": "Fix startup gating so missing caller profile reliably routes to Profile Setup after actor creation, and non-fatal access-control initialization issues do not block Profile Setup or main app rendering.",
-      "acceptanceCriteria": [
-        "If `getCallerUserProfile()` returns null (no profile), the app navigates to / renders ProfileSetup reliably after actor creation.",
-        "Non-fatal access control initialization issues (e.g., “already initialized”) do not prevent reaching ProfileSetup or the main app."
+        "The startup profile query (useGetCallerUserProfileStartup) times out and transitions to the Profile Load Failed error state within a defined timeout (<= 10–15 seconds) if the call does not resolve.",
+        "Timeout errors are normalized into user-facing messages consistent with existing error handling (normalizeError patterns).",
+        "Retry Connection from the error screen resets the timed-out state and re-attempts actor creation and profile load."
       ],
       "file_operations": [
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add a startup-safe profile save path that does not depend on the immutable useActor hook (e.g., a new hook using useResilientActor for saveCallerUserProfile during ProfileSetup), and ensure startup profile query behavior treats missing profiles as a normal state (null) rather than an error."
-        },
-        {
-          "path": "frontend/src/components/ProfileSetup.tsx",
-          "operation": "modify",
-          "description": "Switch ProfileSetup to use the new startup-safe save hook so users can complete Profile Setup without being blocked by access-control initialization issues originating from the immutable actor hook. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/useResilientActor.ts",
-          "operation": "modify",
-          "description": "Refine non-fatal access-control initialization handling so benign initialization outcomes never propagate as fatal startup errors (continue to treat \"already initialized\" / \"already exists\" patterns as warnings only, returning a usable actor)."
+          "description": "Wrap startup profile fetch (actor.getCallerUserProfile) in withTimeout using the configured startup profile timeout (<= 10–15s); on timeout (or other errors), normalize via existing normalizeError patterns so App.tsx lands in the existing \"Profile Load Failed\" flow consistently."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Tighten the gating conditions that decide when to render ProfileSetup (ensure it only depends on authenticated + actor ready + startup profile query fetched + userProfile===null) and prevent access-control initialization warnings from forcing the Profile Load Failed screen when ProfileSetup should be shown."
+          "description": "Ensure Retry Connection fully resets any new fail-fast/timeout state introduced for startup (in addition to existing query removals/refetch) so actor creation and profile load are re-attempted cleanly after a timeout-triggered error."
+        },
+        {
+          "path": "frontend/src/lib/startupTimings.ts",
+          "operation": "modify",
+          "description": "Add/adjust constants for per-step startup timeouts (profile fetch timeout, actor creation timeout) to satisfy the <=10–15s acceptance criteria and keep them aligned across hooks and startup UI logic."
         }
       ]
     },
     {
-      "id": "REQ-5",
-      "summary": "Detect “backend canister is stopped” failures and surface a clear StartupErrorScreen message that explicitly indicates the canister is stopped and includes the targeted canister ID; ensure Retry Connection re-runs health check and retries without infinite loading.",
+      "id": "REQ-3",
+      "summary": "Trigger performHealthCheck earlier during startup when loading exceeds a short threshold, so the UI can distinguish unreachable vs reachable-but-slow without waiting for errors/timeouts.",
       "acceptanceCriteria": [
-        "When an error message contains the stopped-canister pattern (e.g., includes \"is stopped\" and/or \"CallContextManager\"), the displayed StartupErrorScreen message explicitly states that the backend canister is stopped.",
-        "The error screen continues to show backend diagnostics (including canister ID) so the stopped canister can be identified.",
-        "Retry Connection re-runs the health check and retries actor/profile queries; if the canister remains stopped, the error screen reappears with the stopped-canister message (no infinite loading)."
+        "During startup loading, if actor/profile is still pending beyond a short threshold (<= 5 seconds), the app triggers performHealthCheck in the background (without blocking UI).",
+        "If the health check succeeds while startup is still pending, the app uses that reachability signal to drive the faster fallback behavior and messaging.",
+        "Health check calls remain protected by the existing timeouts in performHealthCheck and do not introduce new infinite waits."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/actorInit.ts",
+          "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Improve error normalization/classification to detect stopped-canister patterns (e.g., contains \"is stopped\" and/or \"CallContextManager\") and produce a standardized, user-facing message indicating the backend canister is stopped (without adding any secret data)."
+          "description": "Add an early-startup background health check trigger: when authenticated and actor/profile are still pending beyond the configured threshold (<= 5s), call performHealthCheck without blocking the UI; store the result so the app can label states as \"reachable but slow\" vs \"unreachable\" and use that signal for fail-fast behavior."
+        },
+        {
+          "path": "frontend/src/lib/startupTimings.ts",
+          "operation": "modify",
+          "description": "Define/adjust the early health-check trigger threshold constant (<= 5000ms) used by App.tsx to start performHealthCheck during slow startup, while leaving performHealthCheck's internal timeouts unchanged."
         },
         {
           "path": "frontend/src/lib/startupDiagnostics.ts",
           "operation": "modify",
-          "description": "Extend performHealthCheck() error handling to recognize the stopped-canister pattern and return an actionable failed HealthCheckResult message indicating the canister appears stopped."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "In startup error branches (actor/profile/timeout), use the improved stopped-canister detection to override title/message with an explicit \"backend canister is stopped\" message and reference the targeted canister ID from getBackendDiagnostics(); update Retry Connection to explicitly re-run performHealthCheck() as part of the retry sequence and ensure the UI never returns to an infinite connecting state."
-        },
-        {
-          "path": "frontend/src/components/StartupErrorScreen.tsx",
-          "operation": "modify",
-          "description": "Keep the error-screen content actionable by ensuring the stopped-canister messaging is displayed prominently (while still rendering diagnostics including canister ID) and that Retry Connection continues to work as the primary recovery action. Verify the component's usage instructions before implementing."
+          "description": "Harden performHealthCheck integration for repeated/early calls (idempotent usage expectations): ensure call sites can safely invoke it during startup without introducing any new infinite waits, relying on the existing Promise.race timeouts already present."
         }
       ]
     }

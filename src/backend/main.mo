@@ -442,6 +442,21 @@ actor {
     residents.add(id, updatedResident);
   };
 
+  public shared ({ caller }) func permanentlyDeleteResident(id : Nat) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can permanently delete residents");
+    };
+
+    let exists = switch (residents.get(id)) {
+      case (null) { Runtime.trap("Resident not found") };
+      case (?_resident) { true };
+    };
+
+    if (exists) {
+      residents.remove(id);
+    };
+  };
+
   public query ({ caller }) func getResident(id : Nat) : async ?Resident {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can view residents");

@@ -11,15 +11,14 @@ import { ThemeProvider } from 'next-themes';
 import { createRouter, RouterProvider, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { performHealthCheck, getBackendDiagnostics } from './lib/startupDiagnostics';
 import { isStoppedCanisterError } from './lib/actorInit';
+import { STARTUP_TIMEOUT_MS, FAIL_FAST_MS, HEALTHCHECK_EARLY_TRIGGER_MS } from './lib/startupTimings';
 
 const rootRoute = createRootRoute({
   component: RootComponent,
 });
-
-const STARTUP_TIMEOUT_MS = 45000; // 45 seconds max for startup
 
 function RootComponent() {
   const { identity, isInitializing, clear } = useInternetIdentity();
@@ -28,13 +27,58 @@ function RootComponent() {
   const queryClient = useQueryClient();
   
   const [startupTimeout, setStartupTimeout] = useState(false);
+  const [failFastTimeout, setFailFastTimeout] = useState(false);
   const [healthCheckResult, setHealthCheckResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
+  const healthCheckTriggeredRef = useRef(false);
 
   const isAuthenticated = !!identity;
   const principalId = identity?.getPrincipal().toString();
 
-  // Startup watchdog timer - triggers if actor or profile loading takes too long
+  // Early health check trigger - runs when loading is slow (5s)
+  useEffect(() => {
+    if (isAuthenticated && (actorFetching || profileLoading || !actor) && !healthCheckTriggeredRef.current) {
+      const earlyTimer = setTimeout(() => {
+        if (!healthCheckResult && !isCheckingHealth) {
+          healthCheckTriggeredRef.current = true;
+          setIsCheckingHealth(true);
+          performHealthCheck()
+            .then((result) => {
+              setHealthCheckResult(result);
+            })
+            .catch(() => {
+              setHealthCheckResult({
+                success: false,
+                message: 'Health check failed: Unable to reach backend'
+              });
+            })
+            .finally(() => {
+              setIsCheckingHealth(false);
+            });
+        }
+      }, HEALTHCHECK_EARLY_TRIGGER_MS);
+
+      return () => clearTimeout(earlyTimer);
+    }
+  }, [isAuthenticated, actorFetching, profileLoading, actor, healthCheckResult, isCheckingHealth]);
+
+  // Fast-fail timeout - triggers when backend is reachable but slow (15s)
+  useEffect(() => {
+    if (isAuthenticated && (actorFetching || profileLoading || !actor)) {
+      const fastTimer = setTimeout(() => {
+        // Only trigger fast-fail if health check succeeded (backend is reachable but slow)
+        if (healthCheckResult?.success) {
+          setFailFastTimeout(true);
+        }
+      }, FAIL_FAST_MS);
+
+      return () => clearTimeout(fastTimer);
+    } else {
+      setFailFastTimeout(false);
+    }
+  }, [isAuthenticated, actorFetching, profileLoading, actor, healthCheckResult]);
+
+  // Overall startup watchdog timer - fallback if other mechanisms don't trigger (45s)
   useEffect(() => {
     if (isAuthenticated && (actorFetching || profileLoading || !actor)) {
       const timer = setTimeout(() => {
@@ -47,7 +91,7 @@ function RootComponent() {
     }
   }, [isAuthenticated, actorFetching, profileLoading, actor]);
 
-  // Perform health check when startup fails
+  // Perform health check when startup fails (if not already done)
   useEffect(() => {
     const shouldCheckHealth = (actorIsError || profileIsError || startupTimeout) && !isCheckingHealth && !healthCheckResult;
     
@@ -72,8 +116,10 @@ function RootComponent() {
   // Retry handler that resets all startup state and re-runs health check
   const handleRetry = async () => {
     setStartupTimeout(false);
+    setFailFastTimeout(false);
     setHealthCheckResult(null);
     setIsCheckingHealth(false);
+    healthCheckTriggeredRef.current = false;
     
     // Clear only startup-relevant queries
     queryClient.removeQueries({ queryKey: ['resilient-actor'] });
@@ -115,7 +161,34 @@ function RootComponent() {
     return <LoginPage />;
   }
 
-  // Step 3: Startup timeout - show error screen
+  // Step 3: Fast-fail timeout - backend is reachable but slow
+  if (failFastTimeout && !actorIsError && !profileIsError) {
+    const backendDiagnostics = getBackendDiagnostics();
+    
+    return (
+      <StartupErrorScreen
+        title="Backend Responding Slowly"
+        message="The backend is reachable but taking longer than expected to respond. This may be due to high load or initialization delays. Please try again."
+        error={new Error('Backend is reachable but responding slowly (exceeded ' + (FAIL_FAST_MS / 1000) + ' seconds)')}
+        onRetry={handleRetry}
+        onLogout={async () => {
+          await clear();
+          queryClient.clear();
+          setStartupTimeout(false);
+          setFailFastTimeout(false);
+          setHealthCheckResult(null);
+          healthCheckTriggeredRef.current = false;
+        }}
+        isAuthenticated={isAuthenticated}
+        principalId={principalId}
+        backendDiagnostics={backendDiagnostics}
+        healthCheckResult={healthCheckResult}
+        showLogout={true}
+      />
+    );
+  }
+
+  // Step 4: Startup timeout - show error screen
   if (startupTimeout) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
@@ -139,7 +212,9 @@ function RootComponent() {
           await clear();
           queryClient.clear();
           setStartupTimeout(false);
+          setFailFastTimeout(false);
           setHealthCheckResult(null);
+          healthCheckTriggeredRef.current = false;
         }}
         isAuthenticated={isAuthenticated}
         principalId={principalId}
@@ -150,7 +225,7 @@ function RootComponent() {
     );
   }
 
-  // Step 4: Actor error - show error screen with retry
+  // Step 5: Actor error - show error screen with retry
   if (actorIsError && actorError) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
@@ -178,6 +253,8 @@ function RootComponent() {
           await clear();
           queryClient.clear();
           setHealthCheckResult(null);
+          setFailFastTimeout(false);
+          healthCheckTriggeredRef.current = false;
         }}
         isAuthenticated={isAuthenticated}
         principalId={principalId}
@@ -188,7 +265,7 @@ function RootComponent() {
     );
   }
 
-  // Step 5: Profile error - show error screen with retry
+  // Step 6: Profile error - show error screen with retry
   if (profileIsError && profileError) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
@@ -202,6 +279,14 @@ function RootComponent() {
       errorMessage = `The backend canister (${backendDiagnostics.canisterId}) is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
     } else if (profileError.message.includes('Authorization') || profileError.message.includes('Unauthorized')) {
       errorMessage += 'You may not have the required permissions. Please contact an administrator.';
+    } else if (profileError.message.includes('timed out')) {
+      errorTitle = 'Profile Load Timed Out';
+      errorMessage = 'Loading your profile took too long. ';
+      if (isReachable) {
+        errorMessage += 'The backend is reachable but may be experiencing high load.';
+      } else {
+        errorMessage += 'Please check your connection and try again.';
+      }
     } else if (isReachable) {
       errorMessage += 'The backend is reachable, but there was an error loading your profile.';
     } else {
@@ -218,6 +303,8 @@ function RootComponent() {
           await clear();
           queryClient.clear();
           setHealthCheckResult(null);
+          setFailFastTimeout(false);
+          healthCheckTriggeredRef.current = false;
         }}
         isAuthenticated={isAuthenticated}
         principalId={principalId}
@@ -228,7 +315,7 @@ function RootComponent() {
     );
   }
 
-  // Step 6: Actor loading or not available
+  // Step 7: Actor loading or not available
   if (actorFetching || !actor) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
@@ -241,7 +328,7 @@ function RootComponent() {
     );
   }
 
-  // Step 7: Profile loading
+  // Step 8: Profile loading
   if (profileLoading || !profileFetched) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
@@ -253,13 +340,13 @@ function RootComponent() {
     );
   }
 
-  // Step 8: Profile setup needed
+  // Step 9: Profile setup needed
   const showProfileSetup = isAuthenticated && actor && profileFetched && userProfile === null;
   if (showProfileSetup) {
     return <ProfileSetup />;
   }
 
-  // Step 9: All good - show app
+  // Step 10: All good - show app
   return (
     <>
       <Outlet />

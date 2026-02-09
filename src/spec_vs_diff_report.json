@@ -1,68 +1,33 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T19:27:02.267Z",
-  "summary": "Frontend adds a resilient actor hook with timeouts, startup watchdog (45s) and retry logic with React Query cache clearing, plus diagnostics/health-check utilities and stopped-canister error normalization. Backend changes are shown only in a truncated snippet and do not evidence the required public `healthCheck()` export. Some requirements that depend on StartupErrorScreen/ProfileSetup routing behavior are not verifiable from the provided diff summary.",
-  "missing_requirements": [
-    {
-      "id": "REQ-3",
-      "requirement": "Add a public, unauthenticated backend method `healthCheck()` compatible with frontend `performHealthCheck()` (returns object with `message` and optional `timestamp`).",
-      "reason": "The diff summary for `backend/main.mo` is truncated and does not show any `public query func healthCheck()` definition or export, so implementation cannot be confirmed.",
-      "evidence": [
-        "backend/main.mo (truncated)",
-        "frontend/src/lib/startupDiagnostics.ts (calls `(actor as any).healthCheck()` expecting `message`/`timestamp`)"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "requirement": "StartupErrorScreen shows accurate backend diagnostics (canister ID, network, host) derived from `window.__ENV__` with safe fallbacks and without secrets.",
-      "reason": "While `getBackendDiagnostics()` is implemented, there is no diff evidence that `StartupErrorScreen` is updated to always display these values, nor that it avoids displaying secrets (beyond the helper’s intent).",
-      "evidence": [
-        "frontend/src/lib/startupDiagnostics.ts",
-        "frontend/src/App.tsx (imports `StartupErrorScreen` and `getBackendDiagnostics`, but StartupErrorScreen implementation not shown/modified)"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "requirement": "After actor creation, if `getCallerUserProfile()` returns null, the app reliably reaches ProfileSetup; non-fatal access-control init issues do not block reaching ProfileSetup/main app.",
-      "reason": "Non-fatal access control init handling is present in `useResilientActor`, and a startup-safe profile query exists, but the diff snippet for `App.tsx` is truncated before showing the actual routing/gating logic that renders/navigates to `ProfileSetup` when profile is null.",
-      "evidence": [
-        "frontend/src/hooks/useResilientActor.ts",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/App.tsx (truncated)"
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "requirement": "Detect and surface “backend canister is stopped” failures with explicit stopped-canister messaging on StartupErrorScreen including targeted canister ID; Retry reruns health check and retries actor/profile queries without infinite loading.",
-      "reason": "Stopped-canister detection/normalization and retry behavior are implemented in utilities and `App.tsx`, but there is no diff evidence that the displayed error content in `StartupErrorScreen` is updated to explicitly present the stopped-canister message alongside diagnostics (including canister ID).",
-      "evidence": [
-        "frontend/src/lib/actorInit.ts",
-        "frontend/src/App.tsx (handleRetry + health check triggering)",
-        "frontend/src/lib/startupDiagnostics.ts",
-        "frontend/src/App.tsx (imports `StartupErrorScreen`, but component not shown/modified)"
-      ]
-    }
-  ],
+  "generatedAt": "2026-02-09T19:53:43.473Z",
+  "summary": "The diff implements the requested fast-fail startup behavior via centralized timing constants, per-step timeouts for actor creation and startup profile loading, and an early background health check to distinguish reachable-but-slow backends. No clear required items appear unimplemented based on the provided diff summary, though some unrelated metadata/summary content was also changed.",
+  "missing_requirements": [],
   "hallucinated_features": [
     {
-      "description": "Best-effort admin access-control initialization via secret URL parameter (`caffeineAdminToken`) during actor creation, with special handling for non-fatal init errors.",
-      "reason": "The BuildRequest focuses on startup hardening, diagnostics, and a public health check; it does not request adding or changing admin-token-based initialization behavior during actor creation.",
+      "description": "Unrelated UI/feature changes described (e.g., LoginPage opaque backgrounds/logo mode, Dashboard admin-only actions, ResidentProfile print toggles, dialog solid white backgrounds, global CSS print/layout overrides, date utils changes).",
+      "reason": "These changes are not requested by the BuildRequest (which is exclusively about startup/timeout/health-check logic). The only concrete evidence is that these unrelated changes are asserted inside a modified summary file rather than shown as actual code diffs.",
       "evidence": [
-        "frontend/src/hooks/useResilientActor.ts (uses `getSecretParameter('caffeineAdminToken')` and calls `actor._initializeAccessControlWithSecret(adminToken)`)"
+        "frontend-file-summaries.txt"
+      ]
+    },
+    {
+      "description": "Project tracking/state updates (new_feature_requests entries AR-1..AR-4, summary/known issues text).",
+      "reason": "Not requested as part of the functional requirements; appears to be repo metadata/state management rather than implementing startup behavior.",
+      "evidence": [
+        "project_state.json"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.72,
   "changed_files": [
-    "backend/main.mo",
     "frontend-file-summaries.txt",
     "frontend/src/App.tsx",
-    "frontend/src/components/ProfileSetup.tsx",
     "frontend/src/hooks/useQueries.ts",
     "frontend/src/hooks/useResilientActor.ts",
-    "frontend/src/lib/actorInit.ts",
     "frontend/src/lib/startupDiagnostics.ts",
+    "frontend/src/lib/startupTimings.ts",
     "project_state.json"
   ]
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useGetAllResidents, useGetActiveResidents, useGetDischargedResidents, useDischargeResident, useArchiveResident, useIsCallerAdmin } from '../hooks/useQueries';
+import { useGetAllResidents, useGetActiveResidents, useGetDischargedResidents, useDischargeResident, useArchiveResident, usePermanentlyDeleteResident, useIsCallerAdmin } from '../hooks/useQueries';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Users, UserPlus, LogOut, Loader2, UserCheck, UserX, Archive, Eye, DoorOpen, Filter, ArrowUpDown, AlertCircle, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Users, UserPlus, LogOut, Loader2, UserCheck, UserX, Archive, Eye, DoorOpen, Filter, ArrowUpDown, AlertCircle, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import AddResidentDialog from '../components/AddResidentDialog';
@@ -26,6 +26,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [residentToArchive, setResidentToArchive] = useState<bigint | null>(null);
+  const [residentToDelete, setResidentToDelete] = useState<bigint | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string>('all');
   const [sortBy, setSortBy] = useState<SortCriteria>('roomNumber');
   const [dischargingResidentId, setDischargingResidentId] = useState<bigint | null>(null);
@@ -58,6 +59,7 @@ export default function Dashboard() {
 
   const dischargeResident = useDischargeResident();
   const archiveResident = useArchiveResident();
+  const deleteResident = usePermanentlyDeleteResident();
 
   // Extract unique room numbers from all residents
   const roomNumbers = useMemo(() => {
@@ -221,6 +223,42 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteResident = async () => {
+    if (residentToDelete) {
+      try {
+        await deleteResident.mutateAsync(residentToDelete);
+        toast.success('Resident permanently deleted');
+        setResidentToDelete(null);
+      } catch (error: unknown) {
+        console.error('Delete error:', error);
+        
+        // Check for authorization errors
+        if (error instanceof Error) {
+          const message = error.message.toLowerCase();
+          if (message.includes('unauthorized') || message.includes('admin')) {
+            toast.error('Only administrators can delete residents', {
+              description: 'Please contact an administrator to perform this action.',
+              icon: <ShieldAlert className="h-5 w-5" />,
+            });
+          } else if (message.includes('not found')) {
+            toast.error('Resident not found', {
+              description: 'The resident may have already been deleted.',
+            });
+          } else {
+            toast.error('Failed to delete resident', {
+              description: error.message || 'An unexpected error occurred. Please try again.',
+            });
+          }
+        } else {
+          toast.error('Failed to delete resident', {
+            description: 'An unexpected error occurred. Please try again.',
+          });
+        }
+        setResidentToDelete(null);
+      }
+    }
+  };
+
   // Helper function to format room display
   const formatRoomDisplay = (resident: Resident): string => {
     if (resident.roomType === RoomType.sharedRoom && resident.bed) {
@@ -311,15 +349,26 @@ export default function Dashboard() {
               </Button>
             )}
             {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setResidentToArchive(resident.id)}
-                disabled={archiveResident.isPending}
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
-              >
-                <Archive className="h-4 w-4" />
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setResidentToArchive(resident.id)}
+                  disabled={archiveResident.isPending}
+                  className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                >
+                  <Archive className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setResidentToDelete(resident.id)}
+                  disabled={deleteResident.isPending}
+                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
             )}
           </div>
         </CardContent>
@@ -466,42 +515,42 @@ export default function Dashboard() {
 
         {/* Residents Tabs */}
         <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="all">
-              <Users className="mr-2 h-4 w-4" />
+          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+            <TabsTrigger value="all" className="gap-2">
+              <Users className="h-4 w-4" />
               All
             </TabsTrigger>
-            <TabsTrigger value="active">
-              <UserCheck className="mr-2 h-4 w-4" />
+            <TabsTrigger value="active" className="gap-2">
+              <UserCheck className="h-4 w-4" />
               Active
             </TabsTrigger>
-            <TabsTrigger value="discharged">
-              <UserX className="mr-2 h-4 w-4" />
+            <TabsTrigger value="discharged" className="gap-2">
+              <UserX className="h-4 w-4" />
               Discharged
             </TabsTrigger>
           </TabsList>
 
+          {/* All Residents Tab */}
           <TabsContent value="all" className="space-y-4">
-            {errorAll && <ErrorAlert error={allError as Error} onRetry={() => refetchAll()} />}
+            {errorAll && <ErrorAlert error={allError as Error} onRetry={refetchAll} />}
             {loadingAll ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
               </div>
-            ) : !errorAll && filteredAllResidents.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <Users className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-4 text-lg font-medium text-gray-900">
-                    {selectedRoom === 'all' ? 'No residents found' : `No residents in Room ${selectedRoom}`}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    {selectedRoom === 'all' 
-                      ? 'Get started by adding your first resident' 
-                      : 'Try selecting a different room or view all residents'}
+            ) : filteredAllResidents.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Users className="h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-lg font-medium text-gray-900">No residents found</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {selectedRoom !== 'all' 
+                      ? `No residents in Room ${selectedRoom}`
+                      : 'Add your first resident to get started'
+                    }
                   </p>
                 </CardContent>
               </Card>
-            ) : !errorAll && (
+            ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredAllResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
@@ -510,27 +559,27 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
+          {/* Active Residents Tab */}
           <TabsContent value="active" className="space-y-4">
-            {errorActive && <ErrorAlert error={activeError as Error} onRetry={() => refetchActive()} />}
+            {errorActive && <ErrorAlert error={activeError as Error} onRetry={refetchActive} />}
             {loadingActive ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
               </div>
-            ) : !errorActive && filteredActiveResidents.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-4 text-lg font-medium text-gray-900">
-                    {selectedRoom === 'all' ? 'No active residents' : `No active residents in Room ${selectedRoom}`}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    {selectedRoom === 'all' 
-                      ? 'All residents have been discharged' 
-                      : 'Try selecting a different room or view all residents'}
+            ) : filteredActiveResidents.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <UserCheck className="h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-lg font-medium text-gray-900">No active residents</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {selectedRoom !== 'all' 
+                      ? `No active residents in Room ${selectedRoom}`
+                      : 'All residents have been discharged'
+                    }
                   </p>
                 </CardContent>
               </Card>
-            ) : !errorActive && (
+            ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredActiveResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
@@ -539,27 +588,27 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
+          {/* Discharged Residents Tab */}
           <TabsContent value="discharged" className="space-y-4">
-            {errorDischarged && <ErrorAlert error={dischargedError as Error} onRetry={() => refetchDischarged()} />}
+            {errorDischarged && <ErrorAlert error={dischargedError as Error} onRetry={refetchDischarged} />}
             {loadingDischarged ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
               </div>
-            ) : !errorDischarged && filteredDischargedResidents.length === 0 ? (
-              <Card className="py-12">
-                <CardContent className="text-center">
-                  <UserX className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-4 text-lg font-medium text-gray-900">
-                    {selectedRoom === 'all' ? 'No discharged residents' : `No discharged residents in Room ${selectedRoom}`}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600">
-                    {selectedRoom === 'all' 
-                      ? 'Discharged residents will appear here' 
-                      : 'Try selecting a different room or view all residents'}
+            ) : filteredDischargedResidents.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <UserX className="h-12 w-12 text-gray-400 mb-4" />
+                  <p className="text-lg font-medium text-gray-900">No discharged residents</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {selectedRoom !== 'all' 
+                      ? `No discharged residents in Room ${selectedRoom}`
+                      : 'No residents have been discharged yet'
+                    }
                   </p>
                 </CardContent>
               </Card>
-            ) : !errorDischarged && (
+            ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {filteredDischargedResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
@@ -570,6 +619,23 @@ export default function Dashboard() {
         </Tabs>
       </main>
 
+      {/* Footer */}
+      <footer className="border-t bg-white py-6 mt-12">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-600">
+          <p>
+            © {new Date().getFullYear()} Moritz Care Home • Built with ❤️ using{' '}
+            <a
+              href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-600 hover:text-teal-700 font-medium"
+            >
+              caffeine.ai
+            </a>
+          </p>
+        </div>
+      </footer>
+
       {/* Add Resident Dialog */}
       <AddResidentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
 
@@ -579,24 +645,34 @@ export default function Dashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive this resident? Archived residents will no longer appear in the main lists.
-              This action can be reversed by an administrator if needed.
+              Are you sure you want to archive this resident? Archived residents will be hidden from the main view but can be restored later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleArchiveResident}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {archiveResident.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Archiving...
-                </>
-              ) : (
-                'Archive'
-              )}
+            <AlertDialogAction onClick={handleArchiveResident} className="bg-amber-600 hover:bg-amber-700">
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={residentToDelete !== null} onOpenChange={(open) => !open && setResidentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Permanently Delete Resident</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p className="font-semibold text-red-600">Warning: This action cannot be undone!</p>
+              <p>
+                Are you sure you want to permanently delete this resident? All associated data including medications, records, and vitals will be permanently removed from the system.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteResident} className="bg-red-600 hover:bg-red-700">
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,14 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Make startup resilient to backend actor creation/profile load failures (including stopped canister), add a public backend health check, and ensure startup error diagnostics and recovery actions are accurate and actionable.
+**Goal:** Ensure the app fails fast during startup when the backend is reachable but slow, showing an actionable error screen instead of waiting on long/infinite loading states.
 
 **Planned changes:**
-- Ensure backend actor creation and startup loading always either completes or transitions to the existing StartupErrorScreen within the configured startup timeout (no indefinite “Connecting to backend...”).
-- Update the Retry Connection action to clear relevant React Query caches and re-run actor creation, health check, and profile loading without requiring a page refresh.
-- Improve backend diagnostics shown on StartupErrorScreen to reliably display the targeted canister ID, network, and host (using `window.__ENV__` when available, otherwise clearly labeled safe fallbacks; no secrets displayed).
-- Add an unauthenticated backend `healthCheck()` method compatible with the existing frontend `performHealthCheck()` expectations (returns an object with `message` and optional `timestamp`).
-- Fix startup gating so that after successful actor creation, a missing caller profile reliably routes to/renders Profile Setup, and non-fatal access-control initialization issues do not block Profile Setup or the main app.
-- Improve frontend error normalization and StartupErrorScreen messaging to explicitly detect and surface “backend canister is stopped” failures and show the targeted canister ID; ensure retries do not re-enter infinite loading.
+- Add shorter, configurable startup timeouts (separate from the 45s watchdog) so actor creation and profile loading fail fast when they stall.
+- Wrap startup-critical requests (including `getCallerUserProfile` / `useGetCallerUserProfileStartup` and similar) with per-step `withTimeout` so slow/hanging calls transition into the existing error flow quickly.
+- Trigger `performHealthCheck` earlier during startup if loading exceeds a short threshold, so the UI can distinguish “backend unreachable” vs “backend reachable but slow” and tailor the error messaging and fallback timing.
+- Ensure “Retry Connection” clears any timed-out startup state and re-attempts actor creation and profile loading; “Logout” remains available from the startup error screen.
 
-**User-visible outcome:** The app no longer gets stuck on “Connecting to backend...”; if the backend is unreachable or stopped, users see a clear StartupErrorScreen with accurate diagnostics and a working Retry Connection (including a health check). If the backend is reachable but the user has no profile, the app reliably proceeds to Profile Setup.
+**User-visible outcome:** When the backend is slow, users see a clear startup error screen within ~10–15 seconds (with Retry Connection and Logout) rather than being stuck on “Connecting to backend...” / “Loading your profile...” until the full 45 seconds elapse.

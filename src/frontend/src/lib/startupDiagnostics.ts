@@ -74,6 +74,7 @@ export function getBackendDiagnostics(): BackendDiagnostics {
 /**
  * Performs a health check against the backend
  * Uses the public healthCheck endpoint that doesn't require authentication
+ * Idempotent and safe to call multiple times during startup
  * @returns Health check result with success status and message
  */
 export async function performHealthCheck(): Promise<HealthCheckResult> {

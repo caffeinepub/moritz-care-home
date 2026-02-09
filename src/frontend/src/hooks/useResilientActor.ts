@@ -4,10 +4,9 @@ import { type backendInterface } from '../backend';
 import { createActorWithConfig } from '../config';
 import { getSecretParameter } from '../utils/urlParams';
 import { withTimeout, normalizeError, isNonFatalError } from '../lib/actorInit';
+import { ACTOR_CREATE_TIMEOUT_MS, ADMIN_INIT_TIMEOUT_MS } from '../lib/startupTimings';
 
 const ACTOR_QUERY_KEY = 'resilient-actor';
-const ACTOR_TIMEOUT_MS = 30000; // 30 seconds
-const INIT_TIMEOUT_MS = 15000; // 15 seconds for initialization
 
 export function useResilientActor() {
   const { identity } = useInternetIdentity();
@@ -29,7 +28,7 @@ export function useResilientActor() {
 
         const actor = await withTimeout(
           createActorWithConfig(actorOptions),
-          ACTOR_TIMEOUT_MS,
+          ACTOR_CREATE_TIMEOUT_MS,
           'Connection timed out: Unable to create backend actor'
         );
 
@@ -40,7 +39,7 @@ export function useResilientActor() {
           try {
             await withTimeout(
               actor._initializeAccessControlWithSecret(adminToken),
-              INIT_TIMEOUT_MS,
+              ADMIN_INIT_TIMEOUT_MS,
               'Access control initialization timed out'
             );
           } catch (initError) {

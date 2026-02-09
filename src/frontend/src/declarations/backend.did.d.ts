@@ -336,6 +336,7 @@ export interface _SERVICE {
     { 'message' : string, 'timestamp' : [] | [bigint] }
   >,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'permanentlyDeleteResident' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'updateMedication' : ActorMethod<
     [

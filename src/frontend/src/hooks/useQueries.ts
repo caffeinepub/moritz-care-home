@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useResilientActor } from './useResilientActor';
+import { withTimeout, normalizeError } from '../lib/actorInit';
+import { PROFILE_STARTUP_TIMEOUT_MS } from '../lib/startupTimings';
 import type {
   Resident,
   UserProfile,
@@ -36,15 +38,17 @@ export function useGetCallerUserProfileStartup() {
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       try {
-        return await actor.getCallerUserProfile();
+        // Wrap profile fetch with timeout to fail fast
+        const profile = await withTimeout(
+          actor.getCallerUserProfile(),
+          PROFILE_STARTUP_TIMEOUT_MS,
+          'Profile load timed out: The backend is taking too long to respond'
+        );
+        return profile;
       } catch (error) {
-        // Surface authorization/trap errors clearly
-        if (error instanceof Error) {
-          if (error.message.includes('Unauthorized') || error.message.includes('trap')) {
-            throw new Error('Authorization error: ' + error.message);
-          }
-        }
-        throw error;
+        // Normalize error for consistent handling
+        const normalizedMessage = normalizeError(error);
+        throw new Error(normalizedMessage);
       }
     },
     enabled: !!actor && !actorFetching && !actorIsError,
@@ -342,10 +346,7 @@ export function useDischargeResident() {
       await actor.dischargeResident(id);
     },
     onSuccess: (_, id) => {
-      // Invalidate all resident list queries to ensure UI consistency
-      queryClient.invalidateQueries({ queryKey: ['residents', 'all'] });
-      queryClient.invalidateQueries({ queryKey: ['residents', 'active'] });
-      queryClient.invalidateQueries({ queryKey: ['residents', 'discharged'] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
       queryClient.invalidateQueries({ queryKey: ['resident', id.toString()] });
     },
   });
@@ -360,27 +361,6 @@ export function useArchiveResident() {
       if (!actor) throw new Error('Actor not available');
       await actor.archiveResident(id);
     },
-    onSuccess: () => {
-      // Invalidate all resident list queries
-      queryClient.invalidateQueries({ queryKey: ['residents', 'all'] });
-      queryClient.invalidateQueries({ queryKey: ['residents', 'active'] });
-      queryClient.invalidateQueries({ queryKey: ['residents', 'discharged'] });
-    },
-  });
-}
-
-// Legacy hooks - kept for backward compatibility but not used in Dashboard
-export function useToggleResidentStatus() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: bigint) => {
-      if (!actor) throw new Error('Actor not available');
-      // Note: toggleResidentStatus is not in the backend interface
-      // This is kept for backward compatibility but should not be used
-      throw new Error('toggleResidentStatus is deprecated. Use dischargeResident or archiveResident instead.');
-    },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
       queryClient.invalidateQueries({ queryKey: ['resident', id.toString()] });
@@ -388,19 +368,18 @@ export function useToggleResidentStatus() {
   });
 }
 
-export function useRemoveResident() {
+export function usePermanentlyDeleteResident() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      // Note: removeResident is not in the backend interface
-      // This is kept for backward compatibility but should not be used
-      throw new Error('removeResident is deprecated. Use archiveResident instead.');
+      await actor.permanentlyDeleteResident(id);
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
+      queryClient.removeQueries({ queryKey: ['resident', id.toString()] });
     },
   });
 }
@@ -438,29 +417,7 @@ export function useAddMedication() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-    },
-  });
-}
-
-export function useUpdateMedicationStatus() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      residentId: bigint;
-      medicationId: bigint;
-      status: MedicationStatus;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.updateMedicationStatus(
-        params.residentId,
-        params.medicationId,
-        params.status
-      );
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
   });
 }
@@ -496,12 +453,37 @@ export function useEditMedication() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+    },
+  });
+}
+
+export function useUpdateMedicationStatus() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      residentId: bigint;
+      medicationId: bigint;
+      status: MedicationStatus;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.updateMedicationStatus(
+        params.residentId,
+        params.medicationId,
+        params.status
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
   });
 }
 
 // ============================================================================
-// MAR Record Queries
+// MAR Records
 // ============================================================================
 
 export function useAddMarRecord() {
@@ -532,7 +514,7 @@ export function useAddMarRecord() {
 }
 
 // ============================================================================
-// ADL Record Queries
+// ADL Records
 // ============================================================================
 
 export function useAddAdlRecord() {
@@ -563,7 +545,7 @@ export function useAddAdlRecord() {
 }
 
 // ============================================================================
-// Daily Vitals Queries
+// Daily Vitals
 // ============================================================================
 
 export function useAddDailyVitals() {
@@ -604,7 +586,7 @@ export function useAddDailyVitals() {
 }
 
 // ============================================================================
-// Weight Entry Queries
+// Weight Entries
 // ============================================================================
 
 export function useAddWeightEntry() {

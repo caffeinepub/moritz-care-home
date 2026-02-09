@@ -1,60 +1,49 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "App with Internet Computer (IC) backend canister; current focus is restoring profile loading by redeploying/recreating a stopped backend canister.",
+  "summary": "Project now includes fixing a startup/connectivity issue where the dashboard briefly appears then gets stuck on \"Connecting to backend...\"; user requested a code change to force faster fallback when backend is slow but reachable.",
   "architectural_notes": [
-    "Frontend calls IC backend canister method getCallerUserProfile; if the canister is stopped, calls are rejected (code 5 / IC0508)."
+    "Add startup connection timeout + fallback path (error/retry screen) to prevent indefinite 'Connecting to backend' state when backend actor/profile load is slow."
   ],
   "known_issues": [
-    "Profile Load Failed: backend canister rj6i2-3aaaa-aaaai-q46cq-cai is stopped, causing query rejection (code 5 / IC0508).",
-    "Build/deploy pipeline intermittently fails with 'Our AI encountered an unexpected issue' / 'Something broke on our end', preventing redeploy attempts."
+    "Dashboard flashes empty then becomes stuck on 'Connecting to backend' (startup/actor/profile load can stall indefinitely when backend is slow)."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-the-app-cannot-remain-on-the-connecting-to-backend-screen-indefinitely-by-guaranteeing-that-backend-actor-creation-always-either-succeeds-actor-available-or-transitions-to-the-existing-startuperrorscreen-within-the-configured-startup-time-limits",
-      "title": "Ensure the app cannot remain on the “Connecting to backend...” screen indefinitely by guaranteeing that backend actor creation always either succeeds (actor available) or transitions to the existing StartupErrorScreen within the configured startup time limits.",
+      "id": "feature-update-startup-connection-logic-to-fail-fast-show-startuperrorscreen-when-the-backend-is-reachable-but-actor-creation-or-profile-loading-is-slow-instead-of-staying-on-the-infinite-connecting-to-backend-loading-your-profile-screens-until-the-full-45s-watchdog-expires",
+      "title": "Update startup connection logic to fail fast (show StartupErrorScreen) when the backend is reachable but actor creation or profile loading is slow, instead of staying on the infinite \"Connecting to backend...\" / \"Loading your profile...\" screens until the full 45s watchdog expires.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-make-backend-connectivity-diagnostics-shown-on-startup-error-screens-accurate-and-actionable-by-reliably-determining-and-displaying-the-backend-canister-id-network-and-host-the-frontend-is-targeting-using-window-env-where-available-with-safe-fallbacks",
-      "title": "Make backend connectivity diagnostics shown on startup error screens accurate and actionable by reliably determining and displaying the backend canister ID, network, and host the frontend is targeting (using window.__ENV__ where available, with safe fallbacks).",
+      "id": "feature-add-explicit-per-step-timeouts-to-startup-calls-that-can-hang-even-when-the-backend-is-reachable-including-the-startup-profile-fetch-getcalleruserprofile-and-any-other-startup-critical-requests-using-the-existing-timeout-utility-withtimeout-so-they-error-quickly-and-trigger-the-existing-error-ui-flow",
+      "title": "Add explicit per-step timeouts to startup calls that can hang even when the backend is reachable, including the startup profile fetch (getCallerUserProfile) and any other startup-critical requests, using the existing timeout utility (withTimeout) so they error quickly and trigger the existing error UI flow.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-fix-the-startup-gating-flow-so-that-once-the-backend-actor-is-successfully-created-and-the-caller-profile-is-missing-the-app-reliably-reaches-the-profile-setup-screen-instead-of-being-blocked-by-access-control-initialization-errors-or-profile-query-failures",
-      "title": "Fix the startup gating flow so that once the backend actor is successfully created and the caller profile is missing, the app reliably reaches the Profile Setup screen instead of being blocked by access-control initialization errors or profile query failures.",
+      "id": "feature-run-performhealthcheck-earlier-during-slow-startup-not-only-after-an-error-timeout-so-the-ui-can-distinguish-backend-unreachable-vs-backend-reachable-but-slow-and-present-the-faster-fallback-accordingly",
+      "title": "Run performHealthCheck earlier during slow startup (not only after an error/timeout), so the UI can distinguish \"backend unreachable\" vs \"backend reachable but slow\" and present the faster fallback accordingly.",
       "reqIds": [
-        "REQ-4"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-detect-and-surface-backend-canister-is-stopped-failures-during-profile-load-and-actor-calls-by-improving-frontend-error-normalization-and-error-screen-messaging-to-explicitly-indicate-the-canister-is-stopped-and-show-the-targeted-canister-id-from-diagnostics",
-      "title": "Detect and surface “backend canister is stopped” failures during profile load and actor calls by improving frontend error normalization and error-screen messaging to explicitly indicate the canister is stopped and show the targeted canister ID from diagnostics.",
-      "reqIds": [
-        "REQ-5"
+        "REQ-3"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [
     {
-      "id": "AR-3",
-      "summary": "Add a public, unauthenticated backend method `healthCheck()` that is compatible with the existing frontend `performHealthCheck()` implementation (anonymous actor calling `healthCheck()` expecting an object with `message` and optional `timestamp`).",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "status": "pending"
+      "id": "AR-1",
+      "summary": "Implement faster startup fallback/timeout so UI doesn’t get stuck on 'Connecting to backend' when backend is slow but reachable (improve retry/error handling).",
+      "reqIds": [],
+      "status": "in_progress"
     }
   ],
-  "projectName": "Harden startup against stopped backend canister + add public backend health check",
+  "projectName": "Force faster startup fallback when backend is reachable but slow",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }
