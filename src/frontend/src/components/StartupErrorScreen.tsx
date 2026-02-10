@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, RefreshCw, LogOut, Info, Server, Network } from 'lucide-react';
+import { AlertCircle, RefreshCw, LogOut, Info, Server, Network, Activity, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import type { BackendDiagnostics, HealthCheckResult } from '../lib/startupDiagnostics';
 
@@ -111,12 +111,40 @@ export default function StartupErrorScreen({
                   <Separator />
                   <div className="flex justify-between">
                     <span className="text-gray-600">Health Check:</span>
-                    <span
-                      className={`font-medium ${
-                        healthCheckResult.success ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {healthCheckResult.success ? 'Passed' : 'Failed'}
+                    <span className="flex items-center gap-1">
+                      {healthCheckResult.status === 'pending' && (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                          <span className="font-medium text-blue-600">Checking...</span>
+                        </>
+                      )}
+                      {healthCheckResult.status === 'passed' && (
+                        <>
+                          <Activity className="h-4 w-4 text-green-600" />
+                          <span className="font-medium text-green-600">Passed</span>
+                        </>
+                      )}
+                      {healthCheckResult.status === 'failed' && (
+                        <>
+                          <Network className="h-4 w-4 text-red-600" />
+                          <span className="font-medium text-red-600">Failed</span>
+                        </>
+                      )}
+                      {healthCheckResult.status === 'timed-out' && (
+                        <>
+                          <Network className="h-4 w-4 text-orange-600" />
+                          <span className="font-medium text-orange-600">Timed Out</span>
+                        </>
+                      )}
+                      {!healthCheckResult.status && (
+                        <span
+                          className={`font-medium ${
+                            healthCheckResult.success ? 'text-green-600' : 'text-red-600'
+                          }`}
+                        >
+                          {healthCheckResult.success ? 'Passed' : 'Failed'}
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className="text-xs text-gray-600">{healthCheckResult.message}</div>

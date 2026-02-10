@@ -1,46 +1,25 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T14:28:56.458Z",
+  "generatedAt": "2026-02-10T15:23:01.428Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 2,
+    "total": 2,
+    "implemented": 0,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Eliminate the persistent 'Connecting to backend...' state caused by actor initialization by ensuring resident/admin queries do not depend on the immutable `useActor` hook (which always calls `_initializeAccessControlWithSecret` even when the token is empty). Update data-fetching hooks used by the Dashboard/Resident pages to use the resilient actor pattern (timeouts + best-effort admin init only when a non-empty token exists), so the app either loads data or surfaces a recoverable error state instead of hanging.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/ResidentProfile.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/ResidentProfile.tsx"
-        ]
+        "summary": "Recreate the missing Motoko authorization module at `backend/authorization/access-control.mo` so that `backend/main.mo` can compile and the canister can start. The module must provide a non-trapping `initState()` function and the permission-checking functions used by `backend/main.mo` (at minimum: `hasPermission(state, caller, role)` and `isAdmin(state, caller)`), supporting the role tags referenced in `backend/main.mo` (`#admin` and `#user`).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Prevent the Dashboard from rendering a misleading empty state while resident/admin queries are still loading or not yet enabled due to actor initialization. Update the Dashboard page UI logic to show a clear loading state (or skeleton) until queries have actually fetched (or errored), and to show a clear error message when resident queries fail/time out.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Ensure the backend exposes a public, non-authenticated health check method compatible with the frontend startup diagnostics (`performHealthCheck` calls `healthCheck()`). If missing, add a `public query func healthCheck()` that returns a simple record including at least a human-readable message and a timestamp.",
+        "summary": "Recreate the missing Motoko authorization mixin at `backend/authorization/MixinAuthorization.mo` so that `backend/main.mo` can compile and include it (`include MixinAuthorization(accessControlState);`). The mixin must accept the access control state created by `AccessControl.initState()` and must not trap during actor initialization. Any public/shared/query methods exported by the mixin must be safe to call and must not require unavailable dependencies.",
         "status": "unknown",
         "plannedFiles": [],
         "matchedFiles": []
@@ -50,12 +29,11 @@
   "changedFiles": [
     "build-request.json",
     "feature_evidence.json",
-    "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
     "frontend/src/backend.d.ts",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/Dashboard.tsx",
-    "frontend/src/pages/ResidentProfile.tsx",
+    "frontend/src/backend.ts",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,54 +1,6 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix resident dashboard empty flash and prevent persistent backend-connecting hang",
-  "requirements": [
-    {
-      "id": "REQ-1",
-      "summary": "Decouple resident/admin data fetching from the immutable useActor initialization by switching Dashboard/Resident queries to the resilient actor pattern with timeouts and best-effort admin init only when a non-empty token exists.",
-      "acceptanceCriteria": [
-        "After login, the Dashboard no longer shows an empty residents list due to queries being disabled while the actor is still initializing.",
-        "If backend actor creation or access-control initialization fails/blocks, the UI transitions to an explicit error state (via existing startup/error handling patterns) rather than remaining indefinitely on 'Connecting to backend...'.",
-        "Resident list queries execute successfully using the resilient actor when the backend is healthy, without requiring any URL admin token."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Update resident list hooks (useGetActiveResidents/useGetDischargedResidents and any other Dashboard/Resident page read hooks) to use useResilientActor instead of useActor, ensuring: (1) query enabled-state no longer depends on immutable actor initialization, (2) per-query calls remain timeout-wrapped, (3) returned hook state merges actor fetching/error into query loading/error (e.g., isLoading reflects actorFetching; error reflects resilient-actor failures), and (4) expose refetch/retry for UI recovery. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Update the admin-role check hook (useIsCallerAdmin) to use the resilient actor so it cannot be blocked by useActor’s access-control initialization path; ensure it surfaces a clear, recoverable error (and supports retry) rather than contributing to an indefinite 'Connecting to backend...' experience. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/ResidentProfile.tsx",
-          "operation": "modify",
-          "description": "Ensure ResidentProfile read behavior uses the updated resilient resident-fetch hook state so the page shows a real loading state while the resilient actor is initializing (instead of rendering not-found/empty prematurely), and surfaces a recoverable error state when the resident fetch fails/timeouts. Verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Prevent Dashboard from rendering empty/misleading states while resident/admin queries are still loading or not yet fetched; show clear loading and actionable error UI with retry.",
-      "acceptanceCriteria": [
-        "When the backend is slow, the Dashboard shows a loading indicator instead of empty resident cards/empty-state content.",
-        "When resident queries time out or error, the Dashboard shows an error message with a user-actionable recovery option (e.g., retry) rather than silently showing no residents.",
-        "When resident queries succeed but there are genuinely zero residents, the Dashboard shows the empty-state messaging only after the query is fetched successfully."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Adjust Dashboard rendering conditions to gate empty-state rendering on query fetched state (not just data length), and to treat actor initialization as part of the loading state. Ensure loading skeletons/indicators display until the relevant resident queries have actually fetched or errored. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Improve Dashboard error handling for resident queries: show a clear error message when active/discharged resident queries fail or time out, and provide a user-actionable recovery control (retry) wired to the queries’ refetch functions (and/or resilient actor refetch if exposed). Verify the component's usage instructions before implementing."
-        }
-      ]
-    }
-  ]
+  "title": "Frontend-only plan: no changes required for backend authorization module restoration",
+  "requirements": []
 }

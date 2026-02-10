@@ -1,73 +1,29 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T14:28:56.456Z",
-  "summary": "REQ-1 and REQ-2 appear to be implemented via switching resident/admin React Query hooks to a resilient actor pattern (timeouts + improved error handling) and updating Dashboard/ResidentProfile UI to show proper loading/error/retry states instead of empty content. REQ-3 is not implemented in the provided diff summary (no backend changes / no healthCheck method added). The diff also includes multiple unrelated UI/styling and dialog/form changes not requested by the BuildRequest.",
+  "generatedAt": "2026-02-10T15:23:01.425Z",
+  "summary": "The diff only updates project_state.json to track the work; it does not add or modify the required Motoko authorization modules, so the backend compilation/startup restoration requirements are not implemented.",
   "missing_requirements": [
     {
-      "id": "REQ-3",
-      "requirement": "Backend must expose a public, non-authenticated health check method compatible with frontend startup diagnostics (performHealthCheck calls healthCheck()), e.g., `public query func healthCheck()` returning at least a message and timestamp.",
-      "reason": "The diff summary shows only frontend file modifications; there is no evidence of any backend (`backend/main.mo`) change adding or updating a `healthCheck()` method.",
+      "id": "REQ-1",
+      "requirement": "Recreate the missing Motoko authorization module at `backend/authorization/access-control.mo` with non-trapping `initState()` and permission checks (`hasPermission`, `isAdmin`) supporting `#admin` and `#user` so `backend/main.mo` compiles and the canister can start.",
+      "reason": "No files were added; only `project_state.json` was modified. There is no evidence that `backend/authorization/access-control.mo` was created or that required functions exist.",
       "evidence": [
-        "File diff summary: Added: 0, Modified: 5 (all listed are frontend-related or metadata); no `backend/main.mo` changes shown",
-        "frontend-file-summaries.txt (lists only frontend files; no backend changes referenced)"
+        "project_state.json (diff shows Added: 0, only Modified: project_state.json)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Recreate the missing Motoko authorization mixin at `backend/authorization/MixinAuthorization.mo` that can be included from `backend/main.mo` via `include MixinAuthorization(accessControlState);` and does not trap during actor initialization.",
+      "reason": "No files were added; only `project_state.json` was modified. There is no evidence that `backend/authorization/MixinAuthorization.mo` was created or that it accepts the access control state and initializes safely.",
+      "evidence": [
+        "project_state.json (diff shows Added: 0, only Modified: project_state.json)"
       ]
     }
   ],
-  "hallucinated_features": [
-    {
-      "description": "Login page visual redesign (opaque solid backgrounds, opaque teal overlay, Moritz Care Home logo aspect ratio changes).",
-      "reason": "Not requested by any requirement; BuildRequest focuses on dashboard loading/connection behavior and backend healthCheck only.",
-      "evidence": [
-        "frontend-file-summaries.txt: \"frontend/src/pages/LoginPage.tsx\": \"Login page ... fully opaque solid backgrounds ... teal overlay ... logo displayed in rectangular mode\""
-      ]
-    },
-    {
-      "description": "Comprehensive global CSS/print layout changes (solid white dialog enforcement, healthcare-themed OKLCH color system, fixed-width 1000px print layout override across devices).",
-      "reason": "Not requested; BuildRequest explicitly targets loading/connection behavior, not styling/print layout changes.",
-      "evidence": [
-        "frontend-file-summaries.txt: \"frontend/src/index.css\": \"comprehensive solid white dialog enforcement... healthcare-themed OKLCH color system... fixed-width desktop layout override (1000px) ... for Resident Profile Report, MAR Report, and ADL Report\""
-      ]
-    },
-    {
-      "description": "Major add/edit resident dialog functionality changes (multi-entry support for physicians/responsible persons/medications; select value conversions).",
-      "reason": "Non-goals include changing resident domain features beyond fixing loading/connection behavior; these appear to expand/alter resident feature UI.",
-      "evidence": [
-        "frontend-file-summaries.txt: \"frontend/src/components/AddResidentDialog.tsx\": \"Comprehensive dialog form ... multi-entry support ...\"",
-        "frontend-file-summaries.txt: \"frontend/src/components/EditResidentDialog.tsx\": \"Comprehensive dialog form for editing all resident information ...\""
-      ]
-    },
-    {
-      "description": "New/changed medication/MAR/ADL dialog styling and behavior (solid white backgrounds across many UI elements).",
-      "reason": "Not requested; unrelated to actor initialization / dashboard loading state requirements.",
-      "evidence": [
-        "frontend-file-summaries.txt: \"frontend/src/components/AddMarRecordDialog.tsx\": \"... solid white backgrounds for all UI elements ...\"",
-        "frontend-file-summaries.txt: \"frontend/src/components/AddAdlRecordDialog.tsx\": \"... solid white backgrounds for all UI elements ...\"",
-        "frontend-file-summaries.txt: \"frontend/src/components/AddMedicationDialog.tsx\": \"... solid white backgrounds ...\"",
-        "frontend-file-summaries.txt: \"frontend/src/components/EditMedicationDialog.tsx\": \"Dialog component for editing existing medications ...\""
-      ]
-    },
-    {
-      "description": "ProfileSetup changes (role field removed; new authorization error display; switch to startup-safe profile save mutation).",
-      "reason": "Only the startup-safe mutation aspect is adjacent to REQ-1, but the role-field removal and other ProfileSetup UI/type alignment are not requested in the BuildRequest and could be considered scope expansion.",
-      "evidence": [
-        "frontend-file-summaries.txt: \"frontend/src/components/ProfileSetup.tsx\": \"... role field removed to match backend UserProfile type ...\""
-      ]
-    },
-    {
-      "description": "Date utility changes adding aliases for backward compatibility (dateToBackendTimestamp, backendTimestampToDate).",
-      "reason": "Not requested; unrelated to dashboard loading/actor initialization/healthCheck.",
-      "evidence": [
-        "frontend-file-summaries.txt: \"frontend/src/lib/dateUtils.ts\": \"... added aliases (dateToBackendTimestamp, backendTimestampToDate) ...\""
-      ]
-    }
-  ],
-  "confidence": 0.72,
+  "hallucinated_features": [],
+  "confidence": 0.94,
   "changed_files": [
-    "frontend-file-summaries.txt",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/Dashboard.tsx",
-    "frontend/src/pages/ResidentProfile.tsx",
     "project_state.json"
   ]
 }

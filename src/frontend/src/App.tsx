@@ -9,11 +9,11 @@ import StartupErrorScreen from './components/StartupErrorScreen';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from 'next-themes';
 import { createRouter, RouterProvider, createRoute, createRootRoute, Outlet } from '@tanstack/react-router';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Server, Network, Activity } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { performHealthCheck, getBackendDiagnostics } from './lib/startupDiagnostics';
-import { isStoppedCanisterError } from './lib/actorInit';
+import { isStoppedCanisterError, isCanisterNotFoundError, isNetworkError, isTimeoutError } from './lib/actorInit';
 import { STARTUP_TIMEOUT_MS, FAIL_FAST_MS, HEALTHCHECK_EARLY_TRIGGER_MS } from './lib/startupTimings';
 
 const rootRoute = createRootRoute({
@@ -28,7 +28,7 @@ function RootComponent() {
   
   const [startupTimeout, setStartupTimeout] = useState(false);
   const [failFastTimeout, setFailFastTimeout] = useState(false);
-  const [healthCheckResult, setHealthCheckResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [healthCheckResult, setHealthCheckResult] = useState<{ success: boolean; message: string; status?: 'pending' | 'passed' | 'failed' | 'timed-out' } | null>(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
   const healthCheckTriggeredRef = useRef(false);
 
@@ -42,14 +42,21 @@ function RootComponent() {
         if (!healthCheckResult && !isCheckingHealth) {
           healthCheckTriggeredRef.current = true;
           setIsCheckingHealth(true);
+          setHealthCheckResult({ success: false, message: 'Checking backend health...', status: 'pending' });
           performHealthCheck()
             .then((result) => {
-              setHealthCheckResult(result);
+              setHealthCheckResult({
+                success: result.success,
+                message: result.message,
+                status: result.success ? 'passed' : 'failed'
+              });
             })
-            .catch(() => {
+            .catch((err) => {
+              const isTimeout = err?.message?.includes('timed out');
               setHealthCheckResult({
                 success: false,
-                message: 'Health check failed: Unable to reach backend'
+                message: isTimeout ? 'Health check timed out' : 'Health check failed: Unable to reach backend',
+                status: isTimeout ? 'timed-out' : 'failed'
               });
             })
             .finally(() => {
@@ -97,14 +104,21 @@ function RootComponent() {
     
     if (shouldCheckHealth) {
       setIsCheckingHealth(true);
+      setHealthCheckResult({ success: false, message: 'Checking backend health...', status: 'pending' });
       performHealthCheck()
         .then((result) => {
-          setHealthCheckResult(result);
+          setHealthCheckResult({
+            success: result.success,
+            message: result.message,
+            status: result.success ? 'passed' : 'failed'
+          });
         })
-        .catch(() => {
+        .catch((err) => {
+          const isTimeout = err?.message?.includes('timed out');
           setHealthCheckResult({
             success: false,
-            message: 'Health check failed: Unable to reach backend'
+            message: isTimeout ? 'Health check timed out' : 'Health check failed: Unable to reach backend',
+            status: isTimeout ? 'timed-out' : 'failed'
           });
         })
         .finally(() => {
@@ -129,13 +143,20 @@ function RootComponent() {
     
     // Re-run health check
     setIsCheckingHealth(true);
+    setHealthCheckResult({ success: false, message: 'Checking backend health...', status: 'pending' });
     try {
       const result = await performHealthCheck();
-      setHealthCheckResult(result);
-    } catch {
+      setHealthCheckResult({
+        success: result.success,
+        message: result.message,
+        status: result.success ? 'passed' : 'failed'
+      });
+    } catch (err) {
+      const isTimeout = err instanceof Error && err.message.includes('timed out');
       setHealthCheckResult({
         success: false,
-        message: 'Health check failed: Unable to reach backend'
+        message: isTimeout ? 'Health check timed out' : 'Health check failed: Unable to reach backend',
+        status: isTimeout ? 'timed-out' : 'failed'
       });
     } finally {
       setIsCheckingHealth(false);
@@ -190,7 +211,35 @@ function RootComponent() {
     );
   }
 
-  // Step 4: Startup timeout - show error screen
+  // Step 4: Detect stalled actor creation (actor is null, not fetching, not errored)
+  // This catches the "stuck on connecting" scenario
+  if (isAuthenticated && !actor && !actorFetching && !actorIsError && startupTimeout) {
+    const backendDiagnostics = getBackendDiagnostics();
+    
+    return (
+      <StartupErrorScreen
+        title="Actor Creation Stalled"
+        message="The backend actor could not be initialized. This may indicate a configuration issue or the backend canister may not be properly deployed. Please check the diagnostics below and try again."
+        error={new Error('Actor creation stalled: actor is null but not fetching or errored')}
+        onRetry={handleRetry}
+        onLogout={async () => {
+          await clear();
+          queryClient.clear();
+          setStartupTimeout(false);
+          setFailFastTimeout(false);
+          setHealthCheckResult(null);
+          healthCheckTriggeredRef.current = false;
+        }}
+        isAuthenticated={isAuthenticated}
+        principalId={principalId}
+        backendDiagnostics={backendDiagnostics}
+        healthCheckResult={healthCheckResult}
+        showLogout={true}
+      />
+    );
+  }
+
+  // Step 5: Startup timeout - show error screen
   if (startupTimeout) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
@@ -227,18 +276,36 @@ function RootComponent() {
     );
   }
 
-  // Step 5: Actor error - show error screen with retry
+  // Step 6: Actor error - show error screen with retry and improved classification
   if (actorIsError && actorError) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
     const isStopped = isStoppedCanisterError(actorError);
+    const isNotFound = isCanisterNotFoundError(actorError);
+    const isNetwork = isNetworkError(actorError);
+    const isTimeout = isTimeoutError(actorError);
     
     let errorTitle = 'Connection Failed';
     let errorMessage = 'Unable to connect to the backend. ';
     
     if (isStopped) {
       errorTitle = 'Backend Canister Stopped';
-      errorMessage = `The backend canister (${backendDiagnostics.canisterId}) is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
+      errorMessage = `The backend canister is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
+      if (backendDiagnostics.canisterId && !backendDiagnostics.canisterId.includes('Unknown')) {
+        errorMessage = `The backend canister (${backendDiagnostics.canisterId}) is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
+      }
+    } else if (isNotFound) {
+      errorTitle = 'Backend Canister Not Found';
+      errorMessage = 'The backend canister could not be found. The application may not be properly deployed or the canister ID may be incorrect.';
+      if (backendDiagnostics.canisterId.includes('Unknown')) {
+        errorMessage += ' Additionally, the canister ID configuration is missing or unknown.';
+      }
+    } else if (isNetwork) {
+      errorTitle = 'Network Error';
+      errorMessage = 'Unable to reach the backend due to a network error. Please check your internet connection and try again.';
+    } else if (isTimeout) {
+      errorTitle = 'Connection Timeout';
+      errorMessage = 'The connection to the backend timed out. The backend may be experiencing high load or may be unreachable.';
     } else if (isReachable) {
       errorMessage += 'The backend is reachable, but there may be an authorization or configuration issue.';
     } else {
@@ -267,21 +334,31 @@ function RootComponent() {
     );
   }
 
-  // Step 6: Profile error - show error screen with retry
+  // Step 7: Profile error - show error screen with retry and improved classification
   if (profileIsError && profileError) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
     const isStopped = isStoppedCanisterError(profileError);
+    const isNotFound = isCanisterNotFoundError(profileError);
+    const isNetwork = isNetworkError(profileError);
+    const isTimeout = isTimeoutError(profileError);
     
     let errorTitle = 'Profile Load Failed';
     let errorMessage = 'Unable to load your profile. ';
     
     if (isStopped) {
       errorTitle = 'Backend Canister Stopped';
-      errorMessage = `The backend canister (${backendDiagnostics.canisterId}) is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
-    } else if (profileError.message.includes('Authorization') || profileError.message.includes('Unauthorized')) {
-      errorMessage += 'You may not have the required permissions. Please contact an administrator.';
-    } else if (profileError.message.includes('timed out')) {
+      errorMessage = `The backend canister is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
+      if (backendDiagnostics.canisterId && !backendDiagnostics.canisterId.includes('Unknown')) {
+        errorMessage = `The backend canister (${backendDiagnostics.canisterId}) is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
+      }
+    } else if (isNotFound) {
+      errorTitle = 'Backend Canister Not Found';
+      errorMessage = 'The backend canister could not be found while loading your profile. The application may not be properly deployed.';
+    } else if (isNetwork) {
+      errorTitle = 'Network Error';
+      errorMessage = 'Unable to load your profile due to a network error. Please check your internet connection and try again.';
+    } else if (isTimeout) {
       errorTitle = 'Profile Load Timed Out';
       errorMessage = 'Loading your profile took too long. ';
       if (isReachable) {
@@ -289,6 +366,8 @@ function RootComponent() {
       } else {
         errorMessage += 'Please check your connection and try again.';
       }
+    } else if (profileError.message.includes('Authorization') || profileError.message.includes('Unauthorized')) {
+      errorMessage += 'You may not have the required permissions. Please contact an administrator.';
     } else if (isReachable) {
       errorMessage += 'The backend is reachable, but there was an error loading your profile.';
     } else {
@@ -317,20 +396,93 @@ function RootComponent() {
     );
   }
 
-  // Step 7: Actor loading or not available
+  // Step 8: Actor loading or not available - show diagnostics during connection
   if (actorFetching || !actor) {
+    const backendDiagnostics = getBackendDiagnostics();
+    const showDiagnostics = healthCheckResult !== null || isCheckingHealth;
+    
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
-        <div className="text-center">
+      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50 px-4">
+        <div className="w-full max-w-md text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-teal-600" />
           <p className="mt-4 text-lg text-gray-600">Connecting to backend...</p>
           <p className="mt-2 text-sm text-gray-500">This should only take a few seconds</p>
+          
+          {showDiagnostics && (
+            <div className="mt-6 rounded-lg bg-white p-4 text-left shadow-md">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Server className="h-4 w-4" />
+                Backend Diagnostics
+              </h3>
+              
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Canister ID:</span>
+                  <span className="font-mono text-gray-900">
+                    {backendDiagnostics.canisterId.length > 20 
+                      ? `${backendDiagnostics.canisterId.slice(0, 20)}...` 
+                      : backendDiagnostics.canisterId}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Network:</span>
+                  <span className="font-medium text-gray-900">{backendDiagnostics.network}</span>
+                </div>
+                
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Host:</span>
+                  <span className="font-mono text-gray-900">
+                    {backendDiagnostics.host.length > 30 
+                      ? `${backendDiagnostics.host.slice(0, 30)}...` 
+                      : backendDiagnostics.host}
+                  </span>
+                </div>
+                
+                {healthCheckResult && (
+                  <>
+                    <div className="my-2 border-t border-gray-200" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Health Check:</span>
+                      <span className="flex items-center gap-1">
+                        {healthCheckResult.status === 'pending' && (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+                            <span className="font-medium text-blue-600">Checking...</span>
+                          </>
+                        )}
+                        {healthCheckResult.status === 'passed' && (
+                          <>
+                            <Activity className="h-3 w-3 text-green-600" />
+                            <span className="font-medium text-green-600">Passed</span>
+                          </>
+                        )}
+                        {healthCheckResult.status === 'failed' && (
+                          <>
+                            <Network className="h-3 w-3 text-red-600" />
+                            <span className="font-medium text-red-600">Failed</span>
+                          </>
+                        )}
+                        {healthCheckResult.status === 'timed-out' && (
+                          <>
+                            <Network className="h-3 w-3 text-orange-600" />
+                            <span className="font-medium text-orange-600">Timed Out</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">{healthCheckResult.message}</p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  // Step 8: Profile loading
+  // Step 9: Profile loading
   if (profileLoading || !profileFetched) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
@@ -342,13 +494,13 @@ function RootComponent() {
     );
   }
 
-  // Step 9: Profile setup needed
+  // Step 10: Profile setup needed
   const showProfileSetup = isAuthenticated && actor && profileFetched && userProfile === null;
   if (showProfileSetup) {
     return <ProfileSetup />;
   }
 
-  // Step 10: All good - show app
+  // Step 11: All good - show app
   return (
     <>
       <Outlet />

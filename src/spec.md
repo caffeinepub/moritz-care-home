@@ -1,11 +1,10 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the Dashboard/Resident pages getting stuck on “Connecting to backend…” and avoid showing an empty residents view while backend actor initialization and queries are still in progress.
+**Goal:** Restore missing backend authorization modules so the Motoko canister compiles and starts successfully.
 
 **Planned changes:**
-- Update Dashboard/Resident data-fetching to use the resilient actor pattern (timeouts + best-effort admin initialization only when a non-empty token exists), avoiding reliance on the immutable `useActor` initialization path.
-- Adjust Dashboard UI states so it shows a clear loading indicator while resident/admin queries are pending/not yet enabled, shows an explicit error state with a recovery action (e.g., retry) on failures/timeouts, and only shows “no residents” after a successful fetch.
-- Ensure the backend provides an anonymous `healthCheck()` public query method (message + timestamp) so frontend startup diagnostics can reliably detect backend reachability.
+- Recreate `backend/authorization/access-control.mo` with a non-trapping `initState()` and the permission-checking functions used by `backend/main.mo` (including `hasPermission(state, caller, role)` and `isAdmin(state, caller)`), supporting the `#admin` and `#user` role tags referenced in `backend/main.mo`.
+- Recreate `backend/authorization/MixinAuthorization.mo` so `backend/main.mo` can compile with `include MixinAuthorization(accessControlState);`, ensuring the mixin accepts the access control state from `AccessControl.initState()` and does not trap during actor initialization.
 
-**User-visible outcome:** After login, the Dashboard no longer flashes an empty resident list or hangs indefinitely on “Connecting to backend…”. Users see an appropriate loading state while data is fetching, and a clear recoverable error message if the backend is unreachable or initialization fails.
+**User-visible outcome:** The canister deploys and reaches Running state again (no startup/initialization trap related to missing authorization modules), with existing authorization calls continuing to work.

@@ -14,18 +14,19 @@ export interface HealthCheckResult {
   success: boolean;
   message: string;
   timestamp?: number;
+  status?: 'pending' | 'passed' | 'failed' | 'timed-out';
 }
 
 /**
  * Derives backend target information from the frontend configuration
  * Never includes secrets like admin tokens
- * @returns Backend diagnostics information
+ * @returns Backend diagnostics information with explicit fallback labels
  */
 export function getBackendDiagnostics(): BackendDiagnostics {
   const diagnostics: BackendDiagnostics = {
-    canisterId: 'Unknown (fallback)',
-    network: 'Unknown (fallback)',
-    host: 'Unknown (fallback)',
+    canisterId: 'Unknown (configuration missing)',
+    network: 'Unknown (configuration missing)',
+    host: 'Unknown (configuration missing)',
   };
 
   try {
@@ -51,16 +52,16 @@ export function getBackendDiagnostics(): BackendDiagnostics {
     }
 
     // Fallback: try to detect from window location
-    if (diagnostics.network === 'Unknown (fallback)') {
+    if (diagnostics.network === 'Unknown (configuration missing)') {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        diagnostics.network = 'local (detected)';
-        if (diagnostics.host === 'Unknown (fallback)') {
-          diagnostics.host = 'http://localhost:4943';
+        diagnostics.network = 'local (detected from hostname)';
+        if (diagnostics.host === 'Unknown (configuration missing)') {
+          diagnostics.host = 'http://localhost:4943 (default)';
         }
       } else if (window.location.hostname.endsWith('.ic0.app') || window.location.hostname.endsWith('.icp0.io')) {
-        diagnostics.network = 'ic (detected)';
-        if (diagnostics.host === 'Unknown (fallback)') {
-          diagnostics.host = 'https://ic0.app';
+        diagnostics.network = 'ic (detected from hostname)';
+        if (diagnostics.host === 'Unknown (configuration missing)') {
+          diagnostics.host = 'https://ic0.app (default)';
         }
       }
     }
@@ -75,7 +76,7 @@ export function getBackendDiagnostics(): BackendDiagnostics {
  * Performs a health check against the backend
  * Uses the public healthCheck endpoint that doesn't require authentication
  * Idempotent and safe to call multiple times during startup
- * Aligned with refined stopped-canister detection to reduce false positives
+ * Returns explicit status: pending, passed, failed, or timed-out
  * @returns Health check result with success status and message
  */
 export async function performHealthCheck(): Promise<HealthCheckResult> {
@@ -86,7 +87,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
     const actor = await Promise.race([
       createActorWithConfig(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Health check timed out')), HEALTH_CHECK_TIMEOUT)
+        setTimeout(() => reject(new Error('Health check actor creation timed out')), HEALTH_CHECK_TIMEOUT)
       ),
     ]);
 
@@ -103,38 +104,46 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
         success: true,
         message: result.message,
         timestamp: result.timestamp ? Number(result.timestamp) : undefined,
+        status: 'passed',
       };
     }
 
     return {
       success: true,
       message: 'Backend is reachable',
+      status: 'passed',
     };
   } catch (error) {
     console.error('Health check failed:', error);
     
     let message = 'Backend is not reachable';
+    let status: 'failed' | 'timed-out' = 'failed';
+    
     if (error instanceof Error) {
       const errorMsg = error.message.toLowerCase();
       
-      // Tightened stopped-canister detection: require explicit "is stopped" or CallContextManager
-      if (errorMsg.includes('canister is stopped') || errorMsg.includes('is stopped') || errorMsg.includes('callcontextmanager')) {
-        message = 'Backend canister appears to be stopped';
-      } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-        message = 'Backend health check timed out (slow or unreachable)';
-      } else if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
-        message = 'Network error: Cannot reach backend';
-      } else if (errorMsg.includes('canister') && errorMsg.includes('not found')) {
+      if (errorMsg.includes('timed out') || errorMsg.includes('timeout')) {
+        message = 'Health check timed out after 10 seconds';
+        status = 'timed-out';
+      } else if (errorMsg.includes('is stopped') || errorMsg.includes('canister is stopped')) {
+        message = 'Backend canister is stopped';
+        status = 'failed';
+      } else if (errorMsg.includes('not found') || errorMsg.includes('does not exist')) {
         message = 'Backend canister not found or not deployed';
-      } else if (errorMsg.includes('canister')) {
-        // Generic canister error (not stopped, not not-found)
-        message = 'Backend canister error (check network and deployment)';
+        status = 'failed';
+      } else if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
+        message = 'Network error: Unable to reach backend';
+        status = 'failed';
+      } else {
+        message = `Health check failed: ${error.message}`;
+        status = 'failed';
       }
     }
 
     return {
       success: false,
       message,
+      status,
     };
   }
 }

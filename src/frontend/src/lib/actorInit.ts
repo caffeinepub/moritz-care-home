@@ -55,6 +55,95 @@ export function isStoppedCanisterError(error: unknown): boolean {
 }
 
 /**
+ * Detects if an error indicates a canister not found or not deployed
+ * @param error - The error to check
+ * @returns True if the error indicates canister not found
+ */
+export function isCanisterNotFoundError(error: unknown): boolean {
+  if (!error) return false;
+  
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('canister not found') ||
+      message.includes('not found') ||
+      message.includes('does not exist') ||
+      message.includes('could not be found')
+    );
+  }
+  
+  if (typeof error === 'string') {
+    const message = error.toLowerCase();
+    return (
+      message.includes('canister not found') ||
+      message.includes('not found') ||
+      message.includes('does not exist') ||
+      message.includes('could not be found')
+    );
+  }
+  
+  return false;
+}
+
+/**
+ * Detects if an error is a network/fetch error
+ * @param error - The error to check
+ * @returns True if the error is network-related
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (!error) return false;
+  
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('fetch') ||
+      message.includes('network') ||
+      message.includes('connection') ||
+      message.includes('unreachable')
+    );
+  }
+  
+  if (typeof error === 'string') {
+    const message = error.toLowerCase();
+    return (
+      message.includes('fetch') ||
+      message.includes('network') ||
+      message.includes('connection') ||
+      message.includes('unreachable')
+    );
+  }
+  
+  return false;
+}
+
+/**
+ * Detects if an error is a timeout error
+ * @param error - The error to check
+ * @returns True if the error is timeout-related
+ */
+export function isTimeoutError(error: unknown): boolean {
+  if (!error) return false;
+  
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('timeout') ||
+      message.includes('timed out')
+    );
+  }
+  
+  if (typeof error === 'string') {
+    const message = error.toLowerCase();
+    return (
+      message.includes('timeout') ||
+      message.includes('timed out')
+    );
+  }
+  
+  return false;
+}
+
+/**
  * Normalizes various error types into a human-readable message
  * @param error - The error to normalize
  * @returns A user-friendly error message
@@ -73,16 +162,19 @@ export function normalizeError(error: unknown): string {
       return 'Backend canister is stopped: The canister cannot process requests. Please contact the administrator to restart it.';
     }
 
-    if (message.includes('fetch') || message.includes('network')) {
+    // Check for canister not found
+    if (isCanisterNotFoundError(error)) {
+      return 'Backend canister not found: The canister may not be deployed or the canister ID may be incorrect.';
+    }
+
+    // Check for network errors
+    if (isNetworkError(error)) {
       return 'Network error: Unable to reach the backend. Please check your internet connection.';
     }
 
-    if (message.includes('timeout') || message.includes('timed out')) {
+    // Check for timeout errors
+    if (isTimeoutError(error)) {
       return 'Connection timed out: The backend is taking too long to respond.';
-    }
-
-    if (message.includes('canister') && message.includes('not found')) {
-      return 'Backend canister not found. The application may not be properly deployed.';
     }
 
     if (message.includes('Unauthorized')) {
