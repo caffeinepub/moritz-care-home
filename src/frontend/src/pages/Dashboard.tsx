@@ -236,6 +236,13 @@ export default function Dashboard() {
     }
   };
 
+  // Retry all resident queries
+  const handleRetryResidents = () => {
+    refetchAll();
+    refetchActive();
+    refetchDischarged();
+  };
+
   // Helper function to format room display
   const formatRoomDisplay = (resident: Resident): string => {
     if (resident.roomType === RoomType.sharedRoom && resident.bed) {
@@ -508,14 +515,14 @@ export default function Dashboard() {
         {/* Filters */}
         <div className="mb-6 flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
+            <Filter className="h-5 w-5 text-gray-500" />
             <Select value={selectedRoom} onValueChange={setSelectedRoom}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Filter by room" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Rooms</SelectItem>
-                {roomNumbers.map(room => (
+                {roomNumbers.map((room) => (
                   <SelectItem key={room} value={room}>
                     Room {room}
                   </SelectItem>
@@ -525,7 +532,7 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4 text-gray-500" />
+            <ArrowUpDown className="h-5 w-5 text-gray-500" />
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortCriteria)}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Sort by" />
@@ -539,7 +546,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Residents Tabs */}
+        {/* Tabs */}
         <Tabs defaultValue="all" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
             <TabsTrigger value="all" className="gap-2">
@@ -556,17 +563,20 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
+          {/* All Residents Tab */}
           <TabsContent value="all" className="space-y-4">
-            {errorAll && <ErrorAlert error={allError as Error} onRetry={refetchAll} />}
+            {errorAll && allError && (
+              <ErrorAlert error={allError as Error} onRetry={handleRetryResidents} />
+            )}
             {loadingAll ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               </div>
             ) : filteredAllResidents.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Users className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-900">No residents found</p>
+                  <p className="text-lg font-medium text-gray-600">No residents found</p>
                   <p className="text-sm text-gray-500">
                     {selectedRoom !== 'all' ? 'Try selecting a different room' : 'Add your first resident to get started'}
                   </p>
@@ -574,24 +584,27 @@ export default function Dashboard() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredAllResidents.map(resident => (
+                {filteredAllResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
                 ))}
               </div>
             )}
           </TabsContent>
 
+          {/* Active Residents Tab */}
           <TabsContent value="active" className="space-y-4">
-            {errorActive && <ErrorAlert error={activeError as Error} onRetry={refetchActive} />}
+            {errorActive && activeError && (
+              <ErrorAlert error={activeError as Error} onRetry={handleRetryResidents} />
+            )}
             {loadingActive ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               </div>
             ) : filteredActiveResidents.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <UserCheck className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-900">No active residents</p>
+                  <p className="text-lg font-medium text-gray-600">No active residents found</p>
                   <p className="text-sm text-gray-500">
                     {selectedRoom !== 'all' ? 'Try selecting a different room' : 'All residents have been discharged'}
                   </p>
@@ -599,24 +612,27 @@ export default function Dashboard() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredActiveResidents.map(resident => (
+                {filteredActiveResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
                 ))}
               </div>
             )}
           </TabsContent>
 
+          {/* Discharged Residents Tab */}
           <TabsContent value="discharged" className="space-y-4">
-            {errorDischarged && <ErrorAlert error={dischargedError as Error} onRetry={refetchDischarged} />}
+            {errorDischarged && dischargedError && (
+              <ErrorAlert error={dischargedError as Error} onRetry={handleRetryResidents} />
+            )}
             {loadingDischarged ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
               </div>
             ) : filteredDischargedResidents.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <UserX className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-900">No discharged residents</p>
+                  <p className="text-lg font-medium text-gray-600">No discharged residents found</p>
                   <p className="text-sm text-gray-500">
                     {selectedRoom !== 'all' ? 'Try selecting a different room' : 'No residents have been discharged yet'}
                   </p>
@@ -624,7 +640,7 @@ export default function Dashboard() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredDischargedResidents.map(resident => (
+                {filteredDischargedResidents.map((resident) => (
                   <ResidentCard key={resident.id.toString()} resident={resident} />
                 ))}
               </div>
@@ -637,21 +653,17 @@ export default function Dashboard() {
       <AddResidentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
 
       {/* Discharge Confirmation Dialog */}
-      <AlertDialog open={!!residentToDischarge} onOpenChange={(open) => !open && setResidentToDischarge(null)}>
+      <AlertDialog open={!!residentToDischarge} onOpenChange={() => setResidentToDischarge(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Discharge Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discharge <strong>{getResidentName(residentToDischarge)}</strong>?
-              This will move them to the discharged residents list.
+              Are you sure you want to discharge {getResidentName(residentToDischarge)}? This action can be reversed later if needed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDischargeResident}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
+            <AlertDialogAction onClick={handleDischargeResident}>
               Discharge
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -659,21 +671,17 @@ export default function Dashboard() {
       </AlertDialog>
 
       {/* Archive Confirmation Dialog */}
-      <AlertDialog open={!!residentToArchive} onOpenChange={(open) => !open && setResidentToArchive(null)}>
+      <AlertDialog open={!!residentToArchive} onOpenChange={() => setResidentToArchive(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive <strong>{getResidentName(residentToArchive)}</strong>?
-              Archived residents will be hidden from the main view but can be restored later.
+              Are you sure you want to archive {getResidentName(residentToArchive)}? Archived residents will be hidden from the main view but can be restored if needed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleArchiveResident}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
+            <AlertDialogAction onClick={handleArchiveResident}>
               Archive
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -681,24 +689,18 @@ export default function Dashboard() {
       </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!residentToDelete} onOpenChange={(open) => !open && setResidentToDelete(null)}>
+      <AlertDialog open={!!residentToDelete} onOpenChange={() => setResidentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-600">Permanently Delete Resident</AlertDialogTitle>
+            <AlertDialogTitle>Permanently Delete Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              <span className="font-semibold text-red-600">Warning: This action is irreversible!</span>
-              <br /><br />
-              Are you sure you want to permanently delete <strong>{getResidentName(residentToDelete)}</strong>?
-              All associated data including medications, records, and history will be permanently removed.
+              Are you sure you want to permanently delete {getResidentName(residentToDelete)}? This action cannot be undone and all associated data will be lost.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteResident}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Permanently Delete
+            <AlertDialogAction onClick={handleDeleteResident} className="bg-red-600 hover:bg-red-700">
+              Delete Permanently
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

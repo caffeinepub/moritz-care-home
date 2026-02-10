@@ -34,3 +34,14 @@ export const ADMIN_INIT_TIMEOUT_MS = 10000; // 10 seconds
  * Overall startup watchdog timeout (fallback if other mechanisms don't trigger)
  */
 export const STARTUP_TIMEOUT_MS = 45000; // 45 seconds
+
+/**
+ * Timeout for resident list queries (Dashboard and other views)
+ * Ensures resident loading fails fast instead of hanging indefinitely
+ */
+export const RESIDENT_QUERY_TIMEOUT_MS = 15000; // 15 seconds
+
+/**
+ * Timeout for individual resident fetch
+ */
+export const RESIDENT_FETCH_TIMEOUT_MS = 10000; // 10 seconds

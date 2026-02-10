@@ -1,95 +1,56 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Restore admin resident actions in production Dashboard with explicit gating + diagnostics",
+  "title": "Fail-fast backend connection and resilient resident loading with retry",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Make Discharge/Archive/Delete admin-only resident actions render and work reliably in production, including immediate list updates after mutations.",
-      "acceptanceCriteria": [
-        "When logged in as an admin user in production, each active resident card shows a visible Discharge button and each resident card shows a visible Delete button (in addition to Archive).",
-        "Clicking Discharge updates the resident status to discharged and moves the resident from Active to Discharged lists without requiring a hard refresh.",
-        "Clicking Delete permanently removes the resident and the resident no longer appears in any resident list after the mutation completes.",
-        "No console error occurs related to missing actor methods (e.g., 'isCallerAdmin method not found', 'dischargeResident method not found', 'permanentlyDeleteResident method not found')."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Harden admin + resident lifecycle hooks for production: avoid calling missing actor methods; add compatibility fallbacks for discharge/delete (e.g., prefer current methods, but if unavailable use Version-105 compatible methods exposed on the actor); ensure successful mutations invalidate/refetch resident lists so Active/Discharged tabs update without refresh."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Ensure admin-only actions are rendered based on the resolved admin-gating state and that post-mutation UX triggers appropriate React Query updates (no hard refresh). Keep Discharge visible only for active residents, and Delete visible for all residents for admins."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Expose admin-permission gating failures in the Dashboard with a clear compatibility/error message and one-click retry so missing actions are always explainable.",
-      "acceptanceCriteria": [
-        "If the admin check query errors, the Dashboard shows a prominent, user-readable error state indicating admin actions may not be available and includes a Retry action.",
-        "If the admin check query fails due to missing backend methods (compatibility issue), the Dashboard error message explicitly states that the backend appears out of date/incompatible.",
-        "The absence of Discharge/Delete buttons is always explainable by one of: (a) user is not an admin, or (b) admin check is still loading, or (c) admin check failed and an error banner is visible."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Improve useIsCallerAdmin to (1) detect compatibility issues (missing method) and (2) fall back to an alternate admin determination strategy available in declarations (e.g., role query) when possible; classify errors so the UI can distinguish 'not admin' vs 'check failed' vs 'backend incompatible' without console method-not-found errors."
-        },
-        {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Update the Dashboard admin-gating UI to show: loading state, explicit 'not an admin' explanation when admin check succeeds false, and an error banner with clear compatibility wording when the admin check fails (including missing-method detection) plus a one-click Retry that re-runs the admin check."
-        }
-      ]
-    },
-    {
       "id": "REQ-3",
-      "summary": "Add an unobtrusive in-app production diagnostics indicator showing frontend build identifier/version and the backend canister ID in use (no backend changes).",
+      "summary": "Ensure resident loading fails fast (no indefinite “Connecting to backend…”) and provide a visible Retry that re-runs actor creation and resident queries.",
       "acceptanceCriteria": [
-        "The Dashboard (or a globally accessible area) displays a frontend build identifier (e.g., a version string) and the backend canister ID currently in use.",
-        "The diagnostics indicator is readable but unobtrusive (e.g., small text in footer/header) and uses English labels.",
-        "The values update appropriately between local/dev and production builds and do not require backend changes to render."
+        "When the backend cannot be reached or is misconfigured, the app transitions from the loading screen to an error screen (or error state) within the configured startup timeouts and does not remain indefinitely on “Connecting to backend…”.",
+        "A visible Retry action re-attempts backend connection and re-fetches residents after a failure.",
+        "If the backend is reachable and the user has permissions, the Dashboard loads and displays residents instead of remaining in a connecting state."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/lib/buildInfo.ts",
-          "operation": "create",
-          "description": "Add a small utility to derive a frontend build identifier/version from build-time environment (e.g., Vite env variables) with sensible fallbacks for local/dev, without requiring backend changes."
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Update the startup Retry handler to fully reset resident-loading state by clearing/invalidation of resident-related React Query caches (in addition to the existing resilient-actor + profile queries), so a Retry re-runs actor creation and subsequent resident queries rather than reusing potentially stuck cache state."
         },
         {
-          "path": "frontend/src/components/DiagnosticsIndicator.tsx",
-          "operation": "create",
-          "description": "Create a lightweight UI component that displays English-labeled diagnostics: frontend build identifier/version (from buildInfo) and backend canister ID (from existing getBackendDiagnostics()). Use existing UI primitives (compose; do not edit frontend/src/components/ui). Verify the component's usage instructions before implementing."
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Wrap resident-list query functions in explicit timeouts and normalized error handling (using existing withTimeout/normalizeError) so resident-loading requests fail fast with actionable errors instead of stalling indefinitely."
         },
         {
           "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Render the DiagnosticsIndicator in an unobtrusive location on the Dashboard (e.g., header/footer area) so it is visible in production for confirmation of frontend build + connected backend canister ID. Verify the component's usage instructions before implementing."
+          "description": "Ensure the Dashboard surfaces a clear error state when resident queries fail (including timeout/misconfiguration cases) and that the existing Retry action triggers a full re-attempt (refetch + any needed cache invalidation) for the currently visible resident list."
         }
       ]
     },
     {
       "id": "REQ-4",
-      "summary": "Align frontend runtime behavior with Version 105 backend interface expectations by adding compatibility handling and surfacing mismatches, preventing stale-declaration/method-missing failures in production UI paths.",
+      "summary": "Make Dashboard resident fetching use the resilient actor/connection strategy with explicit timeouts and actionable errors under slow backend initialization.",
       "acceptanceCriteria": [
-        "The deployed backend canister used by production includes callable methods for admin check and resident discharge/delete that match the frontend actor expectations.",
-        "The frontend build does not ship with stale declarations that omit these methods when connecting to production.",
-        "A production smoke check confirms the admin check succeeds and returns true for an admin principal, enabling the admin actions UI."
+        "Dashboard resident queries use an actor creation path that has explicit timeouts and returns actionable errors on failure (rather than silently stalling).",
+        "When backend responsiveness is slow (but reachable), the UI either loads residents successfully or shows an explicit slow-backend error state with retry, rather than leaving the resident list empty without explanation."
       ],
       "file_operations": [
         {
+          "path": "frontend/src/lib/startupTimings.ts",
+          "operation": "modify",
+          "description": "Add and centralize resident-query timing constants (e.g., resident list fetch timeout and/or slow-backend thresholds) so Dashboard resident loading can fail fast and present a consistent slow-backend/error experience."
+        },
+        {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Implement runtime interface-compatibility guards for admin/discharge/delete flows: prefer current actor methods when present, otherwise fall back to Version-105 compatible methods if present; when neither exists, throw a clearly worded 'backend appears out of date/incompatible' error that the UI can display (and avoid raw method-not-found console errors)."
+          "description": "Introduce resilient resident list hooks (or update existing resident list hooks) to use the resilient actor path (useResilientActor) for Dashboard reads, including explicit timeouts and consistent error messages, while keeping non-Dashboard flows unchanged where appropriate."
         },
         {
           "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "When compatibility errors occur (admin check or mutations), display a clear, user-readable message indicating the backend appears out of date/incompatible and provide a one-click retry; optionally include minimal diagnostic context (e.g., connected canister ID via existing diagnostics helper) to support production smoke checks."
+          "description": "Wire Dashboard resident queries to the resilient resident hooks so resident fetching benefits from the same resilient actor creation strategy as startup; ensure loading/error/slow-backend states are clearly communicated and include a retry path."
         }
       ]
     }

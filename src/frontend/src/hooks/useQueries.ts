@@ -3,7 +3,7 @@ import { useActor } from './useActor';
 import { useResilientActor } from './useResilientActor';
 import { useInternetIdentity } from './useInternetIdentity';
 import { withTimeout, normalizeError, isAuthorizationError } from '../lib/actorInit';
-import { PROFILE_STARTUP_TIMEOUT_MS } from '../lib/startupTimings';
+import { PROFILE_STARTUP_TIMEOUT_MS, RESIDENT_QUERY_TIMEOUT_MS, RESIDENT_FETCH_TIMEOUT_MS } from '../lib/startupTimings';
 import type {
   Resident,
   UserProfile,
@@ -193,9 +193,20 @@ export function useGetAllResidents() {
     queryKey: ['residents', 'all'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getAllResidents();
+      try {
+        const residents = await withTimeout(
+          actor.getAllResidents(),
+          RESIDENT_QUERY_TIMEOUT_MS,
+          'Resident list load timed out: The backend is taking too long to respond'
+        );
+        return residents;
+      } catch (error) {
+        const normalized = normalizeError(error);
+        throw new Error(normalized);
+      }
     },
     enabled: !!actor && !actorFetching,
+    retry: 1,
   });
 }
 
@@ -206,9 +217,20 @@ export function useGetActiveResidents() {
     queryKey: ['residents', 'active'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getActiveResidents();
+      try {
+        const residents = await withTimeout(
+          actor.getActiveResidents(),
+          RESIDENT_QUERY_TIMEOUT_MS,
+          'Active residents load timed out: The backend is taking too long to respond'
+        );
+        return residents;
+      } catch (error) {
+        const normalized = normalizeError(error);
+        throw new Error(normalized);
+      }
     },
     enabled: !!actor && !actorFetching,
+    retry: 1,
   });
 }
 
@@ -219,9 +241,20 @@ export function useGetDischargedResidents() {
     queryKey: ['residents', 'discharged'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getDischargedResidents();
+      try {
+        const residents = await withTimeout(
+          actor.getDischargedResidents(),
+          RESIDENT_QUERY_TIMEOUT_MS,
+          'Discharged residents load timed out: The backend is taking too long to respond'
+        );
+        return residents;
+      } catch (error) {
+        const normalized = normalizeError(error);
+        throw new Error(normalized);
+      }
     },
     enabled: !!actor && !actorFetching,
+    retry: 1,
   });
 }
 
@@ -235,9 +268,20 @@ export function useGetFilteredAndSortedResidents(
     queryKey: ['residents', 'filtered', status, sortBy],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.getFilteredAndSortedResidents(status, sortBy);
+      try {
+        const residents = await withTimeout(
+          actor.getFilteredAndSortedResidents(status, sortBy),
+          RESIDENT_QUERY_TIMEOUT_MS,
+          'Filtered residents load timed out: The backend is taking too long to respond'
+        );
+        return residents;
+      } catch (error) {
+        const normalized = normalizeError(error);
+        throw new Error(normalized);
+      }
     },
     enabled: !!actor && !actorFetching,
+    retry: 1,
   });
 }
 
@@ -250,7 +294,11 @@ export function useGetResident(id: bigint | null) {
       if (!actor || !id) return null;
       
       try {
-        const resident = await actor.getResident(id);
+        const resident = await withTimeout(
+          actor.getResident(id),
+          RESIDENT_FETCH_TIMEOUT_MS,
+          'Resident fetch timed out: The backend is taking too long to respond'
+        );
         return resident;
       } catch (error: unknown) {
         if (error instanceof Error) {
@@ -261,11 +309,12 @@ export function useGetResident(id: bigint | null) {
             return null;
           }
         }
-        throw error;
+        const normalized = normalizeError(error);
+        throw new Error(normalized);
       }
     },
     enabled: !!actor && !actorFetching && id !== null,
-    retry: false,
+    retry: 1,
   });
 }
 
@@ -625,8 +674,20 @@ export function useAddMarRecord() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
+  });
+}
+
+export function useGenerateMarReport(residentId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<MedicationAdministrationRecord[]>({
+    queryKey: ['marReport', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.generateMarReport(residentId);
+    },
+    enabled: !!actor && !actorFetching && residentId !== null,
   });
 }
 
@@ -657,8 +718,20 @@ export function useAddAdlRecord() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
+  });
+}
+
+export function useGenerateAdlReport(residentId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<ADLRecord[]>({
+    queryKey: ['adlReport', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.generateAdlReport(residentId);
+    },
+    enabled: !!actor && !actorFetching && residentId !== null,
   });
 }
 
@@ -699,13 +772,26 @@ export function useAddDailyVitals() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      queryClient.invalidateQueries({ queryKey: ['dailyVitals', variables.residentId.toString()] });
     },
   });
 }
 
+export function useGetDailyVitals(residentId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<DailyVitals[]>({
+    queryKey: ['dailyVitals', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.getDailyVitals(residentId);
+    },
+    enabled: !!actor && !actorFetching && residentId !== null,
+  });
+}
+
 // ============================================================================
-// Weight Entries
+// Weight Log
 // ============================================================================
 
 export function useAddWeightEntry() {
@@ -731,13 +817,26 @@ export function useAddWeightEntry() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
+      queryClient.invalidateQueries({ queryKey: ['weightLog', variables.residentId.toString()] });
     },
   });
 }
 
+export function useGetWeightLog(residentId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<WeightEntry[]>({
+    queryKey: ['weightLog', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.getWeightLog(residentId);
+    },
+    enabled: !!actor && !actorFetching && residentId !== null,
+  });
+}
+
 // ============================================================================
-// Physicians
+// Physician Management
 // ============================================================================
 
 export function useGetAllPhysicians() {
@@ -753,8 +852,27 @@ export function useGetAllPhysicians() {
   });
 }
 
+export function useAddPhysician() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      contactNumber: string;
+      specialty: string;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.addPhysician(params.name, params.contactNumber, params.specialty);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['physicians'] });
+    },
+  });
+}
+
 // ============================================================================
-// Pharmacies
+// Pharmacy Management
 // ============================================================================
 
 export function useGetAllPharmacies() {
@@ -770,8 +888,27 @@ export function useGetAllPharmacies() {
   });
 }
 
+export function useAddPharmacy() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      address: string;
+      contactNumber: string;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.addPharmacy(params.name, params.address, params.contactNumber);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pharmacies'] });
+    },
+  });
+}
+
 // ============================================================================
-// Insurance Companies
+// Insurance Management
 // ============================================================================
 
 export function useGetAllInsuranceCompanies() {
@@ -787,8 +924,33 @@ export function useGetAllInsuranceCompanies() {
   });
 }
 
+export function useAddInsurance() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      companyName: string;
+      policyNumber: string;
+      address: string;
+      contactNumber: string;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.addInsurance(
+        params.companyName,
+        params.policyNumber,
+        params.address,
+        params.contactNumber
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['insuranceCompanies'] });
+    },
+  });
+}
+
 // ============================================================================
-// Responsible Persons
+// Responsible Person Management
 // ============================================================================
 
 export function useGetAllResponsiblePersons() {
@@ -801,5 +963,30 @@ export function useGetAllResponsiblePersons() {
       return actor.getAllResponsiblePersons();
     },
     enabled: !!actor && !actorFetching,
+  });
+}
+
+export function useAddResponsiblePerson() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      relationship: string;
+      contactNumber: string;
+      address: string;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.addResponsiblePerson(
+        params.name,
+        params.relationship,
+        params.contactNumber,
+        params.address
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['responsiblePersons'] });
+    },
   });
 }

@@ -45,11 +45,13 @@ The retry script automates the deployment process and captures full output for d
    - The script will create timestamped log files in `frontend/deployment_logs/`
    - On success: Canister IDs are saved to `canister_ids_[timestamp].txt`
    - On failure: Full stdout/stderr is captured in `deploy_v89_retry_[timestamp].log`
+   - **Script uses `set -o pipefail`** to ensure piped commands (e.g., `npm run build | tee`) fail correctly when the underlying command fails
 
 4. **If deployment fails:**
    - Review the complete log file for error details
    - The failing command and full error output will be preserved
    - Use the log file for diagnosis and troubleshooting
+   - The script will exit with a non-zero code and stop immediately on failure
 
 ## Post-Deployment Smoke Tests
 
@@ -73,7 +75,8 @@ The following tests must pass for a successful deployment:
 
 #### Test 3: Dashboard Access (Authenticated)
 - [ ] After successful login, verify the Dashboard route (/) loads without errors
-- [ ] Confirm the resident list is displayed (or an explicit empty state if no residents exist)
+- [ ] **Confirm the Dashboard reaches a settled state (not stuck on "Connecting to backend...")**
+- [ ] Verify the resident list is displayed (or an explicit empty state if no residents exist)
 - [ ] Verify the following UI elements are present:
   - [ ] Header with navigation
   - [ ] Statistics cards (Active Residents, Discharged Residents, Total Rooms)
@@ -86,7 +89,7 @@ The following tests must pass for a successful deployment:
 
 #### Test 4: Profile Setup (First-Time Users)
 - [ ] For a new user (new Internet Identity), verify the profile setup modal appears
-- [ ] Confirm the modal requires: Name, Role, and Employee ID
+- [ ] Confirm the modal requires: Name and Employee ID
 - [ ] Complete the profile setup
 - [ ] Verify the modal closes and the Dashboard loads
 
@@ -95,7 +98,13 @@ The following tests must pass for a successful deployment:
 - [ ] Document any errors found with full details
 - [ ] Verify no React errors, network errors, or API failures
 
-#### Test 6: Logout Functionality
+#### Test 6: Diagnostics Indicator Verification
+- [ ] Locate the diagnostics indicator in the Dashboard header
+- [ ] Verify it displays a frontend build identifier (not "Unknown")
+- [ ] Verify it displays a backend canister ID (not "Not connected")
+- [ ] Cross-check the backend canister ID against the deployment artifacts in `frontend/deployment_logs/canister_ids_[timestamp].txt`
+
+#### Test 7: Logout Functionality
 - [ ] Verify the logout button is accessible
 - [ ] Click logout and confirm successful logout
 - [ ] Verify redirect to Login page
@@ -116,9 +125,10 @@ For step-by-step instructions and detailed acceptance criteria for each test, re
 If any of the smoke tests fail:
 1. Document the specific failure(s) with full error details
 2. Review the deployment log file (if using the retry script)
-3. Revert to the previous stable version
-4. Investigate the issue in a development environment
-5. Do not proceed with the deployment until issues are resolved
+3. Capture the timestamped canister IDs file path for reference
+4. Revert to the previous stable version
+5. Investigate the issue in a development environment
+6. Do not proceed with the deployment until issues are resolved
 
 ## Success Criteria
 All of the following must be true for a successful deployment:
@@ -128,9 +138,10 @@ All of the following must be true for a successful deployment:
 - ✅ Internet Identity authentication completes successfully
 - ✅ Application redirects back after authentication
 - ✅ The Dashboard route (/) loads without errors after login
-- ✅ Dashboard does not show infinite loading spinners
+- ✅ **Dashboard does not show infinite loading spinners or remain stuck on "Connecting to backend..."**
 - ✅ Resident list content displays correctly (or shows an explicit empty/error state)
 - ✅ **No JavaScript console errors are present during the entire flow**
+- ✅ **Diagnostics indicator shows valid frontend build identifier and backend canister ID**
 - ✅ No code changes or new features were introduced
 
 ## Deployment Sign-Off
@@ -141,11 +152,15 @@ All of the following must be true for a successful deployment:
 - **Backend canister ID:** _________________
 - **Deployment method:** ☐ Manual ☐ Retry Script
 - **Deployment log file:** _________________ (if using retry script)
+- **Canister IDs file:** _________________ (if using retry script)
+- **In-app diagnostics indicator values:**
+  - Frontend build identifier: _________________
+  - Backend canister ID: _________________
 - **All smoke tests passed:** ☐ Yes ☐ No
 - **Issues encountered:** _________________
 
 ---
 
 **Version:** 89  
-**Last Updated:** February 9, 2026  
+**Last Updated:** February 10, 2026  
 **Status:** Ready for Production Deployment

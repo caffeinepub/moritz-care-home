@@ -2,53 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-the-production-live-build-renders-the-admin-only-resident-actions-discharge-archive-delete-on-the-dashboard-for-authenticated-administrators-matching-version-105-behavior",
-      "featureTitle": "Ensure the production (live) build renders the admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.",
+      "featureId": "feature-remove-infinite-long-lived-loading-states-in-the-live-app-by-ensuring-resident-loading-queries-fail-fast-with-clear-errors-instead-of-leaving-the-ui-stuck-on-connecting-to-backend-and-provide-a-user-visible-retry-path-that-re-runs-actor-creation-and-resident-queries",
+      "featureTitle": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
       "files": [
+        "frontend/src/App.tsx",
         "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/Dashboard.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "blob-storage@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-make-admin-permission-gating-failures-explicit-in-the-dashboard-ui-so-that-if-the-admin-check-cannot-be-completed-e-g-backend-incompatibility-or-authorization-query-failure-the-ui-clearly-explains-why-discharge-delete-actions-are-unavailable-and-provides-a-one-click-retry",
-      "featureTitle": "Make admin-permission gating failures explicit in the Dashboard UI so that if the admin check cannot be completed (e.g., backend incompatibility or authorization query failure), the UI clearly explains why Discharge/Delete actions are unavailable and provides a one-click retry.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/Dashboard.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "blob-storage@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-a-lightweight-production-diagnostics-indicator-visible-in-the-app-ui-that-displays-the-currently-running-frontend-build-identifier-version-and-the-backend-canister-id-the-frontend-is-connected-to-to-help-confirm-the-live-app-is-actually-serving-version-105-and-pointing-at-the-expected-backend",
-      "featureTitle": "Add a lightweight production diagnostics indicator (visible in the app UI) that displays the currently running frontend build identifier/version and the backend canister ID the frontend is connected to, to help confirm the live app is actually serving Version 105 and pointing at the expected backend.",
-      "files": [
-        "frontend/src/components/DiagnosticsIndicator.tsx",
-        "frontend/src/lib/buildInfo.ts",
         "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
@@ -66,10 +24,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-verify-and-align-backend-interface-compatibility-for-version-105-so-that-production-backend-exposes-the-admin-and-resident-lifecycle-methods-used-by-the-frontend-at-minimum-iscalleradmin-dischargeresident-permanentlydeleteresident-and-that-the-generated-frontend-declarations-match-the-deployed-backend-candid",
-      "featureTitle": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+      "featureId": "feature-make-resident-list-fetching-resilient-by-using-the-same-resilient-actor-connection-strategy-used-during-startup-for-dashboard-resident-queries-so-the-live-app-consistently-loads-residents-even-under-slow-backend-initialization-conditions",
+      "featureTitle": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
       "files": [
         "frontend/src/hooks/useQueries.ts",
+        "frontend/src/lib/startupTimings.ts",
         "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [

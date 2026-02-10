@@ -13,8 +13,6 @@ import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
 
-
-
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -310,7 +308,7 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can access profiles");
     };
-    
+
     switch (userProfiles.get(caller)) {
       case (null) { null };
       case (?profile) {
@@ -328,7 +326,7 @@ actor {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-    
+
     switch (userProfiles.get(user)) {
       case (null) { null };
       case (?profile) {

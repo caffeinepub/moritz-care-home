@@ -1,65 +1,55 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T00:14:45.283Z",
+  "generatedAt": "2026-02-10T01:28:02.412Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
     "total": 4,
-    "implemented": 4,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Ensure the production (live) build renders the admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
+        "summary": "Add a public, unauthenticated backend health check method that the frontend can call during startup, and ensure it always returns quickly with a stable response shape (including a message and timestamp).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Make admin-permission gating failures explicit in the Dashboard UI so that if the admin check cannot be completed (e.g., backend incompatibility or authorization query failure), the UI clearly explains why Discharge/Delete actions are unavailable and provides a one-click retry.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
-        ]
+        "summary": "Ensure the backend supports the startup/admin initialization call used by the frontend resilient actor, and that failures in admin initialization do not prevent normal authenticated users from connecting and reading residents when they have the required permissions.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-3",
-        "summary": "Add a lightweight production diagnostics indicator (visible in the app UI) that displays the currently running frontend build identifier/version and the backend canister ID the frontend is connected to, to help confirm the live app is actually serving Version 105 and pointing at the expected backend.",
+        "summary": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/buildInfo.ts",
-          "frontend/src/components/DiagnosticsIndicator.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/hooks/useQueries.ts",
           "frontend/src/pages/Dashboard.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/lib/buildInfo.ts",
-          "frontend/src/components/DiagnosticsIndicator.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/hooks/useQueries.ts",
           "frontend/src/pages/Dashboard.tsx"
         ]
       },
       {
         "id": "REQ-4",
-        "summary": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+        "summary": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
         "status": "implemented",
         "plannedFiles": [
+          "frontend/src/lib/startupTimings.ts",
           "frontend/src/hooks/useQueries.ts",
           "frontend/src/pages/Dashboard.tsx"
         ],
         "matchedFiles": [
+          "frontend/src/lib/startupTimings.ts",
           "frontend/src/hooks/useQueries.ts",
           "frontend/src/pages/Dashboard.tsx"
         ]
@@ -72,13 +62,9 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/components/DiagnosticsIndicator.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
+    "frontend/src/App.tsx",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/lib/buildInfo.ts",
+    "frontend/src/lib/startupTimings.ts",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",

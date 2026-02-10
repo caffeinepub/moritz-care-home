@@ -1,12 +1,13 @@
 # Specification
 
 ## Summary
-**Goal:** Restore admin-only resident lifecycle actions (Discharge, Archive, Delete) in the production Dashboard and make production/compatibility issues clearly diagnosable in-app.
+**Goal:** Fix the live backend connection so the app doesn’t get stuck on “Connecting to backend…” and residents reliably load.
 
 **Planned changes:**
-- Ensure the production build renders admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.
-- Make admin-permission gating explicit in the Dashboard UI with clear loading/error states; when the admin check fails (including missing backend methods), show an explanatory banner and a one-click Retry.
-- Add a lightweight in-app diagnostics indicator showing the current frontend build identifier/version and the backend canister ID the frontend is connected to.
-- Verify and align production backend interface compatibility so required methods exist (isCallerAdmin, dischargeResident, permanentlyDeleteResident) and frontend declarations match the deployed backend candid.
+- Add a public, unauthenticated `healthCheck` backend method that returns quickly with a stable response shape (message + timestamp) for frontend startup checks.
+- Ensure the backend supports the frontend admin/startup initialization call (`actor._initializeAccessControlWithSecret(secret)`) and that initialization failures do not block normal actor creation or resident read flows (fail fast with explicit errors).
+- Update frontend startup and resident loading to use explicit timeouts and fail-fast error handling (no infinite loading), showing an error state when connection/queries fail.
+- Add a user-visible Retry action that re-runs actor creation and re-fetches residents after a connection or loading failure.
+- Make Dashboard resident fetching use the same resilient actor/connection strategy as startup so slow backend readiness results in either a successful load or an explicit retryable error state.
 
-**User-visible outcome:** Admin users in production can Discharge and permanently Delete residents directly from resident cards (with immediate list updates), and the UI clearly indicates whether actions are unavailable due to non-admin status, loading, or a compatibility/error state—plus shows the running frontend version and connected backend canister ID.
+**User-visible outcome:** The app no longer hangs on “Connecting to backend…”. If the backend is down/misconfigured/slow, users see a clear error with a Retry option; when the backend is reachable and permissions allow, the Dashboard loads and displays residents.

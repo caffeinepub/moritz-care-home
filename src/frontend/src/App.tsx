@@ -121,9 +121,11 @@ function RootComponent() {
     setIsCheckingHealth(false);
     healthCheckTriggeredRef.current = false;
     
-    // Clear only startup-relevant queries
+    // Clear startup-relevant queries AND resident queries
     queryClient.removeQueries({ queryKey: ['resilient-actor'] });
     queryClient.removeQueries({ queryKey: ['currentUserProfile'] });
+    queryClient.removeQueries({ queryKey: ['residents'] });
+    queryClient.removeQueries({ queryKey: ['isCallerAdmin'] });
     
     // Re-run health check
     setIsCheckingHealth(true);

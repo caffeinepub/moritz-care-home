@@ -4,45 +4,46 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Updated discharge and delete actions are not available in the live/production app after deploying Version 105."
+    "Live application stuck on 'connecting to backend'; residents not showing (backend connectivity/loading issue)."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-the-production-live-build-renders-the-admin-only-resident-actions-discharge-archive-delete-on-the-dashboard-for-authenticated-administrators-matching-version-105-behavior",
-      "title": "Ensure the production (live) build renders the admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-make-admin-permission-gating-failures-explicit-in-the-dashboard-ui-so-that-if-the-admin-check-cannot-be-completed-e-g-backend-incompatibility-or-authorization-query-failure-the-ui-clearly-explains-why-discharge-delete-actions-are-unavailable-and-provides-a-one-click-retry",
-      "title": "Make admin-permission gating failures explicit in the Dashboard UI so that if the admin check cannot be completed (e.g., backend incompatibility or authorization query failure), the UI clearly explains why Discharge/Delete actions are unavailable and provides a one-click retry.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-a-lightweight-production-diagnostics-indicator-visible-in-the-app-ui-that-displays-the-currently-running-frontend-build-identifier-version-and-the-backend-canister-id-the-frontend-is-connected-to-to-help-confirm-the-live-app-is-actually-serving-version-105-and-pointing-at-the-expected-backend",
-      "title": "Add a lightweight production diagnostics indicator (visible in the app UI) that displays the currently running frontend build identifier/version and the backend canister ID the frontend is connected to, to help confirm the live app is actually serving Version 105 and pointing at the expected backend.",
+      "id": "feature-remove-infinite-long-lived-loading-states-in-the-live-app-by-ensuring-resident-loading-queries-fail-fast-with-clear-errors-instead-of-leaving-the-ui-stuck-on-connecting-to-backend-and-provide-a-user-visible-retry-path-that-re-runs-actor-creation-and-resident-queries",
+      "title": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-verify-and-align-backend-interface-compatibility-for-version-105-so-that-production-backend-exposes-the-admin-and-resident-lifecycle-methods-used-by-the-frontend-at-minimum-iscalleradmin-dischargeresident-permanentlydeleteresident-and-that-the-generated-frontend-declarations-match-the-deployed-backend-candid",
-      "title": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+      "id": "feature-make-resident-list-fetching-resilient-by-using-the-same-resilient-actor-connection-strategy-used-during-startup-for-dashboard-resident-queries-so-the-live-app-consistently-loads-residents-even-under-slow-backend-initialization-conditions",
+      "title": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
       "reqIds": [
         "REQ-4"
       ],
       "version": 1
     }
   ],
-  "new_feature_requests": [],
-  "projectName": "Fix missing discharge and permanently delete actions in production dashboard",
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Add a public, unauthenticated backend health check method that the frontend can call during startup, and ensure it always returns quickly with a stable response shape (including a message and timestamp).",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Ensure the backend supports the startup/admin initialization call used by the frontend resilient actor, and that failures in admin initialization do not prevent normal authenticated users from connecting and reading residents when they have the required permissions.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    }
+  ],
+  "projectName": "Fix live backend connection so residents load (stuck on “Connecting to backend…”)",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

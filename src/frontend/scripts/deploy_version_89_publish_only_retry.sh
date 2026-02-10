@@ -3,7 +3,8 @@
 # This script re-runs the standard build/deploy commands and captures full output for diagnosis.
 # Usage: ./frontend/scripts/deploy_version_89_publish_only_retry.sh
 
-set -e  # Exit on error
+set -e          # Exit on error
+set -o pipefail # Ensure piped commands fail correctly
 
 # Configuration
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
