@@ -142,7 +142,7 @@ export function useSaveCallerUserProfile() {
 // ============================================================================
 
 export function useIsCallerAdmin() {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
   const { identity } = useInternetIdentity();
 
   // Include principal in query key to ensure fresh data on login/logout
@@ -160,7 +160,11 @@ export function useIsCallerAdmin() {
       }
 
       try {
-        const result = await actor.isCallerAdmin();
+        const result = await withTimeout(
+          actor.isCallerAdmin(),
+          RESIDENT_QUERY_TIMEOUT_MS,
+          'Admin check timed out: The backend is taking too long to respond'
+        );
         return result;
       } catch (error) {
         console.error('Admin check error:', error);
@@ -169,7 +173,7 @@ export function useIsCallerAdmin() {
         throw new Error(normalized);
       }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && !actorIsError,
     retry: 1, // Retry once in case of transient errors
     // Don't cache across sessions
     staleTime: 0,
@@ -179,6 +183,8 @@ export function useIsCallerAdmin() {
     ...query,
     // Expose loading state explicitly so UI can defer rendering admin controls
     isLoading: actorFetching || query.isLoading,
+    // Expose refetch for retry
+    refetch: query.refetch,
   };
 }
 
@@ -187,9 +193,9 @@ export function useIsCallerAdmin() {
 // ============================================================================
 
 export function useGetAllResidents() {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
 
-  return useQuery<Resident[]>({
+  const query = useQuery<Resident[]>({
     queryKey: ['residents', 'all'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
@@ -205,15 +211,22 @@ export function useGetAllResidents() {
         throw new Error(normalized);
       }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && !actorIsError,
     retry: 1,
   });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    // Expose refetch for retry
+    refetch: query.refetch,
+  };
 }
 
 export function useGetActiveResidents() {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
 
-  return useQuery<Resident[]>({
+  const query = useQuery<Resident[]>({
     queryKey: ['residents', 'active'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
@@ -229,15 +242,22 @@ export function useGetActiveResidents() {
         throw new Error(normalized);
       }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && !actorIsError,
     retry: 1,
   });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    // Expose refetch for retry
+    refetch: query.refetch,
+  };
 }
 
 export function useGetDischargedResidents() {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
 
-  return useQuery<Resident[]>({
+  const query = useQuery<Resident[]>({
     queryKey: ['residents', 'discharged'],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
@@ -253,18 +273,25 @@ export function useGetDischargedResidents() {
         throw new Error(normalized);
       }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && !actorIsError,
     retry: 1,
   });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    // Expose refetch for retry
+    refetch: query.refetch,
+  };
 }
 
 export function useGetFilteredAndSortedResidents(
   status: ResidentStatus | null,
   sortBy: SortCriteria | null
 ) {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
 
-  return useQuery<Resident[]>({
+  const query = useQuery<Resident[]>({
     queryKey: ['residents', 'filtered', status, sortBy],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
@@ -280,15 +307,22 @@ export function useGetFilteredAndSortedResidents(
         throw new Error(normalized);
       }
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && !actorIsError,
     retry: 1,
   });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    // Expose refetch for retry
+    refetch: query.refetch,
+  };
 }
 
 export function useGetResident(id: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
 
-  return useQuery<Resident | null>({
+  const query = useQuery<Resident | null>({
     queryKey: ['resident', id?.toString()],
     queryFn: async () => {
       if (!actor || !id) return null;
@@ -313,9 +347,29 @@ export function useGetResident(id: bigint | null) {
         throw new Error(normalized);
       }
     },
-    enabled: !!actor && !actorFetching && id !== null,
+    enabled: !!actor && !actorFetching && !actorIsError && id !== null,
     retry: 1,
   });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    // Expose refetch for retry
+    refetch: query.refetch,
+  };
+}
+
+/**
+ * Normalize backend authorization errors into consistent user-facing messages
+ */
+function normalizeAuthError(error: unknown): Error {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('unauthorized') || msg.includes('only admins') || msg.includes('trap')) {
+      return new Error('You do not have permission to perform this action. Only administrators can manage residents.');
+    }
+  }
+  return error instanceof Error ? error : new Error('An unexpected error occurred');
 }
 
 export function useAddResident() {
@@ -340,22 +394,26 @@ export function useAddResident() {
       medications: Medication[];
     }) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.addResident(
-        params.firstName,
-        params.lastName,
-        params.dateOfBirth,
-        params.admissionDate,
-        params.roomNumber,
-        params.roomType,
-        params.bed,
-        params.physiciansData,
-        params.pharmacyData,
-        params.insuranceData,
-        params.medicaidNumber,
-        params.medicareNumber,
-        params.responsiblePersonsData,
-        params.medications
-      );
+      try {
+        await actor.addResident(
+          params.firstName,
+          params.lastName,
+          params.dateOfBirth,
+          params.admissionDate,
+          params.roomNumber,
+          params.roomType,
+          params.bed,
+          params.physiciansData,
+          params.pharmacyData,
+          params.insuranceData,
+          params.medicaidNumber,
+          params.medicareNumber,
+          params.responsiblePersonsData,
+          params.medications
+        );
+      } catch (error) {
+        throw normalizeAuthError(error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -387,24 +445,28 @@ export function useUpdateResident() {
       medications: Medication[];
     }) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.updateResident(
-        params.id,
-        params.firstName,
-        params.lastName,
-        params.dateOfBirth,
-        params.admissionDate,
-        params.status,
-        params.roomNumber,
-        params.roomType,
-        params.bed,
-        params.physicians,
-        params.pharmacy,
-        params.insurance,
-        params.medicaidNumber,
-        params.medicareNumber,
-        params.responsiblePersons,
-        params.medications
-      );
+      try {
+        return await actor.updateResident(
+          params.id,
+          params.firstName,
+          params.lastName,
+          params.dateOfBirth,
+          params.admissionDate,
+          params.status,
+          params.roomNumber,
+          params.roomType,
+          params.bed,
+          params.physicians,
+          params.pharmacy,
+          params.insurance,
+          params.medicaidNumber,
+          params.medicareNumber,
+          params.responsiblePersons,
+          params.medications
+        );
+      } catch (error) {
+        throw normalizeAuthError(error);
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -420,45 +482,11 @@ export function useDischargeResident() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      
-      // Try primary method first, then fall back to v105 compatibility method
-      const actorAny = actor as any;
-      
-      if (typeof actor.dischargeResident === 'function') {
-        try {
-          await actor.dischargeResident(id);
-          return;
-        } catch (error) {
-          console.error('Primary discharge method failed:', error);
-          // If it's an authorization error, don't try fallback
-          if (isAuthorizationError(error)) {
-            throw new Error('Only administrators can discharge residents');
-          }
-          // Try fallback
-        }
+      try {
+        await actor.dischargeResident(id);
+      } catch (error) {
+        throw normalizeAuthError(error);
       }
-      
-      // Try v105 compatibility method
-      if (typeof actorAny.v105_dischargeResident === 'function') {
-        console.log('Using v105 compatibility discharge method');
-        try {
-          await actorAny.v105_dischargeResident(id);
-          return;
-        } catch (error) {
-          const normalized = normalizeError(error);
-          if (isAuthorizationError(error)) {
-            throw new Error('Only administrators can discharge residents');
-          }
-          if (normalized.toLowerCase().includes('not found')) {
-            throw new Error('Resident not found');
-          }
-          throw new Error(normalized);
-        }
-      }
-      
-      // No method available
-      console.error('No discharge method available on actor');
-      throw new Error('Backend appears out of date or incompatible. The discharge method is not available. Please ensure the backend canister is properly deployed.');
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -477,15 +505,7 @@ export function useArchiveResident() {
       try {
         await actor.archiveResident(id);
       } catch (error) {
-        // Normalize errors for consistent UI handling
-        const normalized = normalizeError(error);
-        if (isAuthorizationError(error)) {
-          throw new Error('Only administrators can archive residents');
-        }
-        if (normalized.toLowerCase().includes('not found')) {
-          throw new Error('Resident not found');
-        }
-        throw new Error(normalized);
+        throw normalizeAuthError(error);
       }
     },
     onSuccess: (_, id) => {
@@ -495,56 +515,21 @@ export function useArchiveResident() {
   });
 }
 
-export function usePermanentlyDeleteResident() {
+export function useDeleteResident() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      
-      // Try primary method first, then fall back to v105 compatibility method
-      const actorAny = actor as any;
-      
-      if (typeof actor.permanentlyDeleteResident === 'function') {
-        try {
-          await actor.permanentlyDeleteResident(id);
-          return;
-        } catch (error) {
-          console.error('Primary delete method failed:', error);
-          // If it's an authorization error, don't try fallback
-          if (isAuthorizationError(error)) {
-            throw new Error('Only administrators can permanently delete residents');
-          }
-          // Try fallback
-        }
+      try {
+        await actor.permanentlyDeleteResident(id);
+      } catch (error) {
+        throw normalizeAuthError(error);
       }
-      
-      // Try v105 compatibility method
-      if (typeof actorAny.v105_permanentlyDeleteResident === 'function') {
-        console.log('Using v105 compatibility delete method');
-        try {
-          await actorAny.v105_permanentlyDeleteResident(id);
-          return;
-        } catch (error) {
-          const normalized = normalizeError(error);
-          if (isAuthorizationError(error)) {
-            throw new Error('Only administrators can permanently delete residents');
-          }
-          if (normalized.toLowerCase().includes('not found')) {
-            throw new Error('Resident not found');
-          }
-          throw new Error(normalized);
-        }
-      }
-      
-      // No method available
-      console.error('No delete method available on actor');
-      throw new Error('Backend appears out of date or incompatible. The delete method is not available. Please ensure the backend canister is properly deployed.');
     },
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
-      queryClient.removeQueries({ queryKey: ['resident', id.toString()] });
     },
   });
 }
@@ -569,16 +554,20 @@ export function useAddMedication() {
       notes: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.addMedication(
-        params.residentId,
-        params.name,
-        params.dosage,
-        params.administrationTimes,
-        params.prescribingPhysician,
-        params.administrationRoute,
-        params.dosageQuantity,
-        params.notes
-      );
+      try {
+        await actor.addMedication(
+          params.residentId,
+          params.name,
+          params.dosage,
+          params.administrationTimes,
+          params.prescribingPhysician,
+          params.administrationRoute,
+          params.dosageQuantity,
+          params.notes
+        );
+      } catch (error) {
+        throw normalizeAuthError(error);
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
@@ -587,7 +576,7 @@ export function useAddMedication() {
   });
 }
 
-export function useEditMedication() {
+export function useUpdateMedication() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
@@ -602,43 +591,25 @@ export function useEditMedication() {
       administrationRoute: AdministrationRoute;
       dosageQuantity: string;
       notes: string;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.editMedication(
-        params.residentId,
-        params.medicationId,
-        params.name,
-        params.dosage,
-        params.administrationTimes,
-        params.prescribingPhysician,
-        params.administrationRoute,
-        params.dosageQuantity,
-        params.notes
-      );
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
-    },
-  });
-}
-
-export function useUpdateMedicationStatus() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      residentId: bigint;
-      medicationId: bigint;
       status: MedicationStatus;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.updateMedicationStatus(
-        params.residentId,
-        params.medicationId,
-        params.status
-      );
+      try {
+        await actor.updateMedication(
+          params.residentId,
+          params.medicationId,
+          params.name,
+          params.dosage,
+          params.administrationTimes,
+          params.prescribingPhysician,
+          params.administrationRoute,
+          params.dosageQuantity,
+          params.notes,
+          params.status
+        );
+      } catch (error) {
+        throw normalizeAuthError(error);
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
@@ -678,19 +649,6 @@ export function useAddMarRecord() {
   });
 }
 
-export function useGenerateMarReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<MedicationAdministrationRecord[]>({
-    queryKey: ['marReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateMarReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
 // ============================================================================
 // ADL Records
 // ============================================================================
@@ -719,19 +677,6 @@ export function useAddAdlRecord() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
     },
-  });
-}
-
-export function useGenerateAdlReport(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<ADLRecord[]>({
-    queryKey: ['adlReport', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.generateAdlReport(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
   });
 }
 
@@ -772,26 +717,12 @@ export function useAddDailyVitals() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['dailyVitals', variables.residentId.toString()] });
     },
-  });
-}
-
-export function useGetDailyVitals(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<DailyVitals[]>({
-    queryKey: ['dailyVitals', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.getDailyVitals(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
   });
 }
 
 // ============================================================================
-// Weight Log
+// Weight Entries
 // ============================================================================
 
 export function useAddWeightEntry() {
@@ -817,176 +748,6 @@ export function useAddWeightEntry() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['weightLog', variables.residentId.toString()] });
-    },
-  });
-}
-
-export function useGetWeightLog(residentId: bigint | null) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<WeightEntry[]>({
-    queryKey: ['weightLog', residentId?.toString()],
-    queryFn: async () => {
-      if (!actor || !residentId) return [];
-      return actor.getWeightLog(residentId);
-    },
-    enabled: !!actor && !actorFetching && residentId !== null,
-  });
-}
-
-// ============================================================================
-// Physician Management
-// ============================================================================
-
-export function useGetAllPhysicians() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Physician[]>({
-    queryKey: ['physicians'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllPhysicians();
-    },
-    enabled: !!actor && !actorFetching,
-  });
-}
-
-export function useAddPhysician() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      name: string;
-      contactNumber: string;
-      specialty: string;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.addPhysician(params.name, params.contactNumber, params.specialty);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['physicians'] });
-    },
-  });
-}
-
-// ============================================================================
-// Pharmacy Management
-// ============================================================================
-
-export function useGetAllPharmacies() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Pharmacy[]>({
-    queryKey: ['pharmacies'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllPharmacies();
-    },
-    enabled: !!actor && !actorFetching,
-  });
-}
-
-export function useAddPharmacy() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      name: string;
-      address: string;
-      contactNumber: string;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.addPharmacy(params.name, params.address, params.contactNumber);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pharmacies'] });
-    },
-  });
-}
-
-// ============================================================================
-// Insurance Management
-// ============================================================================
-
-export function useGetAllInsuranceCompanies() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Insurance[]>({
-    queryKey: ['insuranceCompanies'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllInsuranceCompanies();
-    },
-    enabled: !!actor && !actorFetching,
-  });
-}
-
-export function useAddInsurance() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      companyName: string;
-      policyNumber: string;
-      address: string;
-      contactNumber: string;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.addInsurance(
-        params.companyName,
-        params.policyNumber,
-        params.address,
-        params.contactNumber
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['insuranceCompanies'] });
-    },
-  });
-}
-
-// ============================================================================
-// Responsible Person Management
-// ============================================================================
-
-export function useGetAllResponsiblePersons() {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<ResponsiblePerson[]>({
-    queryKey: ['responsiblePersons'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getAllResponsiblePersons();
-    },
-    enabled: !!actor && !actorFetching,
-  });
-}
-
-export function useAddResponsiblePerson() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (params: {
-      name: string;
-      relationship: string;
-      contactNumber: string;
-      address: string;
-    }) => {
-      if (!actor) throw new Error('Actor not available');
-      await actor.addResponsiblePerson(
-        params.name,
-        params.relationship,
-        params.contactNumber,
-        params.address
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['responsiblePersons'] });
     },
   });
 }

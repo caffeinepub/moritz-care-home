@@ -1,708 +1,402 @@
-import { useState, useMemo } from 'react';
-import { useGetAllResidents, useGetActiveResidents, useGetDischargedResidents, useDischargeResident, useArchiveResident, usePermanentlyDeleteResident, useIsCallerAdmin } from '../hooks/useQueries';
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { useQueryClient } from '@tanstack/react-query';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Users, UserPlus, LogOut, Loader2, UserCheck, UserX, Archive, Eye, DoorOpen, Filter, ArrowUpDown, AlertCircle, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { toast } from 'sonner';
+import { useGetActiveResidents, useGetDischargedResidents, useDischargeResident, useDeleteResident, useIsCallerAdmin } from '../hooks/useQueries';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Plus, UserCheck, UserX, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import { formatDate, calculateAge } from '../lib/dateUtils';
 import AddResidentDialog from '../components/AddResidentDialog';
-import BrandLogo from '@/components/BrandLogo';
-import DiagnosticsIndicator from '@/components/DiagnosticsIndicator';
-import { calculateAge } from '../lib/dateUtils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 import type { Resident } from '../backend';
-import { RoomType } from '../backend';
 
-type SortCriteria = 'roomNumber' | 'residentId' | 'name';
-
+/**
+ * Main dashboard displaying residents in tabbed views with resilient actor-based queries, proper loading states, error recovery with retry, and admin-only actions.
+ */
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { clear, identity } = useInternetIdentity();
-  const queryClient = useQueryClient();
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [residentToArchive, setResidentToArchive] = useState<bigint | null>(null);
-  const [residentToDelete, setResidentToDelete] = useState<bigint | null>(null);
-  const [residentToDischarge, setResidentToDischarge] = useState<bigint | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<SortCriteria>('roomNumber');
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [dischargeConfirmOpen, setDischargeConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
 
-  const { 
-    data: allResidents = [], 
-    isLoading: loadingAll, 
-    isError: errorAll, 
-    error: allError,
-    refetch: refetchAll 
-  } = useGetAllResidents();
-  
   const { 
     data: activeResidents = [], 
     isLoading: loadingActive, 
-    isError: errorActive, 
     error: activeError,
-    refetch: refetchActive 
+    isFetched: activeFetched,
+    refetch: refetchActive
   } = useGetActiveResidents();
   
   const { 
     data: dischargedResidents = [], 
     isLoading: loadingDischarged, 
-    isError: errorDischarged, 
     error: dischargedError,
-    refetch: refetchDischarged 
+    isFetched: dischargedFetched,
+    refetch: refetchDischarged
   } = useGetDischargedResidents();
-
+  
   const { 
-    data: isAdmin = false, 
-    isLoading: loadingAdmin, 
-    isError: adminCheckError,
+    data: isAdmin, 
+    isLoading: adminLoading,
     error: adminError,
-    refetch: refetchAdminCheck 
+    refetch: refetchAdmin
   } = useIsCallerAdmin();
 
-  const dischargeResident = useDischargeResident();
-  const archiveResident = useArchiveResident();
-  const deleteResident = usePermanentlyDeleteResident();
+  const dischargeMutation = useDischargeResident();
+  const deleteMutation = useDeleteResident();
 
-  // Extract unique room numbers from all residents
-  const roomNumbers = useMemo(() => {
-    const rooms = new Set<string>();
-    allResidents.forEach(resident => {
-      if (resident.roomNumber) {
-        rooms.add(resident.roomNumber);
-      }
-    });
-    return Array.from(rooms).sort((a, b) => {
-      // Try to sort numerically if possible
-      const numA = parseInt(a, 10);
-      const numB = parseInt(b, 10);
-      if (!isNaN(numA) && !isNaN(numB)) {
-        return numA - numB;
-      }
-      return a.localeCompare(b);
-    });
-  }, [allResidents]);
-
-  // Sort residents based on selected criteria
-  const sortResidents = (residents: Resident[]): Resident[] => {
-    const sorted = [...residents];
-    
-    switch (sortBy) {
-      case 'residentId':
-        return sorted.sort((a, b) => {
-          const idA = Number(a.id);
-          const idB = Number(b.id);
-          return idA - idB;
-        });
-      
-      case 'name':
-        return sorted.sort((a, b) => {
-          const nameA = `${a.lastName} ${a.firstName}`.toLowerCase();
-          const nameB = `${b.lastName} ${b.firstName}`.toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-      
-      case 'roomNumber':
-      default:
-        return sorted.sort((a, b) => {
-          // Try to sort numerically if possible
-          const numA = parseInt(a.roomNumber, 10);
-          const numB = parseInt(b.roomNumber, 10);
-          if (!isNaN(numA) && !isNaN(numB)) {
-            if (numA !== numB) {
-              return numA - numB;
-            }
-            // Same room number, sort by bed (A before B) for shared rooms
-            if (a.roomType === RoomType.sharedRoom && b.roomType === RoomType.sharedRoom) {
-              const bedA = a.bed || '';
-              const bedB = b.bed || '';
-              return bedA.localeCompare(bedB);
-            }
-            return 0;
-          }
-          // Fallback to string comparison
-          const roomCompare = a.roomNumber.localeCompare(b.roomNumber);
-          if (roomCompare !== 0) {
-            return roomCompare;
-          }
-          // Same room number, sort by bed for shared rooms
-          if (a.roomType === RoomType.sharedRoom && b.roomType === RoomType.sharedRoom) {
-            const bedA = a.bed || '';
-            const bedB = b.bed || '';
-            return bedA.localeCompare(bedB);
-          }
-          return 0;
-        });
-    }
+  const handleDischargeClick = (resident: Resident) => {
+    setSelectedResident(resident);
+    setDischargeConfirmOpen(true);
   };
 
-  // Filter residents by selected room
-  const filterByRoom = (residents: Resident[]) => {
-    if (selectedRoom === 'all') return residents;
-    return residents.filter(r => r.roomNumber === selectedRoom);
+  const handleDeleteClick = (resident: Resident) => {
+    setSelectedResident(resident);
+    setDeleteConfirmOpen(true);
   };
 
-  // Apply filtering and sorting
-  const filteredAllResidents = useMemo(() => {
-    const filtered = filterByRoom(allResidents);
-    return sortResidents(filtered);
-  }, [allResidents, selectedRoom, sortBy]);
-
-  const filteredActiveResidents = useMemo(() => {
-    const filtered = filterByRoom(activeResidents);
-    return sortResidents(filtered);
-  }, [activeResidents, selectedRoom, sortBy]);
-
-  const filteredDischargedResidents = useMemo(() => {
-    const filtered = filterByRoom(dischargedResidents);
-    return sortResidents(filtered);
-  }, [dischargedResidents, selectedRoom, sortBy]);
-
-  const handleLogout = async () => {
-    await clear();
-    queryClient.clear();
-  };
-
-  const handleDischargeResident = async () => {
-    if (!residentToDischarge) return;
+  const handleDischargeConfirm = async () => {
+    if (!selectedResident) return;
 
     try {
-      await dischargeResident.mutateAsync(residentToDischarge);
-      toast.success('Resident discharged successfully');
-      setResidentToDischarge(null);
-    } catch (error: unknown) {
+      await dischargeMutation.mutateAsync(selectedResident.id);
+      toast.success(`${selectedResident.firstName} ${selectedResident.lastName} has been discharged successfully.`);
+      setDischargeConfirmOpen(false);
+      setSelectedResident(null);
+    } catch (error) {
       console.error('Discharge error:', error);
-      
-      if (error instanceof Error) {
-        toast.error('Failed to discharge resident', {
-          description: error.message,
-        });
-      } else {
-        toast.error('Failed to discharge resident', {
-          description: 'An unexpected error occurred. Please try again.',
-        });
-      }
-      setResidentToDischarge(null);
+      const message = error instanceof Error ? error.message : 'Failed to discharge resident. Please try again.';
+      toast.error(message);
     }
   };
 
-  const handleArchiveResident = async () => {
-    if (!residentToArchive) return;
+  const handleDeleteConfirm = async () => {
+    if (!selectedResident) return;
 
     try {
-      await archiveResident.mutateAsync(residentToArchive);
-      toast.success('Resident archived successfully');
-      setResidentToArchive(null);
-    } catch (error: unknown) {
-      console.error('Archive error:', error);
-      
-      if (error instanceof Error) {
-        toast.error('Failed to archive resident', {
-          description: error.message,
-        });
-      } else {
-        toast.error('Failed to archive resident', {
-          description: 'An unexpected error occurred. Please try again.',
-        });
-      }
-      setResidentToArchive(null);
-    }
-  };
-
-  const handleDeleteResident = async () => {
-    if (!residentToDelete) return;
-
-    try {
-      await deleteResident.mutateAsync(residentToDelete);
-      toast.success('Resident permanently deleted');
-      setResidentToDelete(null);
-    } catch (error: unknown) {
+      await deleteMutation.mutateAsync(selectedResident.id);
+      toast.success(`${selectedResident.firstName} ${selectedResident.lastName} has been permanently deleted.`);
+      setDeleteConfirmOpen(false);
+      setSelectedResident(null);
+    } catch (error) {
       console.error('Delete error:', error);
-      
-      if (error instanceof Error) {
-        toast.error('Failed to delete resident', {
-          description: error.message,
-        });
-      } else {
-        toast.error('Failed to delete resident', {
-          description: 'An unexpected error occurred. Please try again.',
-        });
-      }
-      setResidentToDelete(null);
+      const message = error instanceof Error ? error.message : 'Failed to delete resident. Please try again.';
+      toast.error(message);
     }
   };
 
-  // Retry all resident queries
-  const handleRetryResidents = () => {
-    refetchAll();
+  const handleRetry = () => {
     refetchActive();
     refetchDischarged();
+    refetchAdmin();
   };
 
-  // Helper function to format room display
-  const formatRoomDisplay = (resident: Resident): string => {
-    if (resident.roomType === RoomType.sharedRoom && resident.bed) {
-      return `Room ${resident.roomNumber} - Shared (Bed ${resident.bed})`;
-    }
-    return `Room ${resident.roomNumber} - Solo`;
-  };
-
-  // Get resident name for confirmation dialogs
-  const getResidentName = (id: bigint | null): string => {
-    if (!id) return '';
-    const resident = allResidents.find(r => r.id === id);
-    return resident ? `${resident.firstName} ${resident.lastName}` : '';
-  };
-
-  const ResidentCard = ({ resident }: { resident: Resident }) => {
+  const renderResidentCard = (resident: Resident) => {
     const age = calculateAge(resident.dateOfBirth);
+    const initials = `${resident.firstName[0]}${resident.lastName[0]}`;
     const isActive = resident.status === 'active';
 
     return (
-      <Card className="group transition-all hover:shadow-lg">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-xl font-semibold text-gray-900">
-                  {resident.firstName} {resident.lastName}
-                </CardTitle>
-                <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-300 font-semibold">
-                  <DoorOpen className="mr-1 h-3 w-3" />
-                  {formatRoomDisplay(resident)}
-                </Badge>
-              </div>
-              <CardDescription className="mt-1 text-sm">
-                Age: {age} years • ID: {resident.id.toString()}
-              </CardDescription>
+      <Card
+        key={resident.id.toString()}
+        className="cursor-pointer transition-shadow hover:shadow-lg"
+      >
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-12 w-12">
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <CardTitle
+                className="text-lg hover:text-primary"
+                onClick={() => navigate({ to: `/resident/${resident.id}` })}
+              >
+                {resident.firstName} {resident.lastName}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Room {resident.roomNumber}
+                {resident.bed && ` - Bed ${resident.bed}`}
+              </p>
             </div>
-            <Badge
-              variant={isActive ? 'default' : 'secondary'}
-              className={isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-            >
-              {isActive ? (
-                <>
-                  <UserCheck className="mr-1 h-3 w-3" />
-                  Active
-                </>
-              ) : (
-                <>
-                  <UserX className="mr-1 h-3 w-3" />
-                  Discharged
-                </>
-              )}
-            </Badge>
           </div>
+          <Badge variant={isActive ? 'default' : 'secondary'}>
+            {isActive ? 'Active' : 'Discharged'}
+          </Badge>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <p className="text-gray-500">Physicians</p>
-              <p className="font-medium text-gray-900">{resident.physicians.length}</p>
+        <CardContent>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Age:</span>
+              <span className="font-medium">{age} years</span>
             </div>
-            <div>
-              <p className="text-gray-500">Medications</p>
-              <p className="font-medium text-gray-900">{resident.medications.length}</p>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Date of Birth:</span>
+              <span className="font-medium">{formatDate(resident.dateOfBirth)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Admission Date:</span>
+              <span className="font-medium">{formatDate(resident.admissionDate)}</span>
+            </div>
+            {resident.dischargeTimestamp && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discharge Date:</span>
+                <span className="font-medium">{formatDate(resident.dischargeTimestamp)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Medications:</span>
+              <span className="font-medium">{resident.medications.length}</span>
             </div>
           </div>
 
-          <div className="flex gap-2 pt-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 min-w-[120px]"
-              onClick={() => navigate({ to: '/resident/$residentId', params: { residentId: resident.id.toString() } })}
-            >
-              <Eye className="mr-1 h-4 w-4" />
-              View Profile
-            </Button>
-            {/* Only show admin actions when admin check has completed and user is admin */}
-            {!loadingAdmin && isAdmin && (
-              <>
-                {isActive && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setResidentToDischarge(resident.id)}
-                    disabled={dischargeResident.isPending}
-                    className="text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                  >
-                    {dischargeResident.isPending ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <UserX className="mr-1 h-4 w-4" />
-                    )}
-                    Discharge
-                  </Button>
-                )}
+          {/* Admin-only action buttons */}
+          {!adminLoading && isAdmin && (
+            <div className="mt-4 flex gap-2">
+              {isActive && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setResidentToDelete(resident.id)}
-                  disabled={deleteResident.isPending}
-                  className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDischargeClick(resident);
+                  }}
+                  disabled={dischargeMutation.isPending}
+                  className="flex-1"
                 >
-                  {deleteResident.isPending ? (
-                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-1 h-4 w-4" />
-                  )}
-                  Delete
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Discharge
                 </Button>
-              </>
-            )}
-          </div>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteClick(resident);
+                }}
+                disabled={deleteMutation.isPending}
+                className="flex-1"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
   };
 
-  const ErrorAlert = ({ error, onRetry }: { error: Error; onRetry: () => void }) => (
-    <Alert variant="destructive" className="mb-4">
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>Failed to load residents</AlertTitle>
-      <AlertDescription className="flex items-center justify-between">
-        <span>{error.message || 'An error occurred while loading resident data.'}</span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRetry}
-          className="ml-4 gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Retry
-        </Button>
-      </AlertDescription>
-    </Alert>
-  );
-
-  const AdminCheckAlert = () => {
-    if (loadingAdmin) {
-      return (
-        <Alert className="mb-4 border-blue-200 bg-blue-50">
-          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-          <AlertTitle className="text-blue-900">Checking admin permissions...</AlertTitle>
-          <AlertDescription className="text-blue-700">
-            Please wait while we verify your access level.
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (adminCheckError && adminError) {
-      const errorMessage = adminError instanceof Error 
-        ? adminError.message 
-        : 'Unable to determine admin status. Admin actions may not be available.';
-      
-      const isCompatibilityIssue = errorMessage.toLowerCase().includes('compatibility') || 
-                                   errorMessage.toLowerCase().includes('out of date') ||
-                                   errorMessage.toLowerCase().includes('not available');
-      
-      return (
-        <Alert variant="destructive" className="mb-4">
-          <ShieldAlert className="h-4 w-4" />
-          <AlertTitle>
-            {isCompatibilityIssue ? 'Backend Compatibility Issue' : 'Admin permissions check failed'}
-          </AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>{errorMessage}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchAdminCheck()}
-              className="ml-4 gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      );
-    }
-
-    return null;
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-blue-50 to-teal-50">
-      {/* Header */}
-      <header className="border-b bg-white shadow-sm">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-3">
-            <BrandLogo size="md" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Moritz Care Home</h1>
-              <p className="text-sm text-gray-600">Assisted Living Management</p>
+  // Show error state with retry option
+  if ((activeError || dischargedError || adminError) && (activeFetched || dischargedFetched)) {
+    const errorMessage = activeError?.message || dischargedError?.message || adminError?.message || 'Failed to load residents';
+    return (
+      <div className="container mx-auto p-6">
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-destructive">Error Loading Dashboard</h3>
+              <p className="mt-1 text-sm text-destructive/90">{errorMessage}</p>
+              <Button 
+                onClick={handleRetry} 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Retry
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <DiagnosticsIndicator />
-            <Button variant="outline" onClick={handleLogout} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
-          </div>
         </div>
-      </header>
+      </div>
+    );
+  }
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">Resident Management</h2>
-            <p className="mt-1 text-gray-600">Manage and monitor all residents</p>
-          </div>
-          {!loadingAdmin && isAdmin && (
-            <Button
-              onClick={() => setShowAddDialog(true)}
-              className="gap-2 bg-gradient-to-r from-teal-600 to-blue-600 shadow-lg hover:from-teal-700 hover:to-blue-700"
-            >
-              <UserPlus className="h-5 w-5" />
-              Add New Resident
-            </Button>
+  return (
+    <div className="container mx-auto space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Resident Dashboard</h1>
+          <p className="text-muted-foreground">
+            Manage and view all residents in the care home
+          </p>
+        </div>
+        {/* Admin-only Add Resident button */}
+        {!adminLoading && isAdmin && (
+          <Button onClick={() => setAddDialogOpen(true)} size="lg">
+            <Plus className="mr-2 h-5 w-5" />
+            Add Resident
+          </Button>
+        )}
+      </div>
+
+      <Tabs defaultValue="active" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Active Residents
+            {activeFetched && !loadingActive && (
+              <Badge variant="secondary" className="ml-1">
+                {activeResidents.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="discharged" className="flex items-center gap-2">
+            <UserX className="h-4 w-4" />
+            Discharged Residents
+            {dischargedFetched && !loadingDischarged && (
+              <Badge variant="secondary" className="ml-1">
+                {dischargedResidents.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4">
+          {loadingActive ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-1/2 rounded bg-muted" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="h-3 w-full rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : activeFetched && activeResidents.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <UserCheck className="mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-lg font-medium">No active residents</p>
+                <p className="text-sm text-muted-foreground">
+                  {isAdmin ? 'Click "Add Resident" to get started' : 'No residents to display'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeResidents.map(renderResidentCard)}
+            </div>
           )}
-        </div>
+        </TabsContent>
 
-        {/* Admin Check Alert */}
-        <AdminCheckAlert />
+        <TabsContent value="discharged" className="space-y-4">
+          {loadingDischarged ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-muted" />
+                    <div className="h-3 w-1/2 rounded bg-muted" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="h-3 w-full rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted" />
+                      <div className="h-3 w-full rounded bg-muted" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : dischargedFetched && dischargedResidents.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <UserX className="mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-lg font-medium">No discharged residents</p>
+                <p className="text-sm text-muted-foreground">
+                  Discharged residents will appear here
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {dischargedResidents.map(renderResidentCard)}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
-        {/* Stats Cards */}
-        <div className="mb-8 grid gap-4 md:grid-cols-3">
-          <Card className="border-l-4 border-l-teal-500">
-            <CardHeader className="pb-3">
-              <CardDescription>Total Residents</CardDescription>
-              <CardTitle className="text-3xl font-bold text-teal-700">
-                {loadingAll ? <Loader2 className="h-8 w-8 animate-spin" /> : allResidents.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader className="pb-3">
-              <CardDescription>Active Residents</CardDescription>
-              <CardTitle className="text-3xl font-bold text-green-700">
-                {loadingActive ? <Loader2 className="h-8 w-8 animate-spin" /> : activeResidents.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="border-l-4 border-l-gray-500">
-            <CardHeader className="pb-3">
-              <CardDescription>Discharged Residents</CardDescription>
-              <CardTitle className="text-3xl font-bold text-gray-700">
-                {loadingDischarged ? <Loader2 className="h-8 w-8 animate-spin" /> : dischargedResidents.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-6 flex flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-              <SelectTrigger className="w-[200px] bg-white">
-                <SelectValue placeholder="Filter by room" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Rooms</SelectItem>
-                {roomNumbers.map((room) => (
-                  <SelectItem key={room} value={room}>
-                    Room {room}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4 text-gray-500" />
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortCriteria)}>
-              <SelectTrigger className="w-[200px] bg-white">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="roomNumber">Room Number</SelectItem>
-                <SelectItem value="residentId">Resident ID</SelectItem>
-                <SelectItem value="name">Name</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="bg-white">
-            <TabsTrigger value="all" className="gap-2">
-              <Users className="h-4 w-4" />
-              All Residents
-            </TabsTrigger>
-            <TabsTrigger value="active" className="gap-2">
-              <UserCheck className="h-4 w-4" />
-              Active
-            </TabsTrigger>
-            <TabsTrigger value="discharged" className="gap-2">
-              <UserX className="h-4 w-4" />
-              Discharged
-            </TabsTrigger>
-          </TabsList>
-
-          {/* All Residents Tab */}
-          <TabsContent value="all" className="space-y-4">
-            {errorAll && allError && <ErrorAlert error={allError as Error} onRetry={handleRetryResidents} />}
-            {loadingAll ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-              </div>
-            ) : filteredAllResidents.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Users className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-900">No residents found</p>
-                  <p className="text-sm text-gray-500">
-                    {selectedRoom !== 'all' ? 'Try selecting a different room filter' : 'Add your first resident to get started'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredAllResidents.map((resident) => (
-                  <ResidentCard key={resident.id.toString()} resident={resident} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Active Residents Tab */}
-          <TabsContent value="active" className="space-y-4">
-            {errorActive && activeError && <ErrorAlert error={activeError as Error} onRetry={handleRetryResidents} />}
-            {loadingActive ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-              </div>
-            ) : filteredActiveResidents.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <UserCheck className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-900">No active residents found</p>
-                  <p className="text-sm text-gray-500">
-                    {selectedRoom !== 'all' ? 'Try selecting a different room filter' : 'All residents have been discharged'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredActiveResidents.map((resident) => (
-                  <ResidentCard key={resident.id.toString()} resident={resident} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          {/* Discharged Residents Tab */}
-          <TabsContent value="discharged" className="space-y-4">
-            {errorDischarged && dischargedError && <ErrorAlert error={dischargedError as Error} onRetry={handleRetryResidents} />}
-            {loadingDischarged ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
-              </div>
-            ) : filteredDischargedResidents.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <UserX className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-900">No discharged residents found</p>
-                  <p className="text-sm text-gray-500">
-                    {selectedRoom !== 'all' ? 'Try selecting a different room filter' : 'No residents have been discharged yet'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredDischargedResidents.map((resident) => (
-                  <ResidentCard key={resident.id.toString()} resident={resident} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      {/* Add Resident Dialog */}
-      <AddResidentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
+      {/* Admin-only Add Resident Dialog */}
+      {isAdmin && (
+        <AddResidentDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      )}
 
       {/* Discharge Confirmation Dialog */}
-      <AlertDialog open={!!residentToDischarge} onOpenChange={(open) => !open && setResidentToDischarge(null)}>
-        <AlertDialogContent className="bg-white">
+      <AlertDialog open={dischargeConfirmOpen} onOpenChange={setDischargeConfirmOpen}>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Discharge Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discharge <strong>{getResidentName(residentToDischarge)}</strong>? This will move them to the discharged residents list.
+              Are you sure you want to discharge{' '}
+              <span className="font-semibold">
+                {selectedResident?.firstName} {selectedResident?.lastName}
+              </span>
+              ? This action will mark them as discharged and they will be moved to the discharged residents list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDischargeResident} className="bg-orange-600 hover:bg-orange-700">
-              Discharge
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Archive Confirmation Dialog */}
-      <AlertDialog open={!!residentToArchive} onOpenChange={(open) => !open && setResidentToArchive(null)}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Archive Resident</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to archive <strong>{getResidentName(residentToArchive)}</strong>? Archived residents will be hidden from the main view.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleArchiveResident} className="bg-amber-600 hover:bg-amber-700">
-              Archive
+            <AlertDialogAction
+              onClick={handleDischargeConfirm}
+              disabled={dischargeMutation.isPending}
+            >
+              {dischargeMutation.isPending ? 'Discharging...' : 'Discharge'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!residentToDelete} onOpenChange={(open) => !open && setResidentToDelete(null)}>
-        <AlertDialogContent className="bg-white">
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Permanently Delete Resident</AlertDialogTitle>
+            <AlertDialogTitle>Delete Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete <strong>{getResidentName(residentToDelete)}</strong>? This action cannot be undone and will remove all associated data.
+              Are you sure you want to permanently delete{' '}
+              <span className="font-semibold">
+                {selectedResident?.firstName} {selectedResident?.lastName}
+              </span>
+              ? This action cannot be undone and will remove all associated records.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteResident} className="bg-red-600 hover:bg-red-700">
-              Delete Permanently
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Footer */}
-      <footer className="border-t bg-white py-6 mt-12">
-        <div className="container mx-auto px-4 text-center text-sm text-gray-600">
-          <p>
-            © {new Date().getFullYear()} Moritz Care Home • Built with ❤️ using{' '}
-            <a
-              href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(
-                typeof window !== 'undefined' ? window.location.hostname : 'moritz-care-home'
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-teal-600 hover:text-teal-700 font-medium"
-            >
-              caffeine.ai
-            </a>
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

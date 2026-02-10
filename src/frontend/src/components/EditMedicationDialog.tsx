@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useEditMedication } from '../hooks/useQueries';
+import { useUpdateMedication } from '../hooks/useQueries';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Resident, Medication } from '../backend';
-import { AdministrationRoute } from '../backend';
+import { AdministrationRoute, MedicationStatus } from '../backend';
 
 interface EditMedicationDialogProps {
   open: boolean;
@@ -18,6 +18,9 @@ interface EditMedicationDialogProps {
   medication: Medication | null;
 }
 
+/**
+ * Dialog component for editing existing medications with pre-filled form fields and solid white backgrounds for all UI elements.
+ */
 export default function EditMedicationDialog({ open, onOpenChange, resident, medication }: EditMedicationDialogProps) {
   const [name, setName] = useState('');
   const [dosage, setDosage] = useState('');
@@ -26,8 +29,9 @@ export default function EditMedicationDialog({ open, onOpenChange, resident, med
   const [administrationTimes, setAdministrationTimes] = useState('');
   const [prescribingPhysicianName, setPrescribingPhysicianName] = useState('');
   const [notes, setNotes] = useState('');
+  const [status, setStatus] = useState<MedicationStatus>(MedicationStatus.active);
 
-  const editMedication = useEditMedication();
+  const updateMedication = useUpdateMedication();
 
   useEffect(() => {
     if (medication) {
@@ -38,6 +42,7 @@ export default function EditMedicationDialog({ open, onOpenChange, resident, med
       setAdministrationTimes(medication.administrationTimes.join(', '));
       setPrescribingPhysicianName(medication.prescribingPhysician?.name || '');
       setNotes(medication.notes || '');
+      setStatus(medication.status);
     }
   }, [medication]);
 
@@ -58,7 +63,7 @@ export default function EditMedicationDialog({ open, onOpenChange, resident, med
         ? administrationTimes.split(',').map((t) => t.trim())
         : [];
 
-      await editMedication.mutateAsync({
+      await updateMedication.mutateAsync({
         residentId: resident.id,
         medicationId: medication.id,
         name,
@@ -68,11 +73,15 @@ export default function EditMedicationDialog({ open, onOpenChange, resident, med
         administrationRoute,
         dosageQuantity,
         notes,
+        status,
       });
 
+      toast.success('Medication updated successfully');
       onOpenChange(false);
     } catch (error) {
       console.error('Error editing medication:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update medication';
+      toast.error(message);
     }
   };
 
@@ -187,6 +196,21 @@ export default function EditMedicationDialog({ open, onOpenChange, resident, med
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="status" className="text-foreground">
+              Status <span className="text-red-500">*</span>
+            </Label>
+            <Select value={status} onValueChange={(value) => setStatus(value as MedicationStatus)}>
+              <SelectTrigger id="status" className="bg-white border-input text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value={MedicationStatus.active}>Active</SelectItem>
+                <SelectItem value={MedicationStatus.discontinued}>Discontinued</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="notes" className="text-foreground">
               Notes
             </Label>
@@ -201,11 +225,11 @@ export default function EditMedicationDialog({ open, onOpenChange, resident, med
           </div>
 
           <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={editMedication.isPending} className="bg-white">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={updateMedication.isPending} className="bg-white">
               Cancel
             </Button>
-            <Button type="submit" disabled={editMedication.isPending} className="bg-primary text-primary-foreground">
-              {editMedication.isPending ? (
+            <Button type="submit" disabled={updateMedication.isPending} className="bg-primary text-primary-foreground">
+              {updateMedication.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Updating...

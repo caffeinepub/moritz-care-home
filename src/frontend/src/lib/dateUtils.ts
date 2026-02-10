@@ -16,6 +16,13 @@ export function dateStringToNanoseconds(dateString: string): bigint {
 }
 
 /**
+ * Alias for dateStringToNanoseconds for backward compatibility
+ */
+export function dateToBackendTimestamp(dateString: string): bigint {
+  return dateStringToNanoseconds(dateString);
+}
+
+/**
  * Convert nanoseconds from backend to a date string (YYYY-MM-DD)
  * Returns the date in local format without timezone offset
  */
@@ -29,6 +36,13 @@ export function nanosecondsToDateString(nanoseconds: bigint): string {
   const day = String(date.getUTCDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Alias for nanosecondsToDateString for backward compatibility
+ */
+export function backendTimestampToDate(nanoseconds: bigint): string {
+  return nanosecondsToDateString(nanoseconds);
 }
 
 /**

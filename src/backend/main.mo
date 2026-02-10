@@ -1,4 +1,3 @@
-// UNCHANGED. No backend coding needed for redeployment.
 import Map "mo:core/Map";
 import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
@@ -261,15 +260,6 @@ actor {
   var nextDailyVitalsId = 1;
   var nextWeightEntryId = 1;
 
-  // Helper function to convert UserRole to Text
-  func roleToText(role : AccessControl.UserRole) : Text {
-    switch (role) {
-      case (#admin) { "admin" };
-      case (#user) { "user" };
-      case (#guest) { "guest" };
-    };
-  };
-
   // Archive Helper - now as a shared function that can be called periodically
   public shared ({ caller }) func autoArchiveDischargedResidents() : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
@@ -305,40 +295,18 @@ actor {
   };
 
   // User Profile Management
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfileWithRole {
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
-
-    switch (userProfiles.get(caller)) {
-      case (null) { null };
-      case (?profile) {
-        let userRole = AccessControl.getUserRole(accessControlState, caller);
-        ?{
-          name = profile.name;
-          role = roleToText(userRole);
-          employeeId = profile.employeeId;
-        };
-      };
-    };
+    userProfiles.get(caller);
   };
 
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfileWithRole {
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-
-    switch (userProfiles.get(user)) {
-      case (null) { null };
-      case (?profile) {
-        let userRole = AccessControl.getUserRole(accessControlState, user);
-        ?{
-          name = profile.name;
-          role = roleToText(userRole);
-          employeeId = profile.employeeId;
-        };
-      };
-    };
+    userProfiles.get(user);
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {

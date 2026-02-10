@@ -146,9 +146,8 @@ export const Resident = IDL.Record({
   'medicareNumber' : IDL.Text,
   'firstName' : IDL.Text,
 });
-export const UserProfileWithRole = IDL.Record({
+export const UserProfile = IDL.Record({
   'name' : IDL.Text,
-  'role' : IDL.Text,
   'employeeId' : IDL.Text,
 });
 export const SortCriteria = IDL.Variant({
@@ -156,10 +155,6 @@ export const SortCriteria = IDL.Variant({
   'residentId' : IDL.Null,
   'name' : IDL.Null,
   'roomNumber' : IDL.Null,
-});
-export const UserProfile = IDL.Record({
-  'name' : IDL.Text,
-  'employeeId' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
@@ -327,11 +322,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getAllRoomNumbers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
-  'getCallerUserProfile' : IDL.Func(
-      [],
-      [IDL.Opt(UserProfileWithRole)],
-      ['query'],
-    ),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getDailyVitals' : IDL.Func([IDL.Nat], [IDL.Vec(DailyVitals)], ['query']),
   'getDischargedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
@@ -417,7 +408,7 @@ export const idlService = IDL.Service({
     ),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
-      [IDL.Opt(UserProfileWithRole)],
+      [IDL.Opt(UserProfile)],
       ['query'],
     ),
   'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
@@ -614,9 +605,8 @@ export const idlFactory = ({ IDL }) => {
     'medicareNumber' : IDL.Text,
     'firstName' : IDL.Text,
   });
-  const UserProfileWithRole = IDL.Record({
+  const UserProfile = IDL.Record({
     'name' : IDL.Text,
-    'role' : IDL.Text,
     'employeeId' : IDL.Text,
   });
   const SortCriteria = IDL.Variant({
@@ -624,10 +614,6 @@ export const idlFactory = ({ IDL }) => {
     'residentId' : IDL.Null,
     'name' : IDL.Null,
     'roomNumber' : IDL.Null,
-  });
-  const UserProfile = IDL.Record({
-    'name' : IDL.Text,
-    'employeeId' : IDL.Text,
   });
   
   return IDL.Service({
@@ -795,11 +781,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getAllRoomNumbers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
-    'getCallerUserProfile' : IDL.Func(
-        [],
-        [IDL.Opt(UserProfileWithRole)],
-        ['query'],
-      ),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getDailyVitals' : IDL.Func([IDL.Nat], [IDL.Vec(DailyVitals)], ['query']),
     'getDischargedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
@@ -885,7 +867,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
-        [IDL.Opt(UserProfileWithRole)],
+        [IDL.Opt(UserProfile)],
         ['query'],
       ),
     'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),

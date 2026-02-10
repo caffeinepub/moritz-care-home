@@ -3,36 +3,39 @@
   "projectStateVersion": 3,
   "summary": "New project",
   "architectural_notes": [],
-  "known_issues": [],
+  "known_issues": [
+    "Resident dashboard shows empty state and then gets stuck on 'connecting to backend' (connection issue persists)."
+  ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-roll-back-the-deployed-application-to-version-85-by-checking-out-the-repository-state-that-corresponds-to-version-85-tag-branch-commit-used-for-that-release-and-redeploying-to-the-internet-computer-ic-network",
-      "title": "Roll back the deployed application to Version 85 by checking out the repository state that corresponds to \"Version 85\" (tag/branch/commit used for that release) and redeploying to the Internet Computer (ic) network.",
+      "id": "feature-eliminate-the-persistent-connecting-to-backend-state-caused-by-actor-initialization-by-ensuring-resident-admin-queries-do-not-depend-on-the-immutable-useactor-hook-which-always-calls-initializeaccesscontrolwithsecret-even-when-the-token-is-empty-update-data-fetching-hooks-used-by-the-dashboard-resident-pages-to-use-the-resilient-actor-pattern-timeouts-best-effort-admin-init-only-when-a-non-empty-token-exists-so-the-app-either-loads-data-or-surfaces-a-recoverable-error-state-instead-of-hanging",
+      "title": "Eliminate the persistent 'Connecting to backend...' state caused by actor initialization by ensuring resident/admin queries do not depend on the immutable `useActor` hook (which always calls `_initializeAccessControlWithSecret` even when the token is empty). Update data-fetching hooks used by the Dashboard/Resident pages to use the resilient actor pattern (timeouts + best-effort admin init only when a non-empty token exists), so the app either loads data or surfaces a recoverable error state instead of hanging.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-perform-the-rollback-deployment-using-the-clean-rebuild-workflow-to-minimize-the-risk-of-stale-frontend-artifacts-and-cached-canister-id-wiring-in-production",
-      "title": "Perform the rollback deployment using the clean rebuild workflow to minimize the risk of stale frontend artifacts and cached canister-ID wiring in production.",
+      "id": "feature-prevent-the-dashboard-from-rendering-a-misleading-empty-state-while-resident-admin-queries-are-still-loading-or-not-yet-enabled-due-to-actor-initialization-update-the-dashboard-page-ui-logic-to-show-a-clear-loading-state-or-skeleton-until-queries-have-actually-fetched-or-errored-and-to-show-a-clear-error-message-when-resident-queries-fail-time-out",
+      "title": "Prevent the Dashboard from rendering a misleading empty state while resident/admin queries are still loading or not yet enabled due to actor initialization. Update the Dashboard page UI logic to show a clear loading state (or skeleton) until queries have actually fetched (or errored), and to show a clear error message when resident queries fail/time out.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
-    },
+    }
+  ],
+  "new_feature_requests": [
     {
-      "id": "feature-verify-the-rollback-in-production-by-running-the-post-deployment-smoke-tests-and-confirming-the-app-is-not-stuck-on-connecting-to-backend-and-that-diagnostics-show-valid-build-metadata-and-canister-ids",
-      "title": "Verify the rollback in production by running the post-deployment smoke tests and confirming the app is not stuck on \"Connecting to backend...\" and that diagnostics show valid build metadata and canister IDs.",
+      "id": "AR-3",
+      "summary": "Ensure the backend exposes a public, non-authenticated health check method compatible with the frontend startup diagnostics (`performHealthCheck` calls `healthCheck()`). If missing, add a `public query func healthCheck()` that returns a simple record including at least a human-readable message and a timestamp.",
       "reqIds": [
         "REQ-3"
       ],
-      "version": 1
+      "status": "pending"
     }
   ],
-  "new_feature_requests": [],
-  "projectName": "Rollback production deployment to Version 85",
+  "projectName": "Fix resident dashboard empty flash and persistent 'Connecting to backend' state",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

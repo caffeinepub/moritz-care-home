@@ -70,11 +70,6 @@ export interface ADLRecord {
     date: bigint;
     activity: string;
 }
-export interface UserProfileWithRole {
-    name: string;
-    role: string;
-    employeeId: string;
-}
 export interface Pharmacy {
     id: bigint;
     name: string;
@@ -184,7 +179,7 @@ export interface backendInterface {
     getAllResidents(): Promise<Array<Resident>>;
     getAllResponsiblePersons(): Promise<Array<ResponsiblePerson>>;
     getAllRoomNumbers(): Promise<Array<string>>;
-    getCallerUserProfile(): Promise<UserProfileWithRole | null>;
+    getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDailyVitals(residentId: bigint): Promise<Array<DailyVitals>>;
     getDischargedResidents(): Promise<Array<Resident>>;
@@ -232,7 +227,7 @@ export interface backendInterface {
             totalResidents: bigint;
         };
     }>;
-    getUserProfile(user: Principal): Promise<UserProfileWithRole | null>;
+    getUserProfile(user: Principal): Promise<UserProfile | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
     healthCheck(): Promise<{
         message: string;

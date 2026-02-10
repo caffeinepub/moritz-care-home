@@ -1,74 +1,52 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Rollback deployment support for Version 85 (frontend-only)",
+  "title": "Fix resident dashboard empty flash and prevent persistent backend-connecting hang",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Ensure rollback redeploy artifacts clearly document the exact Version 85 repository state used (git ref/commit) and preserve timestamped logs.",
+      "summary": "Decouple resident/admin data fetching from the immutable useActor initialization by switching Dashboard/Resident queries to the resilient actor pattern with timeouts and best-effort admin init only when a non-empty token exists.",
       "acceptanceCriteria": [
-        "The codebase used for the deployment is confirmed to be the exact repository state corresponding to Version 85 (document the git ref/commit hash used).",
-        "A successful `dfx deploy --network ic` is performed from the Version 85 code state without build/deploy errors.",
-        "The deployment produces timestamped artifacts in `frontend/deployment_logs/` including a deploy log (`deploy_[timestamp].log`) and canister ID summary (`canister_ids_[timestamp].txt`)."
+        "After login, the Dashboard no longer shows an empty residents list due to queries being disabled while the actor is still initializing.",
+        "If backend actor creation or access-control initialization fails/blocks, the UI transitions to an explicit error state (via existing startup/error handling patterns) rather than remaining indefinitely on 'Connecting to backend...'.",
+        "Resident list queries execute successfully using the resilient actor when the backend is healthy, without requiring any URL admin token."
       ],
       "file_operations": [
         {
-          "path": "frontend/scripts/redeploy_production.sh",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Augment the production redeploy script to capture and persist the repository state used for the deployment (e.g., current commit hash and a human-friendly ref such as tag/branch/describe output) into both the deploy log and the generated canister IDs summary, so operators can document the exact Version 85 git ref/commit used."
+          "description": "Update resident list hooks (useGetActiveResidents/useGetDischargedResidents and any other Dashboard/Resident page read hooks) to use useResilientActor instead of useActor, ensuring: (1) query enabled-state no longer depends on immutable actor initialization, (2) per-query calls remain timeout-wrapped, (3) returned hook state merges actor fetching/error into query loading/error (e.g., isLoading reflects actorFetching; error reflects resilient-actor failures), and (4) expose refetch/retry for UI recovery. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/scripts/clean_redeploy_production.sh",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Augment the clean redeploy script to capture and persist the repository state used for the deployment (e.g., current commit hash and a human-friendly ref such as tag/branch/describe output) into both the deploy log and the generated canister IDs summary, so operators can document the exact Version 85 git ref/commit used."
+          "description": "Update the admin-role check hook (useIsCallerAdmin) to use the resilient actor so it cannot be blocked by useActor’s access-control initialization path; ensure it surfaces a clear, recoverable error (and supports retry) rather than contributing to an indefinite 'Connecting to backend...' experience. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/DEPLOYMENT_CHECKLIST.md",
+          "path": "frontend/src/pages/ResidentProfile.tsx",
           "operation": "modify",
-          "description": "Update the checklist to explicitly require recording the Version 85 git ref/commit used for the rollback (as written by the deployment scripts into frontend/deployment_logs artifacts) and to reference the expected location/format in the latest canister_ids_[timestamp].txt."
+          "description": "Ensure ResidentProfile read behavior uses the updated resilient resident-fetch hook state so the page shows a real loading state while the resilient actor is initializing (instead of rendering not-found/empty prematurely), and surfaces a recoverable error state when the resident fetch fails/timeouts. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Reinforce the clean rebuild rollback workflow to prevent stale frontend artifacts and ensure canister-ID wiring/build metadata are captured as proof of a clean build.",
+      "summary": "Prevent Dashboard from rendering empty/misleading states while resident/admin queries are still loading or not yet fetched; show clear loading and actionable error UI with retry.",
       "acceptanceCriteria": [
-        "The deployment is executed via `./frontend/scripts/clean_redeploy_production.sh` from the Version 85 code state (or an equivalent clean rebuild procedure matching that script’s behavior).",
-        "After deployment, the `canister_ids_[timestamp].txt` file includes Frontend and Backend canister IDs plus build metadata (version, git commit, build time) and indicates a clean rebuild.",
-        "No prior `frontend/dist` or Vite cache artifacts are reused for the production build (clean step completed)."
+        "When the backend is slow, the Dashboard shows a loading indicator instead of empty resident cards/empty-state content.",
+        "When resident queries time out or error, the Dashboard shows an error message with a user-actionable recovery option (e.g., retry) rather than silently showing no residents.",
+        "When resident queries succeed but there are genuinely zero residents, the Dashboard shows the empty-state messaging only after the query is fetched successfully."
       ],
       "file_operations": [
         {
-          "path": "frontend/scripts/clean_redeploy_production.sh",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Strengthen the canister_ids_[timestamp].txt output to include explicit clean-rebuild build metadata (version, git commit, build time) plus a clear 'clean rebuild' indicator and the list of cleaned artifact paths, so the artifact itself demonstrates that frontend/dist and Vite caches were not reused."
+          "description": "Adjust Dashboard rendering conditions to gate empty-state rendering on query fetched state (not just data length), and to treat actor initialization as part of the loading state. Ensure loading skeletons/indicators display until the relevant resident queries have actually fetched or errored. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/DEPLOYMENT_CHECKLIST.md",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Clarify/align the documented clean rebuild procedure with the current clean_redeploy_production.sh behavior, including how to confirm the clean step completed and where to verify the 'clean rebuild' marker and build metadata in the latest canister_ids_[timestamp].txt."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Make post-deploy rollback verification repeatable by aligning checklist and helper script with the required production smoke tests and diagnostics cross-checks.",
-      "acceptanceCriteria": [
-        "Using `frontend/DEPLOYMENT_CHECKLIST.md`, the following pass in production: Login page load, Internet Identity authentication, Dashboard reaches a settled state within 10 seconds, and no console errors.",
-        "The in-app diagnostics indicator shows a non-unknown frontend build identifier and a non-unknown backend canister ID.",
-        "The backend canister ID shown in the diagnostics indicator matches the backend canister ID recorded in the latest `frontend/deployment_logs/canister_ids_[timestamp].txt`.",
-        "Operator performs a hard refresh (and clears site cache if needed) and the app continues to function normally on the rolled-back version."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/DEPLOYMENT_CHECKLIST.md",
-          "operation": "modify",
-          "description": "Ensure the checklist explicitly directs operators to (1) verify the app is not stuck on 'Connecting to backend...' (dashboard settles within 10 seconds), (2) verify diagnostics build identifier/canister ID are non-unknown, (3) cross-check the backend canister ID against the latest frontend/deployment_logs/canister_ids_[timestamp].txt, and (4) perform a hard refresh / cache clear and re-verify stability."
-        },
-        {
-          "path": "frontend/scripts/post_deploy_smoke_test_helper.sh",
-          "operation": "modify",
-          "description": "Align the interactive smoke test helper with the rollback acceptance checks by adding/strengthening prompts for: confirming no 'Connecting to backend...' hang, validating diagnostics indicator build metadata is non-unknown, validating backend canister ID matches the latest canister_ids_[timestamp].txt, and confirming a hard refresh/cache clear does not break the rolled-back app."
+          "description": "Improve Dashboard error handling for resident queries: show a clear error message when active/discharged resident queries fail or time out, and provide a user-actionable recovery control (retry) wired to the queries’ refetch functions (and/or resilient actor refetch if exposed). Verify the component's usage instructions before implementing."
         }
       ]
     }

@@ -1,17 +1,30 @@
 import { useActor } from '../hooks/useActor';
-import { getBuildIdentifier, getBuildInfo, isBuildMetadataMissing } from '../lib/buildInfo';
+import { getBuildIdentifier, getBuildInfo, isBuildMetadataMissing, getBuildIdentifierWithFallback } from '../lib/buildInfo';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Info, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
- * Diagnostics indicator component displaying frontend build version and backend canister ID with explicit detection of missing build metadata in production.
+ * Diagnostics indicator component displaying frontend build version and backend canister ID with runtime fallback for missing build metadata.
  */
 export default function DiagnosticsIndicator() {
   const { actor } = useActor();
   const buildInfo = getBuildInfo();
   const buildId = getBuildIdentifier();
   const metadataMissing = isBuildMetadataMissing();
+  const [fallbackBuildId, setFallbackBuildId] = useState<string | null>(null);
+  const [fallbackLoaded, setFallbackLoaded] = useState(false);
+
+  // Try to load build metadata from runtime file if missing
+  useEffect(() => {
+    if (metadataMissing && !fallbackLoaded) {
+      getBuildIdentifierWithFallback().then((id) => {
+        setFallbackBuildId(id);
+        setFallbackLoaded(true);
+      });
+    }
+  }, [metadataMissing, fallbackLoaded]);
 
   // Extract canister ID from actor if available
   const getCanisterId = (): string => {
@@ -35,9 +48,10 @@ export default function DiagnosticsIndicator() {
 
   const canisterId = getCanisterId();
 
-  // Determine display values
-  const frontendDisplay = metadataMissing ? 'Unknown' : (buildId || 'Unknown');
-  const showWarning = metadataMissing || canisterId === 'Not connected' || canisterId === 'Unknown';
+  // Determine display values with fallback
+  const effectiveBuildId = fallbackBuildId || buildId;
+  const frontendDisplay = metadataMissing && !fallbackBuildId ? 'Unknown' : (effectiveBuildId || 'Unknown');
+  const showWarning = (metadataMissing && !fallbackBuildId) || canisterId === 'Not connected' || canisterId === 'Unknown';
 
   return (
     <TooltipProvider>
@@ -63,7 +77,7 @@ export default function DiagnosticsIndicator() {
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
-            {metadataMissing && (
+            {metadataMissing && !fallbackBuildId && (
               <div className="mb-2 rounded bg-yellow-100 p-2 text-yellow-800">
                 <span className="font-semibold">⚠️ Missing build metadata</span>
                 <p className="mt-1 text-xs">
@@ -73,7 +87,7 @@ export default function DiagnosticsIndicator() {
             )}
             <div>
               <span className="font-semibold">Frontend Build:</span>{' '}
-              {metadataMissing ? 'Unknown (missing metadata)' : (buildId || 'Unknown')}
+              {metadataMissing && !fallbackBuildId ? 'Unknown (missing metadata)' : (effectiveBuildId || 'Unknown')}
             </div>
             {buildInfo.timestamp && (
               <div>

@@ -121,11 +121,6 @@ export type SortCriteria = { 'bed' : null } |
   { 'name' : null } |
   { 'roomNumber' : null };
 export interface UserProfile { 'name' : string, 'employeeId' : string }
-export interface UserProfileWithRole {
-  'name' : string,
-  'role' : string,
-  'employeeId' : string,
-}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -270,7 +265,7 @@ export interface _SERVICE {
   'getAllResidents' : ActorMethod<[], Array<Resident>>,
   'getAllResponsiblePersons' : ActorMethod<[], Array<ResponsiblePerson>>,
   'getAllRoomNumbers' : ActorMethod<[], Array<string>>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfileWithRole]>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getDailyVitals' : ActorMethod<[bigint], Array<DailyVitals>>,
   'getDischargedResidents' : ActorMethod<[], Array<Resident>>,
@@ -330,7 +325,7 @@ export interface _SERVICE {
       },
     }
   >,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfileWithRole]>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getWeightLog' : ActorMethod<[bigint], Array<WeightEntry>>,
   'healthCheck' : ActorMethod<
     [],

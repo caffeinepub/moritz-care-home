@@ -1,6 +1,6 @@
 /**
- * Build information utility
- * Provides frontend build identifier and version information with explicit detection of missing metadata
+ * Build information utility with runtime fallback for missing environment metadata
+ * Provides frontend build identifier and version information
  */
 
 // Try to get build-time environment variables
@@ -14,6 +14,45 @@ export interface BuildInfo {
   commit: string | null;
   environment: 'production' | 'development' | 'local';
   hasMetadata: boolean;
+}
+
+interface BuildMetaFile {
+  version?: string;
+  commit?: string;
+  timestamp?: string;
+}
+
+let cachedBuildMeta: BuildMetaFile | null | 'loading' = null;
+
+/**
+ * Fetch build metadata from runtime file as fallback
+ */
+async function fetchBuildMetaFile(): Promise<BuildMetaFile | null> {
+  if (cachedBuildMeta === 'loading') {
+    // Already fetching, wait a bit and return null
+    return null;
+  }
+  
+  if (cachedBuildMeta !== null) {
+    return cachedBuildMeta;
+  }
+
+  cachedBuildMeta = 'loading';
+  
+  try {
+    const response = await fetch('/build-meta.json');
+    if (response.ok) {
+      const data = await response.json();
+      cachedBuildMeta = data;
+      return data;
+    }
+  } catch (error) {
+    // Fallback file not available
+    console.debug('Build metadata file not available:', error);
+  }
+  
+  cachedBuildMeta = null;
+  return null;
 }
 
 export function getBuildInfo(): BuildInfo {
@@ -66,6 +105,34 @@ export function getBuildIdentifier(): string | null {
   }
   
   return null;
+}
+
+/**
+ * Async version that attempts to load from runtime file if env vars are missing
+ */
+export async function getBuildIdentifierWithFallback(): Promise<string | null> {
+  const info = getBuildInfo();
+  
+  // If we already have metadata from env vars, use it
+  if (info.hasMetadata && info.version && info.commit) {
+    return `v${info.version}-${info.commit}`;
+  }
+  
+  // In production, try to load from runtime file
+  if (info.environment === 'production') {
+    const metaFile = await fetchBuildMetaFile();
+    if (metaFile && metaFile.version && metaFile.commit) {
+      const shortCommit = metaFile.commit.substring(0, 7);
+      return `v${metaFile.version}-${shortCommit}`;
+    }
+    // Still no metadata available
+    return null;
+  }
+  
+  // Development/local fallback
+  const version = info.version || 'dev';
+  const commit = info.commit || 'unknown';
+  return `v${version}-${commit}`;
 }
 
 export function isBuildMetadataMissing(): boolean {

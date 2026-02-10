@@ -1,47 +1,28 @@
 /**
  * Centralized startup timing configuration
- * All timeouts for startup operations are defined here for easy tuning
+ * All timeouts in milliseconds
  */
 
-/**
- * Fast-fail timeout for startup operations when backend is reachable but slow
- * This is shorter than STARTUP_TIMEOUT_MS to provide faster feedback
- */
-export const FAIL_FAST_MS = 15000; // 15 seconds
+// Actor creation timeout (30 seconds)
+export const ACTOR_CREATE_TIMEOUT_MS = 30_000;
 
-/**
- * Threshold for triggering early health check during startup
- * If actor/profile is still pending after this time, we check backend reachability
- */
-export const HEALTHCHECK_EARLY_TRIGGER_MS = 5000; // 5 seconds
+// Admin initialization timeout (15 seconds)
+export const ADMIN_INIT_TIMEOUT_MS = 15_000;
 
-/**
- * Timeout for profile fetch during startup
- */
-export const PROFILE_STARTUP_TIMEOUT_MS = 12000; // 12 seconds
+// Profile startup timeout (15 seconds)
+export const PROFILE_STARTUP_TIMEOUT_MS = 15_000;
 
-/**
- * Timeout for actor creation during startup
- */
-export const ACTOR_CREATE_TIMEOUT_MS = 15000; // 15 seconds
+// Resident query timeout (15 seconds)
+export const RESIDENT_QUERY_TIMEOUT_MS = 15_000;
 
-/**
- * Timeout for admin initialization (best-effort)
- */
-export const ADMIN_INIT_TIMEOUT_MS = 10000; // 10 seconds
+// Resident fetch timeout (10 seconds)
+export const RESIDENT_FETCH_TIMEOUT_MS = 10_000;
 
-/**
- * Overall startup watchdog timeout (fallback if other mechanisms don't trigger)
- */
-export const STARTUP_TIMEOUT_MS = 45000; // 45 seconds
+// Fast-fail timeout - triggers when backend is reachable but slow (15 seconds)
+export const FAIL_FAST_MS = 15_000;
 
-/**
- * Timeout for resident list queries (Dashboard and other views)
- * Ensures resident loading fails fast instead of hanging indefinitely
- */
-export const RESIDENT_QUERY_TIMEOUT_MS = 15000; // 15 seconds
+// Overall startup watchdog timer - fallback if other mechanisms don't trigger (45 seconds)
+export const STARTUP_TIMEOUT_MS = 45_000;
 
-/**
- * Timeout for individual resident fetch
- */
-export const RESIDENT_FETCH_TIMEOUT_MS = 10000; // 10 seconds
+// Health check early trigger - runs when loading is slow (5 seconds)
+export const HEALTHCHECK_EARLY_TRIGGER_MS = 5_000;

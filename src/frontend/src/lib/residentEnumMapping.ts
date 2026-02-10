@@ -36,6 +36,20 @@ export function stringToRoomType(value: string): RoomType {
   }
 }
 
+/**
+ * Alias for stringToRoomType for backward compatibility
+ */
+export function mapRoomTypeToBackend(value: string): RoomType {
+  return stringToRoomType(value);
+}
+
+/**
+ * Alias for roomTypeToString for backward compatibility
+ */
+export function mapRoomTypeFromBackend(roomType: RoomType): string {
+  return roomTypeToString(roomType);
+}
+
 // ============================================================================
 // ResidentStatus Mapping
 // ============================================================================
@@ -65,4 +79,18 @@ export function stringToResidentStatus(value: string): ResidentStatus {
     default:
       return ResidentStatus.active;
   }
+}
+
+/**
+ * Alias for residentStatusToString for backward compatibility
+ */
+export function mapResidentStatusFromBackend(status: ResidentStatus): string {
+  return residentStatusToString(status);
+}
+
+/**
+ * Alias for stringToResidentStatus for backward compatibility
+ */
+export function mapResidentStatusToBackend(value: string): ResidentStatus {
+  return stringToResidentStatus(value);
 }
