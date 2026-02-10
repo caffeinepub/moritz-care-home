@@ -1,12 +1,12 @@
 import Map "mo:core/Map";
 import Order "mo:core/Order";
-import Runtime "mo:core/Runtime";
 import Text "mo:core/Text";
 import Nat "mo:core/Nat";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
 import Time "mo:core/Time";
 import Principal "mo:core/Principal";
+import Runtime "mo:core/Runtime";
 import List "mo:core/List";
 
 import MixinAuthorization "authorization/MixinAuthorization";
@@ -296,8 +296,10 @@ actor {
 
   // User Profile Management
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+    // Allow any authenticated user (not anonymous) to get their profile
+    // Return null if they don't have user permission yet (first login case)
+    if (caller.isAnonymous()) {
+      return null;
     };
     userProfiles.get(caller);
   };
@@ -310,10 +312,26 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+    // Allow any authenticated user (not anonymous) to save their profile
+    // This enables first-time users to set up their profile after calling ensureRegisteredUser
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Anonymous users cannot save profiles");
     };
     userProfiles.add(caller, profile);
+  };
+
+  /// Ensures the caller is registered with baseline access for normal app usage (idempotent).
+  /// Safe to call repeatedly. Should be called immediately after login.
+  public shared ({ caller }) func ensureRegisteredUser(
+    adminToken : Text,
+    userProvidedToken : Text
+  ) : async () {
+    AccessControl.initialize(
+      accessControlState,
+      caller,
+      adminToken,
+      userProvidedToken,
+    );
   };
 
   // Resident Management

@@ -166,6 +166,11 @@ export interface backendInterface {
     }>;
     dischargeResident(id: bigint): Promise<void>;
     editMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string): Promise<void>;
+    /**
+     * / Ensures the caller is registered with baseline access for normal app usage (idempotent).
+     * / Safe to call repeatedly. Should be called immediately after login.
+     */
+    ensureRegisteredUser(adminToken: string, userProvidedToken: string): Promise<void>;
     findResidentByRoom(roomNumber: string): Promise<Resident | null>;
     generateAdlReport(residentId: bigint): Promise<Array<ADLRecord>>;
     generateFullMedicationReport(residentId: bigint): Promise<Array<Medication>>;

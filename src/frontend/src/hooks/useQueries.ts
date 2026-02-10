@@ -4,6 +4,8 @@ import { useResilientActor } from './useResilientActor';
 import { useInternetIdentity } from './useInternetIdentity';
 import { withTimeout, normalizeError, isAuthorizationError } from '../lib/actorInit';
 import { PROFILE_STARTUP_TIMEOUT_MS, RESIDENT_QUERY_TIMEOUT_MS, RESIDENT_FETCH_TIMEOUT_MS } from '../lib/startupTimings';
+import { getSecretParameter } from '../utils/urlParams';
+import { mapRegistrationError, isAnonymousAccessError } from '../lib/registrationErrorMapping';
 import type {
   Resident,
   UserProfile,
@@ -24,18 +26,70 @@ import type {
 } from '../backend';
 
 // ============================================================================
+// Baseline Access Registration (Post-Login Initialization)
+// ============================================================================
+
+/**
+ * Ensures the caller is registered with baseline user access after login.
+ * This must succeed before attempting to load the user profile.
+ */
+export function useEnsureRegisteredUser() {
+  const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
+  const { identity } = useInternetIdentity();
+
+  const principal = identity?.getPrincipal().toString() || 'anonymous';
+
+  const query = useQuery<void, Error>({
+    queryKey: ['baselineAccess', principal],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      
+      const adminToken = getSecretParameter('caffeineAdminToken') || '';
+      const userToken = getSecretParameter('caffeineUserToken') || '';
+
+      try {
+        await withTimeout(
+          actor.ensureRegisteredUser(adminToken, userToken),
+          PROFILE_STARTUP_TIMEOUT_MS,
+          'User registration timed out: The backend is taking too long to respond'
+        );
+      } catch (error) {
+        // Use the new registration error mapping for accurate messages
+        const mappedMessage = mapRegistrationError(error);
+        throw new Error(mappedMessage);
+      }
+    },
+    enabled: !!actor && !actorFetching && !actorIsError && principal !== 'anonymous',
+    retry: false,
+    staleTime: Infinity, // Only needs to succeed once per session
+  });
+
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && !actorFetching && query.isFetched,
+  };
+}
+
+// ============================================================================
 // User Profile Queries
 // ============================================================================
 
 /**
  * Startup-safe profile query that uses the resilient actor
  * This is used during app initialization to prevent infinite loading states
+ * IMPORTANT: This query should only be enabled after baseline access succeeds
+ * Query is scoped by principal to prevent stale cache across account switches
  */
 export function useGetCallerUserProfileStartup() {
   const { actor, isFetching: actorFetching, isError: actorIsError } = useResilientActor();
+  const { identity } = useInternetIdentity();
+  const { data: baselineAccessData, isLoading: baselineLoading, isFetched: baselineFetched, isError: baselineIsError, error: baselineError } = useEnsureRegisteredUser();
+
+  const principal = identity?.getPrincipal().toString() || 'anonymous';
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
+    queryKey: ['currentUserProfile', principal],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       try {
@@ -49,30 +103,46 @@ export function useGetCallerUserProfileStartup() {
       } catch (error) {
         // Normalize error for consistent handling
         const normalizedMessage = normalizeError(error);
+        
+        // If this is an authorization error after baseline access succeeded,
+        // it means the user needs to set up their profile (return null)
+        if (isAuthorizationError(error)) {
+          // This is expected for first-time users - return null to trigger ProfileSetup
+          return null;
+        }
+        
         throw new Error(normalizedMessage);
       }
     },
-    enabled: !!actor && !actorFetching && !actorIsError,
+    // Only enable after baseline access succeeds
+    enabled: !!actor && !actorFetching && !actorIsError && !baselineLoading && baselineFetched && !baselineIsError && principal !== 'anonymous',
     retry: false,
   });
 
   return {
     ...query,
-    isLoading: actorFetching || query.isLoading,
-    isFetched: !!actor && !actorFetching && query.isFetched,
+    // Include baseline loading state in overall loading
+    isLoading: actorFetching || baselineLoading || query.isLoading,
+    isFetched: !!actor && !actorFetching && baselineFetched && query.isFetched,
+    // Propagate baseline error with mapped message
+    error: baselineIsError ? baselineError : query.error,
+    isError: baselineIsError || query.isError,
   };
 }
 
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+
+  const principal = identity?.getPrincipal().toString() || 'anonymous';
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
+    queryKey: ['currentUserProfile', principal],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       return actor.getCallerUserProfile();
     },
-    enabled: !!actor && !actorFetching,
+    enabled: !!actor && !actorFetching && principal !== 'anonymous',
     retry: false,
   });
 
@@ -86,35 +156,70 @@ export function useGetCallerUserProfile() {
 /**
  * Startup-safe profile save mutation using resilient actor
  * Used during ProfileSetup to avoid dependency on immutable useActor hook
+ * After successful save, invalidates and refetches the profile to trigger UI transition
  */
 export function useSaveCallerUserProfileStartup() {
   const { actor } = useResilientActor();
+  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
+
+  const principal = identity?.getPrincipal().toString() || 'anonymous';
 
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
-      if (!actor) throw new Error('Actor not available');
+      if (!actor) {
+        throw new Error('Backend connection not available. Please refresh the page and try again.');
+      }
+      
       try {
         await actor.saveCallerUserProfile(profile);
       } catch (error) {
-        // Provide clear error messages for authorization issues
+        console.error('Profile save error:', error);
+        
+        // Provide clear, actionable error messages
         if (error instanceof Error) {
-          if (error.message.includes('Unauthorized') || error.message.includes('trap')) {
-            throw new Error('Unable to save profile: You may not have the required permissions. Please contact an administrator.');
+          const msg = error.message.toLowerCase();
+          
+          if (msg.includes('actor not available') || msg.includes('not initialized')) {
+            throw new Error('Backend connection not available. Please refresh the page and try again.');
+          }
+          
+          if (msg.includes('unauthorized') || msg.includes('trap') || msg.includes('permission')) {
+            throw new Error('Unable to save profile: You do not have the required permissions. Please contact an administrator to provision your account.');
+          }
+          
+          if (msg.includes('network') || msg.includes('fetch')) {
+            throw new Error('Network error: Unable to reach the backend. Please check your internet connection and try again.');
+          }
+          
+          if (msg.includes('timeout') || msg.includes('timed out')) {
+            throw new Error('Request timed out: The backend is taking too long to respond. Please try again.');
+          }
+          
+          // Return the original error message if it's already descriptive
+          if (error.message.length > 20) {
+            throw error;
           }
         }
-        throw error;
+        
+        // Fallback for unknown errors
+        throw new Error('Failed to save profile. Please try again or contact support if the problem persists.');
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+    onSuccess: async () => {
+      // Invalidate and refetch the profile query to trigger UI transition
+      await queryClient.invalidateQueries({ queryKey: ['currentUserProfile', principal] });
+      await queryClient.refetchQueries({ queryKey: ['currentUserProfile', principal] });
     },
   });
 }
 
 export function useSaveCallerUserProfile() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
+
+  const principal = identity?.getPrincipal().toString() || 'anonymous';
 
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
@@ -132,7 +237,7 @@ export function useSaveCallerUserProfile() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['currentUserProfile', principal] });
     },
   });
 }
@@ -446,7 +551,7 @@ export function useUpdateResident() {
     }) => {
       if (!actor) throw new Error('Actor not available');
       try {
-        return await actor.updateResident(
+        await actor.updateResident(
           params.id,
           params.firstName,
           params.lastName,
@@ -484,26 +589,6 @@ export function useDischargeResident() {
       if (!actor) throw new Error('Actor not available');
       try {
         await actor.dischargeResident(id);
-      } catch (error) {
-        throw normalizeAuthError(error);
-      }
-    },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ['residents'] });
-      queryClient.invalidateQueries({ queryKey: ['resident', id.toString()] });
-    },
-  });
-}
-
-export function useArchiveResident() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: bigint) => {
-      if (!actor) throw new Error('Actor not available');
-      try {
-        await actor.archiveResident(id);
       } catch (error) {
         throw normalizeAuthError(error);
       }
@@ -619,7 +704,7 @@ export function useUpdateMedication() {
 }
 
 // ============================================================================
-// MAR Records
+// MAR Record Queries
 // ============================================================================
 
 export function useAddMarRecord() {
@@ -650,7 +735,7 @@ export function useAddMarRecord() {
 }
 
 // ============================================================================
-// ADL Records
+// ADL Record Queries
 // ============================================================================
 
 export function useAddAdlRecord() {
@@ -681,7 +766,7 @@ export function useAddAdlRecord() {
 }
 
 // ============================================================================
-// Daily Vitals
+// Daily Vitals Queries
 // ============================================================================
 
 export function useAddDailyVitals() {
@@ -722,7 +807,7 @@ export function useAddDailyVitals() {
 }
 
 // ============================================================================
-// Weight Entries
+// Weight Entry Queries
 // ============================================================================
 
 export function useAddWeightEntry() {

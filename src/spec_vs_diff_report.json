@@ -1,48 +1,51 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T16:49:33.538Z",
-  "summary": "REQ-1 is partially implemented: the new restart script exists and appears to meet the start/restart/status/output requirements, but the diff snippet for redeploy_production.sh is truncated before any explicit post-deploy start/restart invocation is shown. REQ-2 appears implemented via DEPLOYMENT_CHECKLIST.md updates that include status/start commands and reference the new script. REQ-3 appears implemented by adding a stopped-canister troubleshooting section in StartupErrorScreen including the canister ID and start guidance. The diff also includes several unrequested additions/changes (extra deployment script behavior/metadata/logging, project_state.json claims about always-running uptime expectations, and a frontend-file-summaries change).",
+  "generatedAt": "2026-02-10T18:34:04.759Z",
+  "summary": "Frontend changes add a new error-mapping utility and update startup registration/profile bootstrap to call ensureRegisteredUser with optional URL tokens and show more accurate messages. However, the diff summary does not provide evidence that the backend registration logic (tokenless baseline registration, idempotency, and stable backend-side error signaling) was updated to satisfy the core provisioning-failure fix.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Update frontend/scripts/redeploy_production.sh to run the backend start/restart logic after `dfx deploy --network ic` completes, so a stopped backend is brought back online automatically as part of the standard redeploy flow.",
-      "reason": "The provided diff content for redeploy_production.sh shows deploy and canister ID extraction steps, but is truncated before any explicit call to `frontend/scripts/restart_backend_canister.sh` (or equivalent `dfx canister start/restart` logic) after deployment can be verified.",
+      "requirement": "Update backend user registration so authenticated users can successfully complete baseline registration without requiring an administrator-provisioned token, while keeping any existing admin-token flow for admin provisioning intact.",
+      "reason": "The backend diff is truncated and does not show any changes to the registration entrypoint (e.g., ensureRegisteredUser) or its authorization/token requirements. The frontend now calls actor.ensureRegisteredUser(adminToken, userToken) with empty strings when tokens are absent, but there is no evidence the backend now accepts authenticated callers without tokens or that registration is idempotent and rejects anonymous principals with a clear authorization error.",
       "evidence": [
-        "frontend/scripts/redeploy_production.sh (truncated)"
+        "backend/main.mo (truncated; no visible registration-related changes)",
+        "frontend/src/hooks/useQueries.ts (calls actor.ensureRegisteredUser(adminToken, userToken) with '' defaults)"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Ensure backend error signaling for registration failures is specific and stable (e.g., anonymous caller, truly unauthorized admin-only operation), so the frontend can distinguish between provisioning issues and other failures; do not emit the generic provisioning message for normal first-time authenticated users.",
+      "reason": "The diff adds frontend-side mapping of error messages, but does not show backend-side changes that would make error signaling specific and stable. Without backend changes, normal first-time authenticated users could still receive the legacy provisioning/admin-contact message from the backend.",
+      "evidence": [
+        "backend/main.mo (truncated; no visible error-message/registration error changes)",
+        "frontend/src/lib/registrationErrorMapping.ts (maps messages but does not change backend signaling)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added/updated project metadata asserting an expectation of continuous uptime / always-running behavior.",
-      "reason": "BuildRequest explicitly constrains: \"Do not claim or implement an always-on process model inside the canister\" and lists non-goals around uptime monitoring/auto-restart; this new text is not requested and contradicts the constraint.",
+      "description": "Added comprehensive startup reliability features (health checks, multiple timers, diagnostics display) beyond the requested registration/provisioning fix.",
+      "reason": "REQ-3 asks to adjust startup bootstrap to avoid blocking on provisioning error; the diff indicates broader startup reliability/diagnostics behavior that was not explicitly requested.",
       "evidence": [
-        "project_state.json (\"ensure it stays continuously running\", \"always running\", architectural_notes about uptime/auto-restart)"
+        "frontend/src/App.tsx (truncated; health check triggers, fast-fail timeout logic, diagnostics imports)"
       ]
     },
     {
-      "description": "Deployment script enhancements beyond requested 'start backend after deploy' (e.g., build metadata injection, repository state capture, extensive logging/tee wrappers, canister ID extraction/verification).",
-      "reason": "REQ-1 only asks to run backend start/restart logic after `dfx deploy --network ic`; the diff shows multiple additional behaviors that were not requested.",
+      "description": "Introduced broad UI/UX and feature changes across multiple pages/components (e.g., LoginPage background/logo changes, dashboard/resident profile changes, dialog styling, print layout overrides, added delete behavior).",
+      "reason": "These changes are not part of REQ-1/2/3 and go beyond the scope of fixing baseline registration and error messaging. They also risk violating the constraint about immutable frontend paths (cannot be verified here because the immutable list is not provided, but the changes appear unrelated to the fix request).",
       "evidence": [
-        "frontend/scripts/redeploy_production.sh (truncated: build metadata injection, repository state capture, logging, canister ID extraction)"
-      ]
-    },
-    {
-      "description": "Updated/added a broad 'frontend-file-summaries.txt' describing many unrelated frontend changes/features.",
-      "reason": "Not requested by any requirement (REQ-1/REQ-2/REQ-3) and appears unrelated to the canister restart/runbook/startup error guidance scope.",
-      "evidence": [
-        "frontend-file-summaries.txt (truncated)"
+        "frontend-file-summaries.txt (describes changes to LoginPage, Dashboard, ResidentProfile, multiple dialog components, index.css, and a permanentlyDeleteResident call)"
       ]
     }
   ],
-  "confidence": 0.64,
+  "confidence": 0.6,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/DEPLOYMENT_CHECKLIST.md",
-    "frontend/scripts/redeploy_production.sh",
-    "frontend/scripts/restart_backend_canister.sh",
-    "frontend/src/components/StartupErrorScreen.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/registrationErrorMapping.ts",
     "project_state.json"
   ]
 }

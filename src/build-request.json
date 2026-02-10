@@ -1,75 +1,70 @@
 {
   "kind": "build_request",
-  "title": "Add backend canister restart/runbook and frontend guidance for stopped canister",
-  "priority": "normal",
+  "title": "Fix baseline user registration failing with provisioning error",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add an operator script to restart the backend canister on the IC network and ensure the backend canister is started after deploy.\n\n- Create a new script at frontend/scripts/restart_backend_canister.sh that:\n  - Checks backend canister status on network ic.\n  - If the canister is stopped, starts it.\n  - Supports an explicit \"restart\" mode that performs stop+start.\n  - Writes clear, English console output and exits non-zero on failure.\n- Update frontend/scripts/redeploy_production.sh to run the backend start/restart logic after `dfx deploy --network ic` completes, so a stopped backend is brought back online automatically as part of the standard redeploy flow.",
-      "target": "frontend",
+      "text": "Update backend user registration so authenticated users can successfully complete baseline registration without requiring an administrator-provisioned token, while keeping any existing admin-token flow for admin provisioning intact.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "restart backend canister and always keep it running"
+          "Unable to register user: Please contact an administrator to provision your account."
         ]
       },
       "acceptanceCriteria": [
-        "A new script `frontend/scripts/restart_backend_canister.sh` exists and can be executed on a machine with dfx installed.",
-        "Running the script when the backend canister is stopped results in the canister being started (verified by `dfx canister --network ic status backend`).",
-        "Running the script in restart mode results in a stop+start cycle for the backend canister (verified by status output).",
-        "`frontend/scripts/redeploy_production.sh` triggers the backend start/restart step after deployment so that a stopped canister is started without manual intervention.",
-        "All script output is in English and failures return a non-zero exit code."
+        "An authenticated (non-anonymous) principal can call the backend registration flow and subsequently access user-gated queries (e.g., resident list queries) without receiving an authorization/provisioning error.",
+        "The registration call remains idempotent (repeated calls do not trap and do not change state unexpectedly).",
+        "Anonymous principals cannot register and receive an authorization error."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Update the production deployment runbook to include explicit backend canister status verification and restart instructions.\n\n- Update frontend/DEPLOYMENT_CHECKLIST.md to add a dedicated subsection that:\n  - Shows how to check backend status (`dfx canister --network ic status backend`).\n  - Shows how to start or restart the backend canister.\n  - References the new `frontend/scripts/restart_backend_canister.sh` script as the preferred method.\n  - Clarifies that the deployment process should confirm the backend canister is not in a stopped state after deployment.",
-      "target": "frontend",
+      "text": "Ensure backend error signaling for registration failures is specific and stable (e.g., anonymous caller, truly unauthorized admin-only operation), so the frontend can distinguish between provisioning issues and other failures; do not emit the generic provisioning message for normal first-time authenticated users.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "restart backend canister and always keep it running"
+          "Unable to register user: Please contact an administrator to provision your account."
         ]
       },
       "acceptanceCriteria": [
-        "frontend/DEPLOYMENT_CHECKLIST.md includes step-by-step, English instructions for checking backend canister status and starting/restarting it.",
-        "The checklist references `frontend/scripts/restart_backend_canister.sh` and indicates it as the recommended approach.",
-        "Checklist text explicitly includes the backend status command and what to do if the canister is stopped."
+        "For first-time authenticated users, registration does not fail with a provisioning/admin-contact message.",
+        "If registration fails due to anonymous access, the backend returns/traps with an error that clearly indicates anonymous/unauthenticated access.",
+        "If registration fails for any other reason, the error message is not misleadingly framed as an admin provisioning requirement."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Improve the frontend startup error experience to guide operators when the backend canister is stopped.\n\n- Update the StartupErrorScreen UI to display an explicit, English troubleshooting hint when the health check indicates the backend canister is stopped.\n- The hint must include:\n  - The backend canister ID already shown in diagnostics.\n  - The exact command(s) or reference to the repo script to start/restart the backend canister.\n- Do not require authentication changes; this is informational guidance only.",
+      "text": "Adjust the frontend startup registration/profile bootstrap so it no longer blocks first-time authenticated users behind the message \"Unable to register user: Please contact an administrator to provision your account.\" when baseline registration should succeed.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "restart backend canister and always keep it running"
+          "Unable to register user: Please contact an administrator to provision your account."
         ]
       },
       "acceptanceCriteria": [
-        "When healthCheckResult.message indicates \"Backend canister is stopped\", StartupErrorScreen shows a clear troubleshooting section in English with start/restart guidance.",
-        "The guidance includes the backend canister ID from diagnostics and references the restart script and/or the dfx command to start/restart.",
-        "No changes are made to immutable frontend paths (e.g., useInternetIdentity/useActor/main.tsx/ui components)."
+        "After logging in with Internet Identity, the app proceeds past startup without showing the provisioning error for a first-time user.",
+        "If the backend genuinely returns an authorization error (e.g., anonymous), the UI shows an accurate English error message reflecting the actual cause rather than the provisioning message.",
+        "If URL parameters for tokens are present, they are still passed through as before (backward compatible), but absence of tokens does not cause a provisioning failure when backend supports tokenless baseline registration."
       ]
     }
   ],
   "constraints": [
-    "Backend is a single Motoko actor (all backend logic must remain in backend/main.mo).",
-    "Do not edit files under frontend/src/components/ui or any paths listed in frontend.immutablePaths.",
-    "User-facing text must be in English.",
-    "Do not claim or implement an always-on process model inside the canister; canister stop/start is managed operationally via dfx/controllers."
+    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
+    "Do not modify files under frontend/src/components/ui or any frontend paths listed as immutable in SYSTEM_CONTEXT."
   ],
   "nonGoals": [
-    "Implementing external uptime monitoring, alerting, or paging.",
-    "Adding third-party cron/keep-alive services or external infrastructure.",
-    "Changing Internet Identity authentication behavior."
+    "Implementing third-party authentication (only Internet Identity is used).",
+    "Adding external databases or off-canister storage beyond existing patterns."
   ],
   "imageRequirements": {
     "required": [],

@@ -266,6 +266,11 @@ export interface backendInterface {
     }>;
     dischargeResident(id: bigint): Promise<void>;
     editMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string): Promise<void>;
+    /**
+     * / Ensures the caller is registered with baseline access for normal app usage (idempotent).
+     * / Safe to call repeatedly. Should be called immediately after login.
+     */
+    ensureRegisteredUser(adminToken: string, userProvidedToken: string): Promise<void>;
     findResidentByRoom(roomNumber: string): Promise<Resident | null>;
     generateAdlReport(residentId: bigint): Promise<Array<ADLRecord>>;
     generateFullMedicationReport(residentId: bigint): Promise<Array<Medication>>;
@@ -682,6 +687,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.editMedication(arg0, arg1, arg2, arg3, arg4, to_candid_opt_n15(this._uploadFile, this._downloadFile, arg5), to_candid_AdministrationRoute_n13(this._uploadFile, this._downloadFile, arg6), arg7, arg8);
+            return result;
+        }
+    }
+    async ensureRegisteredUser(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.ensureRegisteredUser(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.ensureRegisteredUser(arg0, arg1);
             return result;
         }
     }

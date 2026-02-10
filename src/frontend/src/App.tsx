@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { performHealthCheck, getBackendDiagnostics } from './lib/startupDiagnostics';
 import { isStoppedCanisterError, isCanisterNotFoundError, isNetworkError, isTimeoutError } from './lib/actorInit';
+import { isAnonymousAccessError } from './lib/registrationErrorMapping';
 import { STARTUP_TIMEOUT_MS, FAIL_FAST_MS, HEALTHCHECK_EARLY_TRIGGER_MS } from './lib/startupTimings';
 
 const rootRoute = createRootRoute({
@@ -135,8 +136,9 @@ function RootComponent() {
     setIsCheckingHealth(false);
     healthCheckTriggeredRef.current = false;
     
-    // Clear startup-relevant queries AND resident queries
+    // Clear startup-relevant queries including baseline access and profile (scoped by principal)
     queryClient.removeQueries({ queryKey: ['resilient-actor'] });
+    queryClient.removeQueries({ queryKey: ['baselineAccess'] });
     queryClient.removeQueries({ queryKey: ['currentUserProfile'] });
     queryClient.removeQueries({ queryKey: ['residents'] });
     queryClient.removeQueries({ queryKey: ['isCallerAdmin'] });
@@ -335,6 +337,7 @@ function RootComponent() {
   }
 
   // Step 7: Profile error - show error screen with retry and improved classification
+  // Use the new registration error mapping for accurate messages
   if (profileIsError && profileError) {
     const backendDiagnostics = getBackendDiagnostics();
     const isReachable = healthCheckResult?.success || false;
@@ -342,11 +345,16 @@ function RootComponent() {
     const isNotFound = isCanisterNotFoundError(profileError);
     const isNetwork = isNetworkError(profileError);
     const isTimeout = isTimeoutError(profileError);
+    const isAnonymous = isAnonymousAccessError(profileError);
     
     let errorTitle = 'Profile Load Failed';
     let errorMessage = 'Unable to load your profile. ';
     
-    if (isStopped) {
+    // Special handling for anonymous access errors
+    if (isAnonymous) {
+      errorTitle = 'Authentication Required';
+      errorMessage = profileError.message;
+    } else if (isStopped) {
       errorTitle = 'Backend Canister Stopped';
       errorMessage = `The backend canister is stopped and cannot process requests. Please contact the administrator to restart the canister.`;
       if (backendDiagnostics.canisterId && !backendDiagnostics.canisterId.includes('Unknown')) {
@@ -367,7 +375,8 @@ function RootComponent() {
         errorMessage += 'Please check your connection and try again.';
       }
     } else if (profileError.message.includes('Authorization') || profileError.message.includes('Unauthorized')) {
-      errorMessage += 'You may not have the required permissions. Please contact an administrator.';
+      // Use the error message from the registration error mapping
+      errorMessage = profileError.message;
     } else if (isReachable) {
       errorMessage += 'The backend is reachable, but there was an error loading your profile.';
     } else {
@@ -416,63 +425,48 @@ function RootComponent() {
               </h3>
               
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Canister ID:</span>
-                  <span className="font-mono text-gray-900">
-                    {backendDiagnostics.canisterId.length > 20 
-                      ? `${backendDiagnostics.canisterId.slice(0, 20)}...` 
-                      : backendDiagnostics.canisterId}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between">
+                <div className="flex items-center justify-between">
                   <span className="text-gray-600">Network:</span>
-                  <span className="font-medium text-gray-900">{backendDiagnostics.network}</span>
+                  <span className="font-mono text-gray-800">{backendDiagnostics.network}</span>
                 </div>
-                
-                <div className="flex justify-between">
+                <div className="flex items-center justify-between">
                   <span className="text-gray-600">Host:</span>
-                  <span className="font-mono text-gray-900">
-                    {backendDiagnostics.host.length > 30 
-                      ? `${backendDiagnostics.host.slice(0, 30)}...` 
-                      : backendDiagnostics.host}
-                  </span>
+                  <span className="font-mono text-gray-800">{backendDiagnostics.host}</span>
                 </div>
-                
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">Canister ID:</span>
+                  <span className="font-mono text-gray-800">{backendDiagnostics.canisterId}</span>
+                </div>
                 {healthCheckResult && (
-                  <>
-                    <div className="my-2 border-t border-gray-200" />
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Health Check:</span>
-                      <span className="flex items-center gap-1">
-                        {healthCheckResult.status === 'pending' && (
-                          <>
-                            <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
-                            <span className="font-medium text-blue-600">Checking...</span>
-                          </>
-                        )}
-                        {healthCheckResult.status === 'passed' && (
-                          <>
-                            <Activity className="h-3 w-3 text-green-600" />
-                            <span className="font-medium text-green-600">Passed</span>
-                          </>
-                        )}
-                        {healthCheckResult.status === 'failed' && (
-                          <>
-                            <Network className="h-3 w-3 text-red-600" />
-                            <span className="font-medium text-red-600">Failed</span>
-                          </>
-                        )}
-                        {healthCheckResult.status === 'timed-out' && (
-                          <>
-                            <Network className="h-3 w-3 text-orange-600" />
-                            <span className="font-medium text-orange-600">Timed Out</span>
-                          </>
-                        )}
-                      </span>
+                  <div className="mt-3 flex items-center justify-between rounded border border-gray-200 bg-gray-50 p-2">
+                    <span className="text-gray-600">Health Check:</span>
+                    <div className="flex items-center gap-2">
+                      {healthCheckResult.status === 'pending' && (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                          <span className="text-blue-600">Checking...</span>
+                        </>
+                      )}
+                      {healthCheckResult.status === 'passed' && (
+                        <>
+                          <Activity className="h-3 w-3 text-green-500" />
+                          <span className="text-green-600">Passed</span>
+                        </>
+                      )}
+                      {healthCheckResult.status === 'failed' && (
+                        <>
+                          <Network className="h-3 w-3 text-red-500" />
+                          <span className="text-red-600">Failed</span>
+                        </>
+                      )}
+                      {healthCheckResult.status === 'timed-out' && (
+                        <>
+                          <Network className="h-3 w-3 text-orange-500" />
+                          <span className="text-orange-600">Timed Out</span>
+                        </>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500">{healthCheckResult.message}</p>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -482,8 +476,8 @@ function RootComponent() {
     );
   }
 
-  // Step 9: Profile loading
-  if (profileLoading || !profileFetched) {
+  // Step 9: Profile loading - show loading state
+  if (profileLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50">
         <div className="text-center">
@@ -494,34 +488,29 @@ function RootComponent() {
     );
   }
 
-  // Step 10: Profile setup needed
-  const showProfileSetup = isAuthenticated && actor && profileFetched && userProfile === null;
+  // Step 10: Profile setup required - show ProfileSetup component
+  const showProfileSetup = isAuthenticated && !profileLoading && profileFetched && userProfile === null;
   if (showProfileSetup) {
     return <ProfileSetup />;
   }
 
-  // Step 11: All good - show app
-  return (
-    <>
-      <Outlet />
-      <Toaster />
-    </>
-  );
+  // Step 11: Authenticated with profile - show main app
+  return <Outlet />;
 }
 
-const indexRoute = createRoute({
+const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: Dashboard,
 });
 
-const residentRoute = createRoute({
+const residentProfileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resident/$residentId',
   component: ResidentProfile,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, residentRoute]);
+const routeTree = rootRoute.addChildren([dashboardRoute, residentProfileRoute]);
 
 const router = createRouter({ routeTree });
 
@@ -535,6 +524,7 @@ export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <RouterProvider router={router} />
+      <Toaster />
     </ThemeProvider>
   );
 }

@@ -1,32 +1,18 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Project to deploy and operate a backend canister with restart capability and an expectation of continuous uptime (always running).",
+  "summary": "New project",
   "architectural_notes": [
-    "Backend canister is expected to be kept running continuously; include an operational approach for restart and uptime (e.g., monitoring/auto-restart)."
+    "Deployment target is the public Internet Computer (not local dfx); shell scripts like restart_backend_canister.sh cannot be executed from this environment."
   ],
-  "known_issues": [],
-  "isFixRequest": false,
+  "known_issues": [
+    "User registration fails with error: \"Unable to register user: Please contact an administrator to provision your account.\""
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-add-an-operator-script-to-restart-the-backend-canister-on-the-ic-network-and-ensure-the-backend-canister-is-started-after-deploy-create-a-new-script-at-frontend-scripts-restart-backend-canister-sh-that-checks-backend-canister-status-on-network-ic-if-the-canister-is-stopped-starts-it-supports-an-explicit-restart-mode-that-performs-stop-start-writes-clear-english-console-output-and-exits-non-zero-on-failure-update-frontend-scripts-redeploy-production-sh-to-run-the-backend-start-restart-logic-after-dfx-deploy-network-ic-completes-so-a-stopped-backend-is-brought-back-online-automatically-as-part-of-the-standard-redeploy-flow",
-      "title": "Add an operator script to restart the backend canister on the IC network and ensure the backend canister is started after deploy.\n\n- Create a new script at frontend/scripts/restart_backend_canister.sh that:\n  - Checks backend canister status on network ic.\n  - If the canister is stopped, starts it.\n  - Supports an explicit \"restart\" mode that performs stop+start.\n  - Writes clear, English console output and exits non-zero on failure.\n- Update frontend/scripts/redeploy_production.sh to run the backend start/restart logic after `dfx deploy --network ic` completes, so a stopped backend is brought back online automatically as part of the standard redeploy flow.",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-production-deployment-runbook-to-include-explicit-backend-canister-status-verification-and-restart-instructions-update-frontend-deployment-checklist-md-to-add-a-dedicated-subsection-that-shows-how-to-check-backend-status-dfx-canister-network-ic-status-backend-shows-how-to-start-or-restart-the-backend-canister-references-the-new-frontend-scripts-restart-backend-canister-sh-script-as-the-preferred-method-clarifies-that-the-deployment-process-should-confirm-the-backend-canister-is-not-in-a-stopped-state-after-deployment",
-      "title": "Update the production deployment runbook to include explicit backend canister status verification and restart instructions.\n\n- Update frontend/DEPLOYMENT_CHECKLIST.md to add a dedicated subsection that:\n  - Shows how to check backend status (`dfx canister --network ic status backend`).\n  - Shows how to start or restart the backend canister.\n  - References the new `frontend/scripts/restart_backend_canister.sh` script as the preferred method.\n  - Clarifies that the deployment process should confirm the backend canister is not in a stopped state after deployment.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-improve-the-frontend-startup-error-experience-to-guide-operators-when-the-backend-canister-is-stopped-update-the-startuperrorscreen-ui-to-display-an-explicit-english-troubleshooting-hint-when-the-health-check-indicates-the-backend-canister-is-stopped-the-hint-must-include-the-backend-canister-id-already-shown-in-diagnostics-the-exact-command-s-or-reference-to-the-repo-script-to-start-restart-the-backend-canister-do-not-require-authentication-changes-this-is-informational-guidance-only",
-      "title": "Improve the frontend startup error experience to guide operators when the backend canister is stopped.\n\n- Update the StartupErrorScreen UI to display an explicit, English troubleshooting hint when the health check indicates the backend canister is stopped.\n- The hint must include:\n  - The backend canister ID already shown in diagnostics.\n  - The exact command(s) or reference to the repo script to start/restart the backend canister.\n- Do not require authentication changes; this is informational guidance only.",
+      "id": "feature-adjust-the-frontend-startup-registration-profile-bootstrap-so-it-no-longer-blocks-first-time-authenticated-users-behind-the-message-unable-to-register-user-please-contact-an-administrator-to-provision-your-account-when-baseline-registration-should-succeed",
+      "title": "Adjust the frontend startup registration/profile bootstrap so it no longer blocks first-time authenticated users behind the message \"Unable to register user: Please contact an administrator to provision your account.\" when baseline registration should succeed.",
       "reqIds": [
         "REQ-3"
       ],
@@ -36,12 +22,22 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Provide ability to restart the backend canister and ensure it stays continuously running (uptime/auto-restart expectation).",
-      "reqIds": [],
+      "summary": "Update backend user registration so authenticated users can successfully complete baseline registration without requiring an administrator-provisioned token, while keeping any existing admin-token flow for admin provisioning intact.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Ensure backend error signaling for registration failures is specific and stable (e.g., anonymous caller, truly unauthorized admin-only operation), so the frontend can distinguish between provisioning issues and other failures; do not emit the generic provisioning message for normal first-time authenticated users.",
+      "reqIds": [
+        "REQ-2"
+      ],
       "status": "pending"
     }
   ],
-  "projectName": "Add backend canister restart/runbook and frontend guidance for stopped canister",
+  "projectName": "Fix baseline user registration failing with provisioning error",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

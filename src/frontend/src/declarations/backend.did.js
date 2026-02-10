@@ -289,6 +289,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'ensureRegisteredUser' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'findResidentByRoom' : IDL.Func([IDL.Text], [IDL.Opt(Resident)], ['query']),
   'generateAdlReport' : IDL.Func([IDL.Nat], [IDL.Vec(ADLRecord)], ['query']),
   'generateFullMedicationReport' : IDL.Func(
@@ -748,6 +749,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'ensureRegisteredUser' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'findResidentByRoom' : IDL.Func([IDL.Text], [IDL.Opt(Resident)], ['query']),
     'generateAdlReport' : IDL.Func([IDL.Nat], [IDL.Vec(ADLRecord)], ['query']),
     'generateFullMedicationReport' : IDL.Func(

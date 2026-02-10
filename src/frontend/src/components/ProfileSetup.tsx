@@ -25,7 +25,10 @@ export default function ProfileSetup() {
         name: name.trim(),
         employeeId: employeeId.trim(),
       });
+      // On success, the mutation will invalidate and refetch the profile query
+      // which will cause App.tsx to automatically transition to the main app
     } catch (error) {
+      // Error is already logged in the mutation and will be displayed in the alert
       console.error('Failed to save profile:', error);
     }
   };
@@ -71,11 +74,11 @@ export default function ProfileSetup() {
               />
             </div>
 
-            {saveProfileMutation.isError && (
+            {saveProfileMutation.isError && saveProfileMutation.error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {saveProfileMutation.error?.message || 'Failed to save profile. Please try again.'}
+                  {saveProfileMutation.error.message || 'Failed to save profile. Please try again.'}
                 </AlertDescription>
               </Alert>
             )}

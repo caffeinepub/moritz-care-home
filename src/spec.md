@@ -1,12 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Ensure operators can quickly start/restart a stopped backend canister on the IC, and provide clear deployment/runbook and UI guidance when the backend canister is stopped.
+**Goal:** Fix baseline user registration so first-time authenticated users can register successfully without an administrator-provisioned token, while preserving any existing admin-token provisioning flow.
 
 **Planned changes:**
-- Add `frontend/scripts/restart_backend_canister.sh` to check backend canister status on `--network ic`, start it if stopped, and optionally perform a stop+start in an explicit `restart` mode, with clear English output and non-zero exit codes on failure.
-- Update `frontend/scripts/redeploy_production.sh` to run the backend start/restart logic immediately after `dfx deploy --network ic` completes so a stopped backend is brought back online as part of redeploy.
-- Update `frontend/DEPLOYMENT_CHECKLIST.md` with a dedicated subsection documenting how to verify backend canister status, and how to start/restart it (preferably via the new script), including the exact `dfx canister --network ic status backend` command.
-- Update `StartupErrorScreen` to show an explicit English troubleshooting hint when the health check indicates “Backend canister is stopped”, including the backend canister ID from diagnostics and the exact start/restart command(s) and/or reference to the new restart script.
+- Update backend registration logic to allow tokenless baseline registration for authenticated (non-anonymous) principals and keep the admin-token provisioning path intact.
+- Keep the backend registration call idempotent so repeated calls do not fail or unexpectedly change state.
+- Improve backend error signaling for registration failures so errors clearly distinguish anonymous/unauthenticated access from other failures and avoid the generic “contact an administrator to provision your account” message for normal first-time users.
+- Adjust frontend startup registration/profile bootstrap to stop blocking first-time authenticated users with the provisioning error, while remaining backward compatible with existing token URL parameters.
 
-**User-visible outcome:** Operators can restart a stopped backend canister via a script and see clearer deployment and UI guidance to recover when the backend canister is stopped.
+**User-visible outcome:** After logging in with Internet Identity, a first-time user can proceed into the app and access user-gated features without seeing a provisioning/admin-contact error; if access is anonymous or otherwise unauthorized, the UI shows an accurate error message.
