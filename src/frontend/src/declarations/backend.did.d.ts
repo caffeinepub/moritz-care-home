@@ -377,7 +377,7 @@ export interface _SERVICE {
       Array<ResponsiblePerson>,
       Array<Medication>,
     ],
-    undefined
+    Resident
   >,
   'v105_dischargeResident' : ActorMethod<[bigint], undefined>,
   'v105_permanentlyDeleteResident' : ActorMethod<[bigint], undefined>,

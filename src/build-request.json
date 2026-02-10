@@ -1,93 +1,86 @@
 {
   "kind": "build_request",
-  "title": "Fix live backend connection so residents load (stuck on “Connecting to backend…”)",
-  "priority": "high",
+  "title": "Rollback production deployment to Version 85",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a public, unauthenticated backend health check method that the frontend can call during startup, and ensure it always returns quickly with a stable response shape (including a message and timestamp).",
-      "target": "backend",
+      "text": "Roll back the deployed application to Version 85 by checking out the repository state that corresponds to \"Version 85\" (tag/branch/commit used for that release) and redeploying to the Internet Computer (ic) network.",
+      "target": "both",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "please fix backed. residents not showing on the live application. just stucked on the connecting to backend"
+          "revert to version 85"
         ]
       },
       "acceptanceCriteria": [
-        "Backend exposes a public query method named healthCheck that does not require authentication/authorization.",
-        "healthCheck returns an object containing at least a human-readable message and a timestamp.",
-        "Calling healthCheck from an anonymous actor succeeds when the canister is deployed and running."
+        "The codebase used for the deployment is confirmed to be the exact repository state corresponding to Version 85 (document the git ref/commit hash used).",
+        "A successful `dfx deploy --network ic` is performed from the Version 85 code state without build/deploy errors.",
+        "The deployment produces timestamped artifacts in `frontend/deployment_logs/` including a deploy log (`deploy_[timestamp].log`) and canister ID summary (`canister_ids_[timestamp].txt`)."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure the backend supports the startup/admin initialization call used by the frontend resilient actor, and that failures in admin initialization do not prevent normal authenticated users from connecting and reading residents when they have the required permissions.",
-      "target": "backend",
+      "text": "Perform the rollback deployment using the clean rebuild workflow to minimize the risk of stale frontend artifacts and cached canister-ID wiring in production.",
+      "target": "frontend",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "please fix backed. residents not showing on the live application. just stucked on the connecting to backend"
+          "revert to version 85"
         ]
       },
       "acceptanceCriteria": [
-        "Backend exposes a method compatible with the frontend call actor._initializeAccessControlWithSecret(secret).",
-        "If access control initialization is not performed (or is performed with an invalid/expired secret), normal actor creation and non-admin read flows do not hang; they either succeed or fail fast with an explicit error."
+        "The deployment is executed via `./frontend/scripts/clean_redeploy_production.sh` from the Version 85 code state (or an equivalent clean rebuild procedure matching that script’s behavior).",
+        "After deployment, the `canister_ids_[timestamp].txt` file includes Frontend and Backend canister IDs plus build metadata (version, git commit, build time) and indicates a clean rebuild.",
+        "No prior `frontend/dist` or Vite cache artifacts are reused for the production build (clean step completed)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4",
-          "msg-8"
-        ],
-        "quotes": [
-          "just stucked on the connecting to backend",
-          "start again"
-        ]
-      },
-      "acceptanceCriteria": [
-        "When the backend cannot be reached or is misconfigured, the app transitions from the loading screen to an error screen (or error state) within the configured startup timeouts and does not remain indefinitely on “Connecting to backend…”.",
-        "A visible Retry action re-attempts backend connection and re-fetches residents after a failure.",
-        "If the backend is reachable and the user has permissions, the Dashboard loads and displays residents instead of remaining in a connecting state."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
-      "target": "frontend",
+      "text": "Verify the rollback in production by running the post-deployment smoke tests and confirming the app is not stuck on \"Connecting to backend...\" and that diagnostics show valid build metadata and canister IDs.",
+      "target": "both",
       "source": {
         "messageIds": [
           "msg-4"
         ],
         "quotes": [
-          "residents not showing on the live application"
+          "revert to version 85"
         ]
       },
       "acceptanceCriteria": [
-        "Dashboard resident queries use an actor creation path that has explicit timeouts and returns actionable errors on failure (rather than silently stalling).",
-        "When backend responsiveness is slow (but reachable), the UI either loads residents successfully or shows an explicit slow-backend error state with retry, rather than leaving the resident list empty without explanation."
+        "Using `frontend/DEPLOYMENT_CHECKLIST.md`, the following pass in production: Login page load, Internet Identity authentication, Dashboard reaches a settled state within 10 seconds, and no console errors.",
+        "The in-app diagnostics indicator shows a non-unknown frontend build identifier and a non-unknown backend canister ID.",
+        "The backend canister ID shown in the diagnostics indicator matches the backend canister ID recorded in the latest `frontend/deployment_logs/canister_ids_[timestamp].txt`.",
+        "Operator performs a hard refresh (and clears site cache if needed) and the app continues to function normally on the rolled-back version."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo.",
-    "Do not edit files under frontend/src/components/ui or any paths listed in frontend.immutablePaths (compose them instead).",
-    "Use English for all user-facing text."
+    "Backend must remain a single Motoko actor with all logic in `backend/main.mo`; do not introduce additional backend services.",
+    "Do not modify any frontend files under `frontend/src/components/ui` or any paths listed in `frontend.immutablePaths` in SYSTEM_CONTEXT.",
+    "This is a rollback/publish operation only; do not introduce new features, refactors, or UI changes beyond what exists in Version 85."
   ],
   "nonGoals": [
-    "Adding new product features unrelated to backend connectivity and resident loading.",
-    "Introducing external databases, third-party auth providers, or additional backend services.",
-    "Implementing real-time updates (WebSockets/push)."
+    "Implementing new application features or UI enhancements.",
+    "Changing backend data models or performing schema migrations unless Version 85 explicitly requires it for existing stable state.",
+    "Adding new deployment tooling beyond using the existing scripts and checklist."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

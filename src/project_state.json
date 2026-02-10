@@ -3,47 +3,36 @@
   "projectStateVersion": 3,
   "summary": "New project",
   "architectural_notes": [],
-  "known_issues": [
-    "Live application stuck on 'connecting to backend'; residents not showing (backend connectivity/loading issue)."
-  ],
+  "known_issues": [],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-remove-infinite-long-lived-loading-states-in-the-live-app-by-ensuring-resident-loading-queries-fail-fast-with-clear-errors-instead-of-leaving-the-ui-stuck-on-connecting-to-backend-and-provide-a-user-visible-retry-path-that-re-runs-actor-creation-and-resident-queries",
-      "title": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
+      "id": "feature-roll-back-the-deployed-application-to-version-85-by-checking-out-the-repository-state-that-corresponds-to-version-85-tag-branch-commit-used-for-that-release-and-redeploying-to-the-internet-computer-ic-network",
+      "title": "Roll back the deployed application to Version 85 by checking out the repository state that corresponds to \"Version 85\" (tag/branch/commit used for that release) and redeploying to the Internet Computer (ic) network.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-perform-the-rollback-deployment-using-the-clean-rebuild-workflow-to-minimize-the-risk-of-stale-frontend-artifacts-and-cached-canister-id-wiring-in-production",
+      "title": "Perform the rollback deployment using the clean rebuild workflow to minimize the risk of stale frontend artifacts and cached canister-ID wiring in production.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-verify-the-rollback-in-production-by-running-the-post-deployment-smoke-tests-and-confirming-the-app-is-not-stuck-on-connecting-to-backend-and-that-diagnostics-show-valid-build-metadata-and-canister-ids",
+      "title": "Verify the rollback in production by running the post-deployment smoke tests and confirming the app is not stuck on \"Connecting to backend...\" and that diagnostics show valid build metadata and canister IDs.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-make-resident-list-fetching-resilient-by-using-the-same-resilient-actor-connection-strategy-used-during-startup-for-dashboard-resident-queries-so-the-live-app-consistently-loads-residents-even-under-slow-backend-initialization-conditions",
-      "title": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
-      "reqIds": [
-        "REQ-4"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Add a public, unauthenticated backend health check method that the frontend can call during startup, and ensure it always returns quickly with a stable response shape (including a message and timestamp).",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Ensure the backend supports the startup/admin initialization call used by the frontend resilient actor, and that failures in admin initialization do not prevent normal authenticated users from connecting and reading residents when they have the required permissions.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "status": "pending"
-    }
-  ],
-  "projectName": "Fix live backend connection so residents load (stuck on “Connecting to backend…”)",
+  "new_feature_requests": [],
+  "projectName": "Rollback production deployment to Version 85",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

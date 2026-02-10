@@ -75,6 +75,7 @@ export function getBackendDiagnostics(): BackendDiagnostics {
  * Performs a health check against the backend
  * Uses the public healthCheck endpoint that doesn't require authentication
  * Idempotent and safe to call multiple times during startup
+ * Aligned with refined stopped-canister detection to reduce false positives
  * @returns Health check result with success status and message
  */
 export async function performHealthCheck(): Promise<HealthCheckResult> {
@@ -116,15 +117,18 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
     if (error instanceof Error) {
       const errorMsg = error.message.toLowerCase();
       
-      // Check for stopped canister
-      if (errorMsg.includes('is stopped') || errorMsg.includes('callcontextmanager')) {
+      // Tightened stopped-canister detection: require explicit "is stopped" or CallContextManager
+      if (errorMsg.includes('canister is stopped') || errorMsg.includes('is stopped') || errorMsg.includes('callcontextmanager')) {
         message = 'Backend canister appears to be stopped';
       } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
-        message = 'Backend health check timed out';
+        message = 'Backend health check timed out (slow or unreachable)';
       } else if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
         message = 'Network error: Cannot reach backend';
-      } else if (errorMsg.includes('canister')) {
+      } else if (errorMsg.includes('canister') && errorMsg.includes('not found')) {
         message = 'Backend canister not found or not deployed';
+      } else if (errorMsg.includes('canister')) {
+        // Generic canister error (not stopped, not not-found)
+        message = 'Backend canister error (check network and deployment)';
       }
     }
 

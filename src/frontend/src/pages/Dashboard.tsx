@@ -342,20 +342,6 @@ export default function Dashboard() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setResidentToArchive(resident.id)}
-                  disabled={archiveResident.isPending}
-                  className="text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-                >
-                  {archiveResident.isPending ? (
-                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Archive className="mr-1 h-4 w-4" />
-                  )}
-                  Archive
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => setResidentToDelete(resident.id)}
                   disabled={deleteResident.isPending}
                   className="text-red-600 hover:bg-red-50 hover:text-red-700"
@@ -489,7 +475,7 @@ export default function Dashboard() {
           <Card className="border-l-4 border-l-teal-500">
             <CardHeader className="pb-3">
               <CardDescription>Total Residents</CardDescription>
-              <CardTitle className="text-3xl font-bold text-teal-600">
+              <CardTitle className="text-3xl font-bold text-teal-700">
                 {loadingAll ? <Loader2 className="h-8 w-8 animate-spin" /> : allResidents.length}
               </CardTitle>
             </CardHeader>
@@ -497,7 +483,7 @@ export default function Dashboard() {
           <Card className="border-l-4 border-l-green-500">
             <CardHeader className="pb-3">
               <CardDescription>Active Residents</CardDescription>
-              <CardTitle className="text-3xl font-bold text-green-600">
+              <CardTitle className="text-3xl font-bold text-green-700">
                 {loadingActive ? <Loader2 className="h-8 w-8 animate-spin" /> : activeResidents.length}
               </CardTitle>
             </CardHeader>
@@ -505,7 +491,7 @@ export default function Dashboard() {
           <Card className="border-l-4 border-l-gray-500">
             <CardHeader className="pb-3">
               <CardDescription>Discharged Residents</CardDescription>
-              <CardTitle className="text-3xl font-bold text-gray-600">
+              <CardTitle className="text-3xl font-bold text-gray-700">
                 {loadingDischarged ? <Loader2 className="h-8 w-8 animate-spin" /> : dischargedResidents.length}
               </CardTitle>
             </CardHeader>
@@ -515,12 +501,12 @@ export default function Dashboard() {
         {/* Filters */}
         <div className="mb-6 flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-gray-500" />
+            <Filter className="h-4 w-4 text-gray-500" />
             <Select value={selectedRoom} onValueChange={setSelectedRoom}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px] bg-white">
                 <SelectValue placeholder="Filter by room" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="all">All Rooms</SelectItem>
                 {roomNumbers.map((room) => (
                   <SelectItem key={room} value={room}>
@@ -530,14 +516,13 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex items-center gap-2">
-            <ArrowUpDown className="h-5 w-5 text-gray-500" />
+            <ArrowUpDown className="h-4 w-4 text-gray-500" />
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortCriteria)}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px] bg-white">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="roomNumber">Room Number</SelectItem>
                 <SelectItem value="residentId">Resident ID</SelectItem>
                 <SelectItem value="name">Name</SelectItem>
@@ -548,10 +533,10 @@ export default function Dashboard() {
 
         {/* Tabs */}
         <Tabs defaultValue="all" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsList className="bg-white">
             <TabsTrigger value="all" className="gap-2">
               <Users className="h-4 w-4" />
-              All
+              All Residents
             </TabsTrigger>
             <TabsTrigger value="active" className="gap-2">
               <UserCheck className="h-4 w-4" />
@@ -565,20 +550,18 @@ export default function Dashboard() {
 
           {/* All Residents Tab */}
           <TabsContent value="all" className="space-y-4">
-            {errorAll && allError && (
-              <ErrorAlert error={allError as Error} onRetry={handleRetryResidents} />
-            )}
+            {errorAll && allError && <ErrorAlert error={allError as Error} onRetry={handleRetryResidents} />}
             {loadingAll ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
               </div>
             ) : filteredAllResidents.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <Users className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-600">No residents found</p>
+                  <p className="text-lg font-medium text-gray-900">No residents found</p>
                   <p className="text-sm text-gray-500">
-                    {selectedRoom !== 'all' ? 'Try selecting a different room' : 'Add your first resident to get started'}
+                    {selectedRoom !== 'all' ? 'Try selecting a different room filter' : 'Add your first resident to get started'}
                   </p>
                 </CardContent>
               </Card>
@@ -593,20 +576,18 @@ export default function Dashboard() {
 
           {/* Active Residents Tab */}
           <TabsContent value="active" className="space-y-4">
-            {errorActive && activeError && (
-              <ErrorAlert error={activeError as Error} onRetry={handleRetryResidents} />
-            )}
+            {errorActive && activeError && <ErrorAlert error={activeError as Error} onRetry={handleRetryResidents} />}
             {loadingActive ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
               </div>
             ) : filteredActiveResidents.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <UserCheck className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-600">No active residents found</p>
+                  <p className="text-lg font-medium text-gray-900">No active residents found</p>
                   <p className="text-sm text-gray-500">
-                    {selectedRoom !== 'all' ? 'Try selecting a different room' : 'All residents have been discharged'}
+                    {selectedRoom !== 'all' ? 'Try selecting a different room filter' : 'All residents have been discharged'}
                   </p>
                 </CardContent>
               </Card>
@@ -621,20 +602,18 @@ export default function Dashboard() {
 
           {/* Discharged Residents Tab */}
           <TabsContent value="discharged" className="space-y-4">
-            {errorDischarged && dischargedError && (
-              <ErrorAlert error={dischargedError as Error} onRetry={handleRetryResidents} />
-            )}
+            {errorDischarged && dischargedError && <ErrorAlert error={dischargedError as Error} onRetry={handleRetryResidents} />}
             {loadingDischarged ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-12 w-12 animate-spin text-teal-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
               </div>
             ) : filteredDischargedResidents.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <UserX className="mb-4 h-12 w-12 text-gray-400" />
-                  <p className="text-lg font-medium text-gray-600">No discharged residents found</p>
+                  <p className="text-lg font-medium text-gray-900">No discharged residents found</p>
                   <p className="text-sm text-gray-500">
-                    {selectedRoom !== 'all' ? 'Try selecting a different room' : 'No residents have been discharged yet'}
+                    {selectedRoom !== 'all' ? 'Try selecting a different room filter' : 'No residents have been discharged yet'}
                   </p>
                 </CardContent>
               </Card>
@@ -653,17 +632,17 @@ export default function Dashboard() {
       <AddResidentDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
 
       {/* Discharge Confirmation Dialog */}
-      <AlertDialog open={!!residentToDischarge} onOpenChange={() => setResidentToDischarge(null)}>
-        <AlertDialogContent>
+      <AlertDialog open={!!residentToDischarge} onOpenChange={(open) => !open && setResidentToDischarge(null)}>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Discharge Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discharge {getResidentName(residentToDischarge)}? This action can be reversed later if needed.
+              Are you sure you want to discharge <strong>{getResidentName(residentToDischarge)}</strong>? This will move them to the discharged residents list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDischargeResident}>
+            <AlertDialogAction onClick={handleDischargeResident} className="bg-orange-600 hover:bg-orange-700">
               Discharge
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -671,17 +650,17 @@ export default function Dashboard() {
       </AlertDialog>
 
       {/* Archive Confirmation Dialog */}
-      <AlertDialog open={!!residentToArchive} onOpenChange={() => setResidentToArchive(null)}>
-        <AlertDialogContent>
+      <AlertDialog open={!!residentToArchive} onOpenChange={(open) => !open && setResidentToArchive(null)}>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive {getResidentName(residentToArchive)}? Archived residents will be hidden from the main view but can be restored if needed.
+              Are you sure you want to archive <strong>{getResidentName(residentToArchive)}</strong>? Archived residents will be hidden from the main view.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleArchiveResident}>
+            <AlertDialogAction onClick={handleArchiveResident} className="bg-amber-600 hover:bg-amber-700">
               Archive
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -689,12 +668,12 @@ export default function Dashboard() {
       </AlertDialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!residentToDelete} onOpenChange={() => setResidentToDelete(null)}>
-        <AlertDialogContent>
+      <AlertDialog open={!!residentToDelete} onOpenChange={(open) => !open && setResidentToDelete(null)}>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>Permanently Delete Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete {getResidentName(residentToDelete)}? This action cannot be undone and all associated data will be lost.
+              Are you sure you want to permanently delete <strong>{getResidentName(residentToDelete)}</strong>? This action cannot be undone and will remove all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -705,6 +684,25 @@ export default function Dashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Footer */}
+      <footer className="border-t bg-white py-6 mt-12">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-600">
+          <p>
+            © {new Date().getFullYear()} Moritz Care Home • Built with ❤️ using{' '}
+            <a
+              href={`https://caffeine.ai/?utm_source=Caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(
+                typeof window !== 'undefined' ? window.location.hostname : 'moritz-care-home'
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-600 hover:text-teal-700 font-medium"
+            >
+              caffeine.ai
+            </a>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

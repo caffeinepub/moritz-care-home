@@ -1,18 +1,19 @@
 /**
  * Build information utility
- * Provides frontend build identifier and version information
+ * Provides frontend build identifier and version information with explicit detection of missing metadata
  */
 
 // Try to get build-time environment variables
-const buildTimestamp = import.meta.env.VITE_BUILD_TIMESTAMP || new Date().toISOString();
-const buildVersion = import.meta.env.VITE_BUILD_VERSION || 'dev';
-const gitCommit = import.meta.env.VITE_GIT_COMMIT || 'unknown';
+const buildTimestamp = import.meta.env.VITE_BUILD_TIMESTAMP;
+const buildVersion = import.meta.env.VITE_BUILD_VERSION;
+const gitCommit = import.meta.env.VITE_GIT_COMMIT;
 
 export interface BuildInfo {
-  version: string;
-  timestamp: string;
-  commit: string;
+  version: string | null;
+  timestamp: string | null;
+  commit: string | null;
   environment: 'production' | 'development' | 'local';
+  hasMetadata: boolean;
 }
 
 export function getBuildInfo(): BuildInfo {
@@ -25,15 +26,49 @@ export function getBuildInfo(): BuildInfo {
     environment = isLocal ? 'local' : 'development';
   }
 
+  // Check if we have actual build metadata (not just defaults)
+  const hasVersion = buildVersion && buildVersion !== 'dev' && buildVersion !== '';
+  const hasCommit = gitCommit && gitCommit !== 'unknown' && gitCommit !== '';
+  const hasTimestamp = buildTimestamp && buildTimestamp !== '';
+  
+  // In production, we should have all metadata
+  const hasMetadata = environment === 'production' 
+    ? (hasVersion && hasCommit && hasTimestamp)
+    : true; // In dev/local, missing metadata is expected
+
   return {
-    version: buildVersion,
-    timestamp: buildTimestamp,
-    commit: gitCommit.substring(0, 7), // Short commit hash
+    version: hasVersion ? buildVersion : null,
+    timestamp: hasTimestamp ? buildTimestamp : null,
+    commit: hasCommit ? gitCommit?.substring(0, 7) : null, // Short commit hash
     environment,
+    hasMetadata,
   };
 }
 
-export function getBuildIdentifier(): string {
+export function getBuildIdentifier(): string | null {
   const info = getBuildInfo();
-  return `v${info.version}-${info.commit}`;
+  
+  // In production, if we don't have metadata, return null to signal missing build info
+  if (info.environment === 'production' && !info.hasMetadata) {
+    return null;
+  }
+  
+  // In development/local, use fallback values
+  if (info.environment !== 'production') {
+    const version = info.version || 'dev';
+    const commit = info.commit || 'unknown';
+    return `v${version}-${commit}`;
+  }
+  
+  // Production with metadata
+  if (info.version && info.commit) {
+    return `v${info.version}-${info.commit}`;
+  }
+  
+  return null;
+}
+
+export function isBuildMetadataMissing(): boolean {
+  const info = getBuildInfo();
+  return info.environment === 'production' && !info.hasMetadata;
 }

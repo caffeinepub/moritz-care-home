@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAddResident } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,8 @@ import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { dateStringToNanoseconds } from '../lib/dateUtils';
+import { stringToRoomType, ROOM_TYPE_STRING_VALUES } from '../lib/residentEnumMapping';
 import type { Physician, Pharmacy, Insurance, ResponsiblePerson, Medication } from '../backend';
-import { MedicationStatus, RoomType, AdministrationRoute } from '../backend';
 
 interface AddResidentDialogProps {
   open: boolean;
@@ -25,7 +25,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
   const [roomNumber, setRoomNumber] = useState('');
-  const [roomType, setRoomType] = useState<RoomType>(RoomType.solo);
+  const [roomTypeString, setRoomTypeString] = useState<string>(ROOM_TYPE_STRING_VALUES.SOLO);
   const [bed, setBed] = useState('A');
   const [medicaidNumber, setMedicaidNumber] = useState('');
   const [medicareNumber, setMedicareNumber] = useState('');
@@ -51,39 +51,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
     Array<{ name: string; relationship: string; contactNumber: string; address: string }>
   >([{ name: '', relationship: '', contactNumber: '', address: '' }]);
 
-  // Medications - support multiple
-  const [medications, setMedications] = useState<
-    Array<{
-      name: string;
-      dosage: string;
-      administrationTimes: string;
-      prescribingPhysicianName: string;
-    }>
-  >([{ name: '', dosage: '', administrationTimes: '', prescribingPhysicianName: '' }]);
-
   const addResident = useAddResident();
-
-  const resetForm = () => {
-    setFirstName('');
-    setLastName('');
-    setDateOfBirth('');
-    setAdmissionDate('');
-    setRoomNumber('');
-    setRoomType(RoomType.solo);
-    setBed('A');
-    setMedicaidNumber('');
-    setMedicareNumber('');
-    setPhysicians([{ name: '', contactNumber: '', specialty: '' }]);
-    setPharmacyName('');
-    setPharmacyAddress('');
-    setPharmacyContact('');
-    setInsuranceCompany('');
-    setPolicyNumber('');
-    setInsuranceAddress('');
-    setInsuranceContact('');
-    setResponsiblePersons([{ name: '', relationship: '', contactNumber: '', address: '' }]);
-    setMedications([{ name: '', dosage: '', administrationTimes: '', prescribingPhysicianName: '' }]);
-  };
 
   // Physician handlers
   const addPhysician = () => {
@@ -96,7 +64,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
     }
   };
 
-  const updatePhysician = (index: number, field: string, value: string) => {
+  const updatePhysicianField = (index: number, field: string, value: string) => {
     const updated = [...physicians];
     updated[index] = { ...updated[index], [field]: value };
     setPhysicians(updated);
@@ -113,59 +81,65 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
     }
   };
 
-  const updateResponsiblePerson = (index: number, field: string, value: string) => {
+  const updateResponsiblePersonField = (index: number, field: string, value: string) => {
     const updated = [...responsiblePersons];
     updated[index] = { ...updated[index], [field]: value };
     setResponsiblePersons(updated);
   };
 
-  // Medication handlers
-  const addMedication = () => {
-    setMedications([...medications, { name: '', dosage: '', administrationTimes: '', prescribingPhysicianName: '' }]);
-  };
-
-  const removeMedication = (index: number) => {
-    if (medications.length > 1) {
-      setMedications(medications.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateMedication = (index: number, field: string, value: string) => {
-    const updated = [...medications];
-    updated[index] = { ...updated[index], [field]: value };
-    setMedications(updated);
+  const resetForm = () => {
+    setFirstName('');
+    setLastName('');
+    setDateOfBirth('');
+    setAdmissionDate('');
+    setRoomNumber('');
+    setRoomTypeString(ROOM_TYPE_STRING_VALUES.SOLO);
+    setBed('A');
+    setMedicaidNumber('');
+    setMedicareNumber('');
+    setPhysicians([{ name: '', contactNumber: '', specialty: '' }]);
+    setPharmacyName('');
+    setPharmacyAddress('');
+    setPharmacyContact('');
+    setInsuranceCompany('');
+    setPolicyNumber('');
+    setInsuranceAddress('');
+    setInsuranceContact('');
+    setResponsiblePersons([{ name: '', relationship: '', contactNumber: '', address: '' }]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!firstName || !lastName || !dateOfBirth || !admissionDate || !roomNumber) {
-      toast.error('Please fill in all required fields (First Name, Last Name, Date of Birth, Admission Date, Room Number)');
+      toast.error('Please fill in all required fields');
       return;
     }
 
+    // Convert string to backend enum type
+    const roomType = stringToRoomType(roomTypeString);
+
     // Validate bed assignment for shared rooms
-    if (roomType === RoomType.sharedRoom && !bed) {
+    if (roomTypeString === ROOM_TYPE_STRING_VALUES.SHARED && !bed) {
       toast.error('Please select a bed assignment for shared rooms');
       return;
     }
 
     try {
-      // Convert dates using utility function to avoid timezone issues
       const dobNanoseconds = dateStringToNanoseconds(dateOfBirth);
       const admNanoseconds = dateStringToNanoseconds(admissionDate);
 
-      // Build physicians array - only include those with a name
+      // Build physicians array
       const physiciansData: Physician[] = physicians
         .filter((p) => p.name.trim() !== '')
-        .map((p, index) => ({
+        .map((p) => ({
           id: BigInt(0),
           name: p.name,
           contactNumber: p.contactNumber || 'Not provided',
           specialty: p.specialty || 'General',
         }));
 
-      // Build pharmacy object - use null if not provided
+      // Build pharmacy object
       const pharmacyData: Pharmacy | null = pharmacyName.trim()
         ? {
             id: BigInt(0),
@@ -175,7 +149,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
           }
         : null;
 
-      // Build insurance object - use null if not provided
+      // Build insurance object
       const insuranceData: Insurance | null = insuranceCompany.trim()
         ? {
             id: BigInt(0),
@@ -186,10 +160,10 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
           }
         : null;
 
-      // Build responsible persons array - only include those with a name
+      // Build responsible persons array
       const responsiblePersonsData: ResponsiblePerson[] = responsiblePersons
         .filter((rp) => rp.name.trim() !== '')
-        .map((rp, index) => ({
+        .map((rp) => ({
           id: BigInt(0),
           name: rp.name,
           relationship: rp.relationship || 'Not specified',
@@ -197,29 +171,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
           address: rp.address || 'Not specified',
         }));
 
-      // Build medications array - only include those with a name
-      const medicationsData: Medication[] = medications
-        .filter((m) => m.name.trim() !== '')
-        .map((m, index) => {
-          // Find matching physician for this medication
-          const prescribingPhysician = physiciansData.find(
-            (p) => p.name.toLowerCase() === m.prescribingPhysicianName.toLowerCase()
-          );
-
-          return {
-            id: BigInt(0),
-            name: m.name,
-            dosage: m.dosage || 'As prescribed',
-            administrationTimes: m.administrationTimes
-              ? m.administrationTimes.split(',').map((t) => t.trim())
-              : [],
-            prescribingPhysician: prescribingPhysician || undefined,
-            administrationRoute: AdministrationRoute.oral,
-            dosageQuantity: '',
-            notes: '',
-            status: MedicationStatus.active,
-          };
-        });
+      const medications: Medication[] = [];
 
       await addResident.mutateAsync({
         firstName,
@@ -228,21 +180,22 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
         admissionDate: admNanoseconds,
         roomNumber,
         roomType,
-        bed: roomType === RoomType.sharedRoom ? bed : null,
+        bed: roomTypeString === ROOM_TYPE_STRING_VALUES.SHARED ? bed : null,
         physiciansData,
         pharmacyData,
         insuranceData,
         medicaidNumber: medicaidNumber || 'N/A',
         medicareNumber: medicareNumber || 'N/A',
         responsiblePersonsData,
-        medications: medicationsData,
+        medications,
       });
 
+      toast.success('Resident added successfully');
       resetForm();
       onOpenChange(false);
     } catch (error) {
       console.error('Error adding resident:', error);
-      // Error toast is already handled by the mutation
+      toast.error('Failed to add resident');
     }
   };
 
@@ -251,7 +204,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
       <DialogContent className="max-h-[90vh] max-w-4xl bg-white border-border">
         <DialogHeader>
           <DialogTitle className="text-foreground">Add New Resident</DialogTitle>
-          <DialogDescription className="text-muted-foreground">Enter the resident's information below. Fields marked with * are required.</DialogDescription>
+          <DialogDescription className="text-muted-foreground">Enter the resident's information below.</DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
@@ -315,17 +268,17 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
                   <Label htmlFor="roomType" className="text-foreground">
                     Room Type <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={roomType} onValueChange={(value) => setRoomType(value as RoomType)}>
+                  <Select value={roomTypeString} onValueChange={setRoomTypeString}>
                     <SelectTrigger id="roomType" className="bg-white border-input text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value={RoomType.solo}>Solo</SelectItem>
-                      <SelectItem value={RoomType.sharedRoom}>Shared Room</SelectItem>
+                      <SelectItem value={ROOM_TYPE_STRING_VALUES.SOLO}>Solo</SelectItem>
+                      <SelectItem value={ROOM_TYPE_STRING_VALUES.SHARED}>Shared Room</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {roomType === RoomType.sharedRoom && (
+                {roomTypeString === ROOM_TYPE_STRING_VALUES.SHARED && (
                   <div className="space-y-2">
                     <Label htmlFor="bed" className="text-foreground">
                       Bed <span className="text-red-500">*</span>
@@ -387,7 +340,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
                       <Input
                         id={`physician-name-${index}`}
                         value={physician.name}
-                        onChange={(e) => updatePhysician(index, 'name', e.target.value)}
+                        onChange={(e) => updatePhysicianField(index, 'name', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
@@ -398,7 +351,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
                       <Input
                         id={`physician-contact-${index}`}
                         value={physician.contactNumber}
-                        onChange={(e) => updatePhysician(index, 'contactNumber', e.target.value)}
+                        onChange={(e) => updatePhysicianField(index, 'contactNumber', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
@@ -409,7 +362,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
                       <Input
                         id={`physician-specialty-${index}`}
                         value={physician.specialty}
-                        onChange={(e) => updatePhysician(index, 'specialty', e.target.value)}
+                        onChange={(e) => updatePhysicianField(index, 'specialty', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
@@ -426,7 +379,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="pharmacyName" className="text-foreground">
-                    Name
+                    Pharmacy Name
                   </Label>
                   <Input id="pharmacyName" value={pharmacyName} onChange={(e) => setPharmacyName(e.target.value)} className="bg-white border-input text-foreground" />
                 </div>
@@ -453,7 +406,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="insuranceCompany" className="text-foreground">
-                    Company Name
+                    Insurance Company
                   </Label>
                   <Input id="insuranceCompany" value={insuranceCompany} onChange={(e) => setInsuranceCompany(e.target.value)} className="bg-white border-input text-foreground" />
                 </div>
@@ -492,7 +445,7 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
               {responsiblePersons.map((person, index) => (
                 <div key={index} className="space-y-4 rounded-lg border border-border bg-white p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">Person {index + 1}</span>
+                    <span className="text-sm font-medium text-foreground">Responsible Person {index + 1}</span>
                     {responsiblePersons.length > 1 && (
                       <Button type="button" variant="ghost" size="sm" onClick={() => removeResponsiblePerson(index)}>
                         <X className="h-4 w-4" />
@@ -501,46 +454,46 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor={`person-name-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-name-${index}`} className="text-foreground">
                         Name
                       </Label>
                       <Input
-                        id={`person-name-${index}`}
+                        id={`rp-name-${index}`}
                         value={person.name}
-                        onChange={(e) => updateResponsiblePerson(index, 'name', e.target.value)}
+                        onChange={(e) => updateResponsiblePersonField(index, 'name', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`person-relationship-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-relationship-${index}`} className="text-foreground">
                         Relationship
                       </Label>
                       <Input
-                        id={`person-relationship-${index}`}
+                        id={`rp-relationship-${index}`}
                         value={person.relationship}
-                        onChange={(e) => updateResponsiblePerson(index, 'relationship', e.target.value)}
+                        onChange={(e) => updateResponsiblePersonField(index, 'relationship', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`person-contact-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-contact-${index}`} className="text-foreground">
                         Contact Number
                       </Label>
                       <Input
-                        id={`person-contact-${index}`}
+                        id={`rp-contact-${index}`}
                         value={person.contactNumber}
-                        onChange={(e) => updateResponsiblePerson(index, 'contactNumber', e.target.value)}
+                        onChange={(e) => updateResponsiblePersonField(index, 'contactNumber', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`person-address-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-address-${index}`} className="text-foreground">
                         Address
                       </Label>
                       <Input
-                        id={`person-address-${index}`}
+                        id={`rp-address-${index}`}
                         value={person.address}
-                        onChange={(e) => updateResponsiblePerson(index, 'address', e.target.value)}
+                        onChange={(e) => updateResponsiblePersonField(index, 'address', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
@@ -549,84 +502,12 @@ export default function AddResidentDialog({ open, onOpenChange }: AddResidentDia
               ))}
             </div>
 
-            <Separator />
-
-            {/* Medications */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">Medications</h3>
-                <Button type="button" variant="outline" size="sm" onClick={addMedication} className="bg-white">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Medication
-                </Button>
-              </div>
-              {medications.map((medication, index) => (
-                <div key={index} className="space-y-4 rounded-lg border border-border bg-white p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">Medication {index + 1}</span>
-                    {medications.length > 1 && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeMedication(index)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor={`medication-name-${index}`} className="text-foreground">
-                        Name
-                      </Label>
-                      <Input
-                        id={`medication-name-${index}`}
-                        value={medication.name}
-                        onChange={(e) => updateMedication(index, 'name', e.target.value)}
-                        className="bg-white border-input text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`medication-dosage-${index}`} className="text-foreground">
-                        Dosage
-                      </Label>
-                      <Input
-                        id={`medication-dosage-${index}`}
-                        value={medication.dosage}
-                        onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
-                        className="bg-white border-input text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`medication-times-${index}`} className="text-foreground">
-                        Administration Times (comma-separated)
-                      </Label>
-                      <Input
-                        id={`medication-times-${index}`}
-                        value={medication.administrationTimes}
-                        onChange={(e) => updateMedication(index, 'administrationTimes', e.target.value)}
-                        placeholder="8:00 AM, 2:00 PM, 8:00 PM"
-                        className="bg-white border-input text-foreground"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor={`medication-physician-${index}`} className="text-foreground">
-                        Prescribing Physician Name
-                      </Label>
-                      <Input
-                        id={`medication-physician-${index}`}
-                        value={medication.prescribingPhysicianName}
-                        onChange={(e) => updateMedication(index, 'prescribingPhysicianName', e.target.value)}
-                        placeholder="Must match a physician name above"
-                        className="bg-white border-input text-foreground"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={addResident.isPending} className="bg-white">
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={addResident.isPending}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={addResident.isPending} className="bg-primary text-primary-foreground">
+              <Button type="submit" disabled={addResident.isPending} className="bg-gradient-to-r from-teal-600 to-blue-600">
                 {addResident.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

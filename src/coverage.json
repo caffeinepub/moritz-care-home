@@ -1,57 +1,54 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T01:28:02.412Z",
+  "generatedAt": "2026-02-10T03:28:00.041Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 4,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add a public, unauthenticated backend health check method that the frontend can call during startup, and ensure it always returns quickly with a stable response shape (including a message and timestamp).",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-2",
-        "summary": "Ensure the backend supports the startup/admin initialization call used by the frontend resilient actor, and that failures in admin initialization do not prevent normal authenticated users from connecting and reading residents when they have the required permissions.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
+        "summary": "Roll back the deployed application to Version 85 by checking out the repository state that corresponds to \"Version 85\" (tag/branch/commit used for that release) and redeploying to the Internet Computer (ic) network.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/App.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/scripts/redeploy_production.sh",
+          "frontend/scripts/clean_redeploy_production.sh",
+          "frontend/DEPLOYMENT_CHECKLIST.md"
         ],
         "matchedFiles": [
-          "frontend/src/App.tsx",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/scripts/redeploy_production.sh",
+          "frontend/scripts/clean_redeploy_production.sh",
+          "frontend/DEPLOYMENT_CHECKLIST.md"
         ]
       },
       {
-        "id": "REQ-4",
-        "summary": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
+        "id": "REQ-2",
+        "summary": "Perform the rollback deployment using the clean rebuild workflow to minimize the risk of stale frontend artifacts and cached canister-ID wiring in production.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/lib/startupTimings.ts",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/scripts/clean_redeploy_production.sh",
+          "frontend/DEPLOYMENT_CHECKLIST.md"
         ],
         "matchedFiles": [
-          "frontend/src/lib/startupTimings.ts",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/Dashboard.tsx"
+          "frontend/scripts/clean_redeploy_production.sh",
+          "frontend/DEPLOYMENT_CHECKLIST.md"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Verify the rollback in production by running the post-deployment smoke tests and confirming the app is not stuck on \"Connecting to backend...\" and that diagnostics show valid build metadata and canister IDs.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/DEPLOYMENT_CHECKLIST.md",
+          "frontend/scripts/post_deploy_smoke_test_helper.sh"
+        ],
+        "matchedFiles": [
+          "frontend/DEPLOYMENT_CHECKLIST.md",
+          "frontend/scripts/post_deploy_smoke_test_helper.sh"
         ]
       }
     ]
@@ -62,10 +59,10 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/lib/startupTimings.ts",
-    "frontend/src/pages/Dashboard.tsx",
+    "frontend/DEPLOYMENT_CHECKLIST.md",
+    "frontend/scripts/clean_redeploy_production.sh",
+    "frontend/scripts/post_deploy_smoke_test_helper.sh",
+    "frontend/scripts/redeploy_production.sh",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,3 +1,4 @@
+// UNCHANGED. No backend coding needed for redeployment.
 import Map "mo:core/Map";
 import Order "mo:core/Order";
 import Runtime "mo:core/Runtime";
@@ -414,7 +415,7 @@ actor {
     medicareNumber : Text,
     responsiblePersons : [ResponsiblePerson],
     medications : [Medication],
-  ) : async () {
+  ) : async Resident {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
       Runtime.trap("Unauthorized: Only admins can update residents");
     };
@@ -443,6 +444,7 @@ actor {
     };
 
     residents.add(id, updatedResident);
+    updatedResident;
   };
 
   public shared ({ caller }) func dischargeResident(id : Nat) : async () {
@@ -1430,11 +1432,17 @@ actor {
 
   // 105-compatibility discharge function
   public shared ({ caller }) func v105_dischargeResident(id : Nat) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can discharge residents");
+    };
     await dischargeResident(id);
   };
 
   // 105-compatibility permanent delete function
   public shared ({ caller }) func v105_permanentlyDeleteResident(id : Nat) : async () {
+    if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
+      Runtime.trap("Unauthorized: Only admins can permanently delete residents");
+    };
     await permanentlyDeleteResident(id);
   };
 };

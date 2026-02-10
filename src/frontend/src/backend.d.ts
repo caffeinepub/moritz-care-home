@@ -243,7 +243,7 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;
-    updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<void>;
+    updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<Resident>;
     v105_dischargeResident(id: bigint): Promise<void>;
     v105_permanentlyDeleteResident(id: bigint): Promise<void>;
 }

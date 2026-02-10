@@ -10,8 +10,16 @@ import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { dateStringToNanoseconds, nanosecondsToDateString } from '../lib/dateUtils';
+import { normalizeError } from '../lib/actorInit';
+import {
+  roomTypeToString,
+  stringToRoomType,
+  residentStatusToString,
+  stringToResidentStatus,
+  ROOM_TYPE_STRING_VALUES,
+  RESIDENT_STATUS_STRING_VALUES,
+} from '../lib/residentEnumMapping';
 import type { Resident, Physician, Pharmacy, Insurance, ResponsiblePerson, Medication } from '../backend';
-import { MedicationStatus, RoomType, ResidentStatus } from '../backend';
 
 interface EditResidentDialogProps {
   open: boolean;
@@ -25,9 +33,9 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
-  const [status, setStatus] = useState<ResidentStatus>(ResidentStatus.active);
+  const [statusString, setStatusString] = useState<string>(RESIDENT_STATUS_STRING_VALUES.ACTIVE);
   const [roomNumber, setRoomNumber] = useState('');
-  const [roomType, setRoomType] = useState<RoomType>(RoomType.solo);
+  const [roomTypeString, setRoomTypeString] = useState<string>(ROOM_TYPE_STRING_VALUES.SOLO);
   const [bed, setBed] = useState('A');
   const [medicaidNumber, setMedicaidNumber] = useState('');
   const [medicareNumber, setMedicareNumber] = useState('');
@@ -65,9 +73,9 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
       setLastName(resident.lastName);
       setDateOfBirth(nanosecondsToDateString(resident.dateOfBirth));
       setAdmissionDate(nanosecondsToDateString(resident.admissionDate));
-      setStatus(resident.status);
+      setStatusString(residentStatusToString(resident.status));
       setRoomNumber(resident.roomNumber);
-      setRoomType(resident.roomType);
+      setRoomTypeString(roomTypeToString(resident.roomType));
       setBed(resident.bed || 'A');
       setMedicaidNumber(resident.medicaidNumber);
       setMedicareNumber(resident.medicareNumber);
@@ -174,8 +182,12 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
       return;
     }
 
+    // Convert string values to backend enum types
+    const roomType = stringToRoomType(roomTypeString);
+    const status = stringToResidentStatus(statusString);
+
     // Validate bed assignment for shared rooms
-    if (roomType === RoomType.sharedRoom && !bed) {
+    if (roomType === stringToRoomType(ROOM_TYPE_STRING_VALUES.SHARED) && !bed) {
       toast.error('Please select a bed assignment for shared rooms');
       return;
     }
@@ -235,7 +247,7 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
         status,
         roomNumber,
         roomType,
-        bed: roomType === RoomType.sharedRoom ? bed : null,
+        bed: roomType === stringToRoomType(ROOM_TYPE_STRING_VALUES.SHARED) ? bed : null,
         physicians: physiciansData,
         pharmacy: pharmacyData,
         insurance: insuranceData,
@@ -245,9 +257,14 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
         medications,
       });
 
+      toast.success('Resident updated successfully');
       onOpenChange(false);
     } catch (error) {
       console.error('Error updating resident:', error);
+      const errorMessage = normalizeError(error);
+      toast.error('Failed to update resident', {
+        description: errorMessage,
+      });
     }
   };
 
@@ -307,13 +324,13 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
                   <Label htmlFor="status" className="text-foreground">
                     Status <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={status} onValueChange={(value) => setStatus(value as ResidentStatus)}>
+                  <Select value={statusString} onValueChange={setStatusString}>
                     <SelectTrigger id="status" className="bg-white border-input text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value={ResidentStatus.active}>Active</SelectItem>
-                      <SelectItem value={ResidentStatus.discharged}>Discharged</SelectItem>
+                      <SelectItem value={RESIDENT_STATUS_STRING_VALUES.ACTIVE}>Active</SelectItem>
+                      <SelectItem value={RESIDENT_STATUS_STRING_VALUES.DISCHARGED}>Discharged</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -334,17 +351,17 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
                   <Label htmlFor="roomType" className="text-foreground">
                     Room Type <span className="text-red-500">*</span>
                   </Label>
-                  <Select value={roomType} onValueChange={(value) => setRoomType(value as RoomType)}>
+                  <Select value={roomTypeString} onValueChange={setRoomTypeString}>
                     <SelectTrigger id="roomType" className="bg-white border-input text-foreground">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value={RoomType.solo}>Solo</SelectItem>
-                      <SelectItem value={RoomType.sharedRoom}>Shared Room</SelectItem>
+                      <SelectItem value={ROOM_TYPE_STRING_VALUES.SOLO}>Solo</SelectItem>
+                      <SelectItem value={ROOM_TYPE_STRING_VALUES.SHARED}>Shared Room</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {roomType === RoomType.sharedRoom && (
+                {roomTypeString === ROOM_TYPE_STRING_VALUES.SHARED && (
                   <div className="space-y-2">
                     <Label htmlFor="bed" className="text-foreground">
                       Bed <span className="text-red-500">*</span>
@@ -445,7 +462,7 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="pharmacyName" className="text-foreground">
-                    Name
+                    Pharmacy Name
                   </Label>
                   <Input id="pharmacyName" value={pharmacyName} onChange={(e) => setPharmacyName(e.target.value)} className="bg-white border-input text-foreground" />
                 </div>
@@ -472,7 +489,7 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="insuranceCompany" className="text-foreground">
-                    Company Name
+                    Insurance Company
                   </Label>
                   <Input id="insuranceCompany" value={insuranceCompany} onChange={(e) => setInsuranceCompany(e.target.value)} className="bg-white border-input text-foreground" />
                 </div>
@@ -511,7 +528,7 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
               {responsiblePersons.map((person, index) => (
                 <div key={index} className="space-y-4 rounded-lg border border-border bg-white p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-foreground">Person {index + 1}</span>
+                    <span className="text-sm font-medium text-foreground">Responsible Person {index + 1}</span>
                     {responsiblePersons.length > 1 && (
                       <Button type="button" variant="ghost" size="sm" onClick={() => removeResponsiblePerson(index)}>
                         <X className="h-4 w-4" />
@@ -520,44 +537,44 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor={`person-name-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-name-${index}`} className="text-foreground">
                         Name
                       </Label>
                       <Input
-                        id={`person-name-${index}`}
+                        id={`rp-name-${index}`}
                         value={person.name}
                         onChange={(e) => updateResponsiblePersonField(index, 'name', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`person-relationship-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-relationship-${index}`} className="text-foreground">
                         Relationship
                       </Label>
                       <Input
-                        id={`person-relationship-${index}`}
+                        id={`rp-relationship-${index}`}
                         value={person.relationship}
                         onChange={(e) => updateResponsiblePersonField(index, 'relationship', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`person-contact-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-contact-${index}`} className="text-foreground">
                         Contact Number
                       </Label>
                       <Input
-                        id={`person-contact-${index}`}
+                        id={`rp-contact-${index}`}
                         value={person.contactNumber}
                         onChange={(e) => updateResponsiblePersonField(index, 'contactNumber', e.target.value)}
                         className="bg-white border-input text-foreground"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor={`person-address-${index}`} className="text-foreground">
+                      <Label htmlFor={`rp-address-${index}`} className="text-foreground">
                         Address
                       </Label>
                       <Input
-                        id={`person-address-${index}`}
+                        id={`rp-address-${index}`}
                         value={person.address}
                         onChange={(e) => updateResponsiblePersonField(index, 'address', e.target.value)}
                         className="bg-white border-input text-foreground"
@@ -568,18 +585,19 @@ export default function EditResidentDialog({ open, onOpenChange, resident }: Edi
               ))}
             </div>
 
-            <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={updateResident.isPending} className="bg-white">
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={updateResident.isPending}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateResident.isPending} className="bg-primary text-primary-foreground">
+              <Button type="submit" disabled={updateResident.isPending} className="bg-gradient-to-r from-teal-600 to-blue-600">
                 {updateResident.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
+                    Saving...
                   </>
                 ) : (
-                  'Update Resident'
+                  'Save Changes'
                 )}
               </Button>
             </div>

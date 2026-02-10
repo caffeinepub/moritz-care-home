@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Version 89 Publish-Only Deployment Retry Script
-# This script re-runs the standard build/deploy commands and captures full output for diagnosis.
+# 
+# ⚠️ NOTICE: This script is historical and specific to Version 89 only.
+# For current production deployments, please use:
+#   frontend/scripts/redeploy_production.sh
+#
+# This script is preserved for reference and historical purposes.
+#
 # Usage: ./frontend/scripts/deploy_version_89_publish_only_retry.sh
 
 set -e          # Exit on error

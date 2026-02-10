@@ -24,6 +24,7 @@ export function withTimeout<T>(
 
 /**
  * Detects if an error indicates a stopped canister
+ * Tightened matching to avoid false positives during transient startup/network failures
  * @param error - The error to check
  * @returns True if the error indicates a stopped canister
  */
@@ -32,20 +33,21 @@ export function isStoppedCanisterError(error: unknown): boolean {
   
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    // Check for stopped canister patterns
+    // Tightened: require explicit "is stopped" or CallContextManager pattern
+    // Avoid matching generic "canister" + "stopped" which can be too broad
     return (
+      message.includes('canister is stopped') ||
       message.includes('is stopped') ||
-      message.includes('callcontextmanager') ||
-      (message.includes('canister') && message.includes('stopped'))
+      message.includes('callcontextmanager')
     );
   }
   
   if (typeof error === 'string') {
     const message = error.toLowerCase();
     return (
+      message.includes('canister is stopped') ||
       message.includes('is stopped') ||
-      message.includes('callcontextmanager') ||
-      (message.includes('canister') && message.includes('stopped'))
+      message.includes('callcontextmanager')
     );
   }
   
@@ -66,7 +68,7 @@ export function normalizeError(error: unknown): string {
     // Check for common error patterns
     const message = error.message;
 
-    // Check for stopped canister first
+    // Check for stopped canister first (with tightened detection)
     if (isStoppedCanisterError(error)) {
       return 'Backend canister is stopped: The canister cannot process requests. Please contact the administrator to restart it.';
     }

@@ -343,7 +343,7 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;
-    updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<void>;
+    updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<Resident>;
     v105_dischargeResident(id: bigint): Promise<void>;
     v105_permanentlyDeleteResident(id: bigint): Promise<void>;
 }
@@ -1256,18 +1256,18 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async updateResident(arg0: bigint, arg1: string, arg2: string, arg3: bigint, arg4: bigint, arg5: ResidentStatus, arg6: string, arg7: RoomType, arg8: string | null, arg9: Array<Physician>, arg10: Pharmacy | null, arg11: Insurance | null, arg12: string, arg13: string, arg14: Array<ResponsiblePerson>, arg15: Array<Medication>): Promise<void> {
+    async updateResident(arg0: bigint, arg1: string, arg2: string, arg3: bigint, arg4: bigint, arg5: ResidentStatus, arg6: string, arg7: RoomType, arg8: string | null, arg9: Array<Physician>, arg10: Pharmacy | null, arg11: Insurance | null, arg12: string, arg13: string, arg14: Array<ResponsiblePerson>, arg15: Array<Medication>): Promise<Resident> {
         if (this.processError) {
             try {
                 const result = await this.actor.updateResident(arg0, arg1, arg2, arg3, arg4, to_candid_ResidentStatus_n54(this._uploadFile, this._downloadFile, arg5), arg6, to_candid_RoomType_n16(this._uploadFile, this._downloadFile, arg7), to_candid_opt_n18(this._uploadFile, this._downloadFile, arg8), arg9, to_candid_opt_n19(this._uploadFile, this._downloadFile, arg10), to_candid_opt_n20(this._uploadFile, this._downloadFile, arg11), arg12, arg13, arg14, to_candid_vec_n21(this._uploadFile, this._downloadFile, arg15));
-                return result;
+                return from_candid_Resident_n25(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.updateResident(arg0, arg1, arg2, arg3, arg4, to_candid_ResidentStatus_n54(this._uploadFile, this._downloadFile, arg5), arg6, to_candid_RoomType_n16(this._uploadFile, this._downloadFile, arg7), to_candid_opt_n18(this._uploadFile, this._downloadFile, arg8), arg9, to_candid_opt_n19(this._uploadFile, this._downloadFile, arg10), to_candid_opt_n20(this._uploadFile, this._downloadFile, arg11), arg12, arg13, arg14, to_candid_vec_n21(this._uploadFile, this._downloadFile, arg15));
-            return result;
+            return from_candid_Resident_n25(this._uploadFile, this._downloadFile, result);
         }
     }
     async v105_dischargeResident(arg0: bigint): Promise<void> {

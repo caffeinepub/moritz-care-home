@@ -2,12 +2,54 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-remove-infinite-long-lived-loading-states-in-the-live-app-by-ensuring-resident-loading-queries-fail-fast-with-clear-errors-instead-of-leaving-the-ui-stuck-on-connecting-to-backend-and-provide-a-user-visible-retry-path-that-re-runs-actor-creation-and-resident-queries",
-      "featureTitle": "Remove infinite/long-lived loading states in the live app by ensuring resident-loading queries fail fast with clear errors (instead of leaving the UI stuck on “Connecting to backend…”), and provide a user-visible retry path that re-runs actor creation and resident queries.",
+      "featureId": "feature-roll-back-the-deployed-application-to-version-85-by-checking-out-the-repository-state-that-corresponds-to-version-85-tag-branch-commit-used-for-that-release-and-redeploying-to-the-internet-computer-ic-network",
+      "featureTitle": "Roll back the deployed application to Version 85 by checking out the repository state that corresponds to \"Version 85\" (tag/branch/commit used for that release) and redeploying to the Internet Computer (ic) network.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/Dashboard.tsx"
+        "frontend/DEPLOYMENT_CHECKLIST.md",
+        "frontend/scripts/clean_redeploy_production.sh",
+        "frontend/scripts/redeploy_production.sh"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-perform-the-rollback-deployment-using-the-clean-rebuild-workflow-to-minimize-the-risk-of-stale-frontend-artifacts-and-cached-canister-id-wiring-in-production",
+      "featureTitle": "Perform the rollback deployment using the clean rebuild workflow to minimize the risk of stale frontend artifacts and cached canister-ID wiring in production.",
+      "files": [
+        "frontend/DEPLOYMENT_CHECKLIST.md",
+        "frontend/scripts/clean_redeploy_production.sh"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-verify-the-rollback-in-production-by-running-the-post-deployment-smoke-tests-and-confirming-the-app-is-not-stuck-on-connecting-to-backend-and-that-diagnostics-show-valid-build-metadata-and-canister-ids",
+      "featureTitle": "Verify the rollback in production by running the post-deployment smoke tests and confirming the app is not stuck on \"Connecting to backend...\" and that diagnostics show valid build metadata and canister IDs.",
+      "files": [
+        "frontend/DEPLOYMENT_CHECKLIST.md",
+        "frontend/scripts/post_deploy_smoke_test_helper.sh"
       ],
       "components": [
         "authorization@4.0.0",
@@ -20,28 +62,6 @@
       ],
       "testIds": [
         "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-make-resident-list-fetching-resilient-by-using-the-same-resilient-actor-connection-strategy-used-during-startup-for-dashboard-resident-queries-so-the-live-app-consistently-loads-residents-even-under-slow-backend-initialization-conditions",
-      "featureTitle": "Make resident list fetching resilient by using the same resilient actor/connection strategy used during startup for Dashboard resident queries, so the live app consistently loads residents even under slow backend initialization conditions.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/lib/startupTimings.ts",
-        "frontend/src/pages/Dashboard.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "blob-storage@4.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
       ],
       "confidence": "high"
     }

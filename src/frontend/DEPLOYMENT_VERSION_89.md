@@ -1,5 +1,14 @@
 # Version 89 Deployment Checklist
 
+> **⚠️ NOTICE:** This document is historical and specific to Version 89 only.
+> 
+> **For current production deployments, please refer to:**
+> **[`frontend/DEPLOYMENT_CHECKLIST.md`](./DEPLOYMENT_CHECKLIST.md)**
+>
+> This document is preserved for reference and historical purposes.
+
+---
+
 ## Overview
 This document provides a publish-only deployment and smoke-test checklist for Version 89 of the Moritz Care Home application. This deployment does not introduce any new features, UI changes, or code modifications.
 
@@ -28,7 +37,10 @@ This document provides a publish-only deployment and smoke-test checklist for Ve
    - Note the canister IDs for frontend and backend
    - Confirm the production URL is accessible
 
-### Option 2: Using the Retry Script (Recommended)
+### Option 2: Using the Retry Script (Historical - Version 89 Only)
+
+> **⚠️ For current deployments, use `frontend/scripts/redeploy_production.sh` instead.**
+
 The retry script automates the deployment process and captures full output for diagnosis.
 
 1. **Make the script executable (first time only):**
@@ -163,4 +175,4 @@ All of the following must be true for a successful deployment:
 
 **Version:** 89  
 **Last Updated:** February 10, 2026  
-**Status:** Ready for Production Deployment
+**Status:** Historical Reference - Use DEPLOYMENT_CHECKLIST.md for current deployments
