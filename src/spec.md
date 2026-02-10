@@ -1,12 +1,10 @@
 # Specification
 
 ## Summary
-**Goal:** Fix baseline user registration so first-time authenticated users can register successfully without an administrator-provisioned token, while preserving any existing admin-token provisioning flow.
+**Goal:** Grant application administrator permissions to the specified Principal ID so it passes backend `#admin` checks and returns `true` from `isCallerAdmin()`.
 
 **Planned changes:**
-- Update backend registration logic to allow tokenless baseline registration for authenticated (non-anonymous) principals and keep the admin-token provisioning path intact.
-- Keep the backend registration call idempotent so repeated calls do not fail or unexpectedly change state.
-- Improve backend error signaling for registration failures so errors clearly distinguish anonymous/unauthenticated access from other failures and avoid the generic “contact an administrator to provision your account” message for normal first-time users.
-- Adjust frontend startup registration/profile bootstrap to stop blocking first-time authenticated users with the provisioning error, while remaining backward compatible with existing token URL parameters.
+- Update backend authorization logic to recognize Principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` as an application administrator.
+- Ensure the admin grant persists across canister upgrades without resetting or wiping existing authorization state (using conditional migration if persisted/stable state changes are required).
 
-**User-visible outcome:** After logging in with Internet Identity, a first-time user can proceed into the app and access user-gated features without seeing a provisioning/admin-contact error; if access is anonymous or otherwise unauthorized, the UI shows an accurate error message.
+**User-visible outcome:** When authenticated as `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`, admin-gated actions work without unauthorized errors and the frontend admin check returns `true`.

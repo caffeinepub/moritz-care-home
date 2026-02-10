@@ -253,7 +253,7 @@ export interface _SERVICE {
    * / Ensures the caller is registered with baseline access for normal app usage (idempotent).
    * / Safe to call repeatedly. Should be called immediately after login.
    */
-  'ensureRegisteredUser' : ActorMethod<[string, string], undefined>,
+  'ensureRegisteredUser' : ActorMethod<[], undefined>,
   'findResidentByRoom' : ActorMethod<[string], [] | [Resident]>,
   'generateAdlReport' : ActorMethod<[bigint], Array<ADLRecord>>,
   'generateFullMedicationReport' : ActorMethod<[bigint], Array<Medication>>,

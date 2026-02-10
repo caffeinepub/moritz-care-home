@@ -1,73 +1,47 @@
 {
   "kind": "build_request",
-  "title": "Fix baseline user registration failing with provisioning error",
-  "priority": "high",
+  "title": "Add a specific Principal as application administrator",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update backend user registration so authenticated users can successfully complete baseline registration without requiring an administrator-provisioned token, while keeping any existing admin-token flow for admin provisioning intact.",
+      "text": "Grant administrator permissions to the Principal ID `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` so that this identity is recognized by backend authorization as an application administrator (i.e., passes all `#admin` permission checks and returns `true` from `isCallerAdmin()`).",
       "target": "backend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Unable to register user: Please contact an administrator to provision your account."
+          "add principal ID: hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae as application administrator"
         ]
       },
       "acceptanceCriteria": [
-        "An authenticated (non-anonymous) principal can call the backend registration flow and subsequently access user-gated queries (e.g., resident list queries) without receiving an authorization/provisioning error.",
-        "The registration call remains idempotent (repeated calls do not trap and do not change state unexpectedly).",
-        "Anonymous principals cannot register and receive an authorization error."
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Ensure backend error signaling for registration failures is specific and stable (e.g., anonymous caller, truly unauthorized admin-only operation), so the frontend can distinguish between provisioning issues and other failures; do not emit the generic provisioning message for normal first-time authenticated users.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Unable to register user: Please contact an administrator to provision your account."
-        ]
-      },
-      "acceptanceCriteria": [
-        "For first-time authenticated users, registration does not fail with a provisioning/admin-contact message.",
-        "If registration fails due to anonymous access, the backend returns/traps with an error that clearly indicates anonymous/unauthenticated access.",
-        "If registration fails for any other reason, the error message is not misleadingly framed as an admin provisioning requirement."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Adjust the frontend startup registration/profile bootstrap so it no longer blocks first-time authenticated users behind the message \"Unable to register user: Please contact an administrator to provision your account.\" when baseline registration should succeed.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Unable to register user: Please contact an administrator to provision your account."
-        ]
-      },
-      "acceptanceCriteria": [
-        "After logging in with Internet Identity, the app proceeds past startup without showing the provisioning error for a first-time user.",
-        "If the backend genuinely returns an authorization error (e.g., anonymous), the UI shows an accurate English error message reflecting the actual cause rather than the provisioning message.",
-        "If URL parameters for tokens are present, they are still passed through as before (backward compatible), but absence of tokens does not cause a provisioning failure when backend supports tokenless baseline registration."
+        "When calling backend admin-gated methods (e.g., resident create/update/discharge/archive/delete) while authenticated as `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`, the backend does not trap with an unauthorized error.",
+        "The frontend `useIsCallerAdmin` query returns `true` for the Principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`.",
+        "The admin grant remains effective after a canister upgrade (if the authorization state is persisted across upgrades)."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
-    "Do not modify files under frontend/src/components/ui or any frontend paths listed as immutable in SYSTEM_CONTEXT."
+    "Backend must remain a single-actor Motoko canister with logic in backend/main.mo.",
+    "If adding this admin requires modifying persisted/stable authorization state, implement it via the platform's conditional migration policy using backend/migration.mo; do not reset or wipe existing state."
   ],
   "nonGoals": [
-    "Implementing third-party authentication (only Internet Identity is used).",
-    "Adding external databases or off-canister storage beyond existing patterns."
+    "Do not add new authentication providers or any third-party auth; keep Internet Identity as-is.",
+    "Do not change unrelated registration/token behavior beyond what is necessary to grant admin to the specified Principal."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

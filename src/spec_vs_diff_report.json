@@ -1,51 +1,49 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-10T18:34:04.759Z",
-  "summary": "Frontend changes add a new error-mapping utility and update startup registration/profile bootstrap to call ensureRegisteredUser with optional URL tokens and show more accurate messages. However, the diff summary does not provide evidence that the backend registration logic (tokenless baseline registration, idempotency, and stable backend-side error signaling) was updated to satisfy the core provisioning-failure fix.",
+  "generatedAt": "2026-02-10T20:51:05.436Z",
+  "summary": "The diff adds a migration module and various frontend reliability/UI changes, but it does not show any explicit logic that grants `#admin` privileges to the specified Principal or ensures `isCallerAdmin()` returns true for that Principal across upgrades.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Update backend user registration so authenticated users can successfully complete baseline registration without requiring an administrator-provisioned token, while keeping any existing admin-token flow for admin provisioning intact.",
-      "reason": "The backend diff is truncated and does not show any changes to the registration entrypoint (e.g., ensureRegisteredUser) or its authorization/token requirements. The frontend now calls actor.ensureRegisteredUser(adminToken, userToken) with empty strings when tokens are absent, but there is no evidence the backend now accepts authenticated callers without tokens or that registration is idempotent and rejects anonymous principals with a clear authorization error.",
+      "requirement": "Grant administrator permissions to the Principal ID `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` so that this identity is recognized by backend authorization as an application administrator (passes all `#admin` checks and returns `true` from `isCallerAdmin()`).",
+      "reason": "In the provided diff summary, there is no evidence of adding the specified Principal to the backend authorization/admin allowlist (or equivalent access-control structure), nor any shown logic updating `AccessControlState` to include this Principal. The new `backend/migration.mo` content is truncated and shows type/state definitions but no visible admin-grant logic, and `backend/main.mo` shows initialization/migration wiring but no visible grant of admin permissions to the specified Principal.",
       "evidence": [
-        "backend/main.mo (truncated; no visible registration-related changes)",
-        "frontend/src/hooks/useQueries.ts (calls actor.ensureRegisteredUser(adminToken, userToken) with '' defaults)"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "requirement": "Ensure backend error signaling for registration failures is specific and stable (e.g., anonymous caller, truly unauthorized admin-only operation), so the frontend can distinguish between provisioning issues and other failures; do not emit the generic provisioning message for normal first-time authenticated users.",
-      "reason": "The diff adds frontend-side mapping of error messages, but does not show backend-side changes that would make error signaling specific and stable. Without backend changes, normal first-time authenticated users could still receive the legacy provisioning/admin-contact message from the backend.",
-      "evidence": [
-        "backend/main.mo (truncated; no visible error-message/registration error changes)",
-        "frontend/src/lib/registrationErrorMapping.ts (maps messages but does not change backend signaling)"
+        "backend/main.mo",
+        "backend/migration.mo"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added comprehensive startup reliability features (health checks, multiple timers, diagnostics display) beyond the requested registration/provisioning fix.",
-      "reason": "REQ-3 asks to adjust startup bootstrap to avoid blocking on provisioning error; the diff indicates broader startup reliability/diagnostics behavior that was not explicitly requested.",
+      "description": "Frontend startup reliability, baseline registration gating, principal-scoped profile queries, and new registration error mapping behavior.",
+      "reason": "The BuildRequest is specifically about granting admin permissions to a particular Principal and explicitly warns against unrelated behavior changes beyond what is necessary. These frontend changes are unrelated to granting admin permissions.",
       "evidence": [
-        "frontend/src/App.tsx (truncated; health check triggers, fast-fail timeout logic, diagnostics imports)"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend-file-summaries.txt (summaries for frontend/src/App.tsx, frontend/src/hooks/useQueries.ts, frontend/src/components/ProfileSetup.tsx)"
       ]
     },
     {
-      "description": "Introduced broad UI/UX and feature changes across multiple pages/components (e.g., LoginPage background/logo changes, dashboard/resident profile changes, dialog styling, print layout overrides, added delete behavior).",
-      "reason": "These changes are not part of REQ-1/2/3 and go beyond the scope of fixing baseline registration and error messaging. They also risk violating the constraint about immutable frontend paths (cannot be verified here because the immutable list is not provided, but the changes appear unrelated to the fix request).",
+      "description": "UI/UX styling changes (opaque backgrounds, overlay, logo display mode, solid white dialogs, print layout overrides).",
+      "reason": "Not requested by the BuildRequest and unrelated to adding an application administrator principal.",
       "evidence": [
-        "frontend-file-summaries.txt (describes changes to LoginPage, Dashboard, ResidentProfile, multiple dialog components, index.css, and a permanentlyDeleteResident call)"
+        "frontend-file-summaries.txt (summaries for frontend/src/pages/LoginPage.tsx, frontend/src/index.css, multiple dialog components)"
+      ]
+    },
+    {
+      "description": "Resident dashboard/profile UI behavior changes including admin-only actions and enhanced error handling/retry flows.",
+      "reason": "While admin gating exists conceptually, the BuildRequest did not ask for new UI behavior; it asked that the specified Principal be recognized as admin by backend authorization and that the existing `useIsCallerAdmin` returns true. The diff summary indicates broader UI behavior changes beyond that scope.",
+      "evidence": [
+        "frontend-file-summaries.txt (summaries for frontend/src/pages/Dashboard.tsx, frontend/src/pages/ResidentProfile.tsx)"
       ]
     }
   ],
-  "confidence": 0.6,
+  "confidence": 0.68,
   "changed_files": [
     "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/lib/registrationErrorMapping.ts",
     "project_state.json"
   ]
 }

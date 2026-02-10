@@ -1,8 +1,8 @@
 import Map "mo:core/Map";
-import List "mo:core/List";
 import Nat "mo:core/Nat";
+import List "mo:core/List";
 import Principal "mo:core/Principal";
-import Time "mo:core/Time";
+import AccessControl "authorization/access-control";
 
 module {
   type Resident = {
@@ -63,7 +63,11 @@ module {
     address : Text;
   };
 
-  type MedicationStatus = { #active; #discontinued };
+  type MedicationStatus = {
+    #active;
+    #discontinued;
+  };
+
   type AdministrationRoute = {
     #oral;
     #injection;
@@ -132,37 +136,52 @@ module {
 
   type UserProfile = {
     name : Text;
-    role : Text;
     employeeId : Text;
   };
 
   type OldActor = {
+    accessControlState : AccessControl.AccessControlState;
     residents : Map.Map<Nat, Resident>;
+    physicians : Map.Map<Nat, Physician>;
+    pharmacies : Map.Map<Nat, Pharmacy>;
+    insuranceCompanies : Map.Map<Nat, Insurance>;
+    responsiblePersons : Map.Map<Nat, ResponsiblePerson>;
     userProfiles : Map.Map<Principal, UserProfile>;
+    nextResidentId : Nat;
+    nextPhysicianId : Nat;
+    nextPharmacyId : Nat;
+    nextInsuranceId : Nat;
+    nextResponsiblePersonId : Nat;
+    nextMedicationId : Nat;
+    nextMarId : Nat;
+    nextAdlId : Nat;
+    nextDailyVitalsId : Nat;
+    nextWeightEntryId : Nat;
   };
 
-  type NewActor = OldActor;
+  type NewActor = {
+    accessControlState : AccessControl.AccessControlState;
+    residents : Map.Map<Nat, Resident>;
+    physicians : Map.Map<Nat, Physician>;
+    pharmacies : Map.Map<Nat, Pharmacy>;
+    insuranceCompanies : Map.Map<Nat, Insurance>;
+    responsiblePersons : Map.Map<Nat, ResponsiblePerson>;
+    userProfiles : Map.Map<Principal, UserProfile>;
+    nextResidentId : Nat;
+    nextPhysicianId : Nat;
+    nextPharmacyId : Nat;
+    nextInsuranceId : Nat;
+    nextResponsiblePersonId : Nat;
+    nextMedicationId : Nat;
+    nextMarId : Nat;
+    nextAdlId : Nat;
+    nextDailyVitalsId : Nat;
+    nextWeightEntryId : Nat;
+  };
 
   public func run(old : OldActor) : NewActor {
-    let currentTime = Time.now();
-    let archiveThreshold : Int = 30 * 24 * 60 * 60 * 1_000_000_000; // 30 days in nanoseconds
-
-    let archivedResidents = old.residents.map<Nat, Resident, Resident>(
-      func(_id, resident) {
-        switch (resident.status, resident.dischargeTimestamp) {
-          case (#discharged, ?dischargeTime) {
-            if (currentTime - dischargeTime > archiveThreshold) {
-              { resident with isArchived = true };
-            } else { resident };
-          };
-          case (_, _) { resident };
-        };
-      }
-    );
-
-    {
-      old with
-      residents = archivedResidents;
-    };
+    // Migration preserves existing state
+    // Admin initialization is handled during actor creation, not in this migration
+    old;
   };
 };

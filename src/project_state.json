@@ -2,42 +2,29 @@
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
   "summary": "New project",
-  "architectural_notes": [
-    "Deployment target is the public Internet Computer (not local dfx); shell scripts like restart_backend_canister.sh cannot be executed from this environment."
-  ],
+  "architectural_notes": [],
   "known_issues": [
-    "User registration fails with error: \"Unable to register user: Please contact an administrator to provision your account.\""
+    "Profile Setup can throw `baselineAccess ... data is undefined` when ensureRegisteredUser/baseline registration fails (e.g., missing caffeineUserToken/caffeineAdminToken URL params)."
   ],
   "isFixRequest": true,
-  "existing_features": [
-    {
-      "id": "feature-adjust-the-frontend-startup-registration-profile-bootstrap-so-it-no-longer-blocks-first-time-authenticated-users-behind-the-message-unable-to-register-user-please-contact-an-administrator-to-provision-your-account-when-baseline-registration-should-succeed",
-      "title": "Adjust the frontend startup registration/profile bootstrap so it no longer blocks first-time authenticated users behind the message \"Unable to register user: Please contact an administrator to provision your account.\" when baseline registration should succeed.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "version": 1
-    }
-  ],
+  "existing_features": [],
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Update backend user registration so authenticated users can successfully complete baseline registration without requiring an administrator-provisioned token, while keeping any existing admin-token flow for admin provisioning intact.",
-      "reqIds": [
-        "REQ-1"
-      ],
+      "summary": "Add principal ID hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae as an application administrator",
+      "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Ensure backend error signaling for registration failures is specific and stable (e.g., anonymous caller, truly unauthorized admin-only operation), so the frontend can distinguish between provisioning issues and other failures; do not emit the generic provisioning message for normal first-time authenticated users.",
+      "summary": "Grant administrator permissions to the Principal ID `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` so that this identity is recognized by backend authorization as an application administrator (i.e., passes all `#admin` permission checks and returns `true` from `isCallerAdmin()`).",
       "reqIds": [
-        "REQ-2"
+        "REQ-1"
       ],
       "status": "pending"
     }
   ],
-  "projectName": "Fix baseline user registration failing with provisioning error",
+  "projectName": "Add a specific Principal as application administrator",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

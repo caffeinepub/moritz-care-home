@@ -270,7 +270,7 @@ export interface backendInterface {
      * / Ensures the caller is registered with baseline access for normal app usage (idempotent).
      * / Safe to call repeatedly. Should be called immediately after login.
      */
-    ensureRegisteredUser(adminToken: string, userProvidedToken: string): Promise<void>;
+    ensureRegisteredUser(): Promise<void>;
     findResidentByRoom(roomNumber: string): Promise<Resident | null>;
     generateAdlReport(residentId: bigint): Promise<Array<ADLRecord>>;
     generateFullMedicationReport(residentId: bigint): Promise<Array<Medication>>;
@@ -690,17 +690,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async ensureRegisteredUser(arg0: string, arg1: string): Promise<void> {
+    async ensureRegisteredUser(): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.ensureRegisteredUser(arg0, arg1);
+                const result = await this.actor.ensureRegisteredUser();
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.ensureRegisteredUser(arg0, arg1);
+            const result = await this.actor.ensureRegisteredUser();
             return result;
         }
     }

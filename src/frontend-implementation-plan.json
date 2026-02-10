@@ -1,33 +1,6 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix frontend bootstrap to avoid incorrect provisioning error during baseline registration",
-  "requirements": [
-    {
-      "id": "REQ-3",
-      "summary": "Update the frontend startup registration/profile bootstrap to avoid blocking first-time authenticated users with an incorrect admin-provisioning message while keeping token URL parameter passthrough.",
-      "acceptanceCriteria": [
-        "After logging in with Internet Identity, the app proceeds past startup without showing the provisioning error for a first-time user.",
-        "If the backend genuinely returns an authorization error (e.g., anonymous), the UI shows an accurate English error message reflecting the actual cause rather than the provisioning message.",
-        "If URL parameters for tokens are present, they are still passed through as before (backward compatible), but absence of tokens does not cause a provisioning failure when backend supports tokenless baseline registration."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/lib/registrationErrorMapping.ts",
-          "operation": "create",
-          "description": "Add a small utility to map registration/bootstrap failures into stable, user-accurate English messages (e.g., distinguish anonymous/unauthenticated, admin-only provisioning flows, and generic failures) without hardcoding the legacy \"Please contact an administrator to provision your account\" for normal first-time authenticated users."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Update the startup baseline registration hook (useEnsureRegisteredUser) and the startup profile hook (useGetCallerUserProfileStartup) to (1) keep passing through URL token parameters exactly as today via getSecretParameter, (2) stop replacing all authorization-related registration failures with the generic provisioning/admin-contact message, and (3) propagate the mapped, specific error from baseline registration into the startup profile flow so App.tsx can render accurate startup errors. Use the selected \"authorization\" component patterns for post-login bootstrap and authorization-error handling; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Adjust startup error classification/rendering so registration/bootstrap failures do not automatically display as an admin provisioning requirement. Use the new registration error mapping to set the StartupErrorScreen title/message accurately (e.g., anonymous/unauthenticated vs truly unauthorized/admin-only vs other failures) and ensure first-time authenticated users are not blocked once baseline registration succeeds. Use the selected \"authorization\" component guidance for authenticated gating and graceful handling of backend authorization traps; verify the component's usage instructions before implementing."
-        }
-      ]
-    }
-  ]
+  "title": "Frontend plan: no changes required for backend-only admin grant",
+  "requirements": []
 }

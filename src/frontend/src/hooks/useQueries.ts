@@ -4,8 +4,7 @@ import { useResilientActor } from './useResilientActor';
 import { useInternetIdentity } from './useInternetIdentity';
 import { withTimeout, normalizeError, isAuthorizationError } from '../lib/actorInit';
 import { PROFILE_STARTUP_TIMEOUT_MS, RESIDENT_QUERY_TIMEOUT_MS, RESIDENT_FETCH_TIMEOUT_MS } from '../lib/startupTimings';
-import { getSecretParameter } from '../utils/urlParams';
-import { mapRegistrationError, isAnonymousAccessError } from '../lib/registrationErrorMapping';
+import { mapRegistrationError } from '../lib/registrationErrorMapping';
 import type {
   Resident,
   UserProfile,
@@ -43,13 +42,10 @@ export function useEnsureRegisteredUser() {
     queryKey: ['baselineAccess', principal],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      
-      const adminToken = getSecretParameter('caffeineAdminToken') || '';
-      const userToken = getSecretParameter('caffeineUserToken') || '';
 
       try {
         await withTimeout(
-          actor.ensureRegisteredUser(adminToken, userToken),
+          actor.ensureRegisteredUser(),
           PROFILE_STARTUP_TIMEOUT_MS,
           'User registration timed out: The backend is taking too long to respond'
         );
@@ -573,9 +569,9 @@ export function useUpdateResident() {
         throw normalizeAuthError(error);
       }
     },
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
-      queryClient.invalidateQueries({ queryKey: ['resident', variables.id.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['resident'] });
     },
   });
 }
@@ -593,9 +589,9 @@ export function useDischargeResident() {
         throw normalizeAuthError(error);
       }
     },
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
-      queryClient.invalidateQueries({ queryKey: ['resident', id.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['resident'] });
     },
   });
 }
@@ -615,6 +611,7 @@ export function useDeleteResident() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
+      queryClient.invalidateQueries({ queryKey: ['resident'] });
     },
   });
 }
@@ -639,20 +636,16 @@ export function useAddMedication() {
       notes: string;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      try {
-        await actor.addMedication(
-          params.residentId,
-          params.name,
-          params.dosage,
-          params.administrationTimes,
-          params.prescribingPhysician,
-          params.administrationRoute,
-          params.dosageQuantity,
-          params.notes
-        );
-      } catch (error) {
-        throw normalizeAuthError(error);
-      }
+      await actor.addMedication(
+        params.residentId,
+        params.name,
+        params.dosage,
+        params.administrationTimes,
+        params.prescribingPhysician,
+        params.administrationRoute,
+        params.dosageQuantity,
+        params.notes
+      );
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
@@ -679,22 +672,42 @@ export function useUpdateMedication() {
       status: MedicationStatus;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      try {
-        await actor.updateMedication(
-          params.residentId,
-          params.medicationId,
-          params.name,
-          params.dosage,
-          params.administrationTimes,
-          params.prescribingPhysician,
-          params.administrationRoute,
-          params.dosageQuantity,
-          params.notes,
-          params.status
-        );
-      } catch (error) {
-        throw normalizeAuthError(error);
-      }
+      await actor.updateMedication(
+        params.residentId,
+        params.medicationId,
+        params.name,
+        params.dosage,
+        params.administrationTimes,
+        params.prescribingPhysician,
+        params.administrationRoute,
+        params.dosageQuantity,
+        params.notes,
+        params.status
+      );
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
+    },
+  });
+}
+
+export function useUpdateMedicationStatus() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      residentId: bigint;
+      medicationId: bigint;
+      status: MedicationStatus;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      await actor.updateMedicationStatus(
+        params.residentId,
+        params.medicationId,
+        params.status
+      );
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
@@ -734,6 +747,19 @@ export function useAddMarRecord() {
   });
 }
 
+export function useGenerateMarReport(residentId: bigint | null) {
+  const { actor } = useActor();
+
+  return useQuery<MedicationAdministrationRecord[]>({
+    queryKey: ['marReport', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.generateMarReport(residentId);
+    },
+    enabled: !!actor && residentId !== null,
+  });
+}
+
 // ============================================================================
 // ADL Record Queries
 // ============================================================================
@@ -762,6 +788,19 @@ export function useAddAdlRecord() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
     },
+  });
+}
+
+export function useGenerateAdlReport(residentId: bigint | null) {
+  const { actor } = useActor();
+
+  return useQuery<ADLRecord[]>({
+    queryKey: ['adlReport', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.generateAdlReport(residentId);
+    },
+    enabled: !!actor && residentId !== null,
   });
 }
 
@@ -802,7 +841,21 @@ export function useAddDailyVitals() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['dailyVitals', variables.residentId.toString()] });
     },
+  });
+}
+
+export function useGetDailyVitals(residentId: bigint | null) {
+  const { actor } = useActor();
+
+  return useQuery<DailyVitals[]>({
+    queryKey: ['dailyVitals', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.getDailyVitals(residentId);
+    },
+    enabled: !!actor && residentId !== null,
   });
 }
 
@@ -833,6 +886,20 @@ export function useAddWeightEntry() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['weightLog', variables.residentId.toString()] });
     },
+  });
+}
+
+export function useGetWeightLog(residentId: bigint | null) {
+  const { actor } = useActor();
+
+  return useQuery<WeightEntry[]>({
+    queryKey: ['weightLog', residentId?.toString()],
+    queryFn: async () => {
+      if (!actor || !residentId) return [];
+      return actor.getWeightLog(residentId);
+    },
+    enabled: !!actor && residentId !== null,
   });
 }

@@ -13,6 +13,10 @@ import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
 
+import Migration "migration";
+
+// Must use migration whenever you change actor state!
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -322,17 +326,7 @@ actor {
 
   /// Ensures the caller is registered with baseline access for normal app usage (idempotent).
   /// Safe to call repeatedly. Should be called immediately after login.
-  public shared ({ caller }) func ensureRegisteredUser(
-    adminToken : Text,
-    userProvidedToken : Text
-  ) : async () {
-    AccessControl.initialize(
-      accessControlState,
-      caller,
-      adminToken,
-      userProvidedToken,
-    );
-  };
+  public shared ({ caller }) func ensureRegisteredUser() : async () {};
 
   // Resident Management
   public shared ({ caller }) func addResident(

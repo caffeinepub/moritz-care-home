@@ -170,7 +170,7 @@ export interface backendInterface {
      * / Ensures the caller is registered with baseline access for normal app usage (idempotent).
      * / Safe to call repeatedly. Should be called immediately after login.
      */
-    ensureRegisteredUser(adminToken: string, userProvidedToken: string): Promise<void>;
+    ensureRegisteredUser(): Promise<void>;
     findResidentByRoom(roomNumber: string): Promise<Resident | null>;
     generateAdlReport(residentId: bigint): Promise<Array<ADLRecord>>;
     generateFullMedicationReport(residentId: bigint): Promise<Array<Medication>>;
