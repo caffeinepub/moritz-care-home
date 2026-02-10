@@ -3,14 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, UserCircle, AlertCircle } from 'lucide-react';
 import { useSaveCallerUserProfileStartup } from '../hooks/useQueries';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function ProfileSetup() {
   const [name, setName] = useState('');
-  const [role, setRole] = useState('');
   const [employeeId, setEmployeeId] = useState('');
 
   const saveProfileMutation = useSaveCallerUserProfileStartup();
@@ -18,14 +16,13 @@ export default function ProfileSetup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !role || !employeeId.trim()) {
+    if (!name.trim() || !employeeId.trim()) {
       return;
     }
 
     try {
       await saveProfileMutation.mutateAsync({
         name: name.trim(),
-        role,
         employeeId: employeeId.trim(),
       });
     } catch (error) {
@@ -33,7 +30,7 @@ export default function ProfileSetup() {
     }
   };
 
-  const isFormValid = name.trim() !== '' && role !== '' && employeeId.trim() !== '';
+  const isFormValid = name.trim() !== '' && employeeId.trim() !== '';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-teal-50 to-blue-50 px-4">
@@ -59,22 +56,6 @@ export default function ProfileSetup() {
                 disabled={saveProfileMutation.isPending}
                 required
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select value={role} onValueChange={setRole} disabled={saveProfileMutation.isPending}>
-                <SelectTrigger id="role">
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Nurse">Nurse</SelectItem>
-                  <SelectItem value="Caregiver">Caregiver</SelectItem>
-                  <SelectItem value="Administrator">Administrator</SelectItem>
-                  <SelectItem value="Doctor">Doctor</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">

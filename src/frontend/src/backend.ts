@@ -159,6 +159,11 @@ export interface ADLRecord {
     date: bigint;
     activity: string;
 }
+export interface UserProfileWithRole {
+    name: string;
+    role: string;
+    employeeId: string;
+}
 export interface Pharmacy {
     id: bigint;
     name: string;
@@ -193,14 +198,13 @@ export interface WeightEntry {
     notes: string;
     measurementDate: bigint;
 }
-export interface UserProfile {
-    name: string;
-    role: string;
-    employeeId: string;
-}
 export interface _CaffeineStorageRefillResult {
     success?: boolean;
     topped_up_amount?: bigint;
+}
+export interface UserProfile {
+    name: string;
+    employeeId: string;
 }
 export enum AdministrationRoute {
     injection = "injection",
@@ -280,7 +284,7 @@ export interface backendInterface {
     getAllResidents(): Promise<Array<Resident>>;
     getAllResponsiblePersons(): Promise<Array<ResponsiblePerson>>;
     getAllRoomNumbers(): Promise<Array<string>>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserProfile(): Promise<UserProfileWithRole | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDailyVitals(residentId: bigint): Promise<Array<DailyVitals>>;
     getDischargedResidents(): Promise<Array<Resident>>;
@@ -328,7 +332,7 @@ export interface backendInterface {
             totalResidents: bigint;
         };
     }>;
-    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getUserProfile(user: Principal): Promise<UserProfileWithRole | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
     healthCheck(): Promise<{
         message: string;
@@ -340,8 +344,10 @@ export interface backendInterface {
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;
     updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<void>;
+    v105_dischargeResident(id: bigint): Promise<void>;
+    v105_permanentlyDeleteResident(id: bigint): Promise<void>;
 }
-import type { ADLRecord as _ADLRecord, AdministrationRoute as _AdministrationRoute, DailyVitals as _DailyVitals, Insurance as _Insurance, Medication as _Medication, MedicationAdministrationRecord as _MedicationAdministrationRecord, MedicationStatus as _MedicationStatus, Pharmacy as _Pharmacy, Physician as _Physician, Resident as _Resident, ResidentStatus as _ResidentStatus, ResponsiblePerson as _ResponsiblePerson, RoomType as _RoomType, SortCriteria as _SortCriteria, UserProfile as _UserProfile, UserRole as _UserRole, WeightEntry as _WeightEntry, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
+import type { ADLRecord as _ADLRecord, AdministrationRoute as _AdministrationRoute, DailyVitals as _DailyVitals, Insurance as _Insurance, Medication as _Medication, MedicationAdministrationRecord as _MedicationAdministrationRecord, MedicationStatus as _MedicationStatus, Pharmacy as _Pharmacy, Physician as _Physician, Resident as _Resident, ResidentStatus as _ResidentStatus, ResponsiblePerson as _ResponsiblePerson, RoomType as _RoomType, SortCriteria as _SortCriteria, UserProfileWithRole as _UserProfileWithRole, UserRole as _UserRole, WeightEntry as _WeightEntry, _CaffeineStorageRefillInformation as __CaffeineStorageRefillInformation, _CaffeineStorageRefillResult as __CaffeineStorageRefillResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _caffeineStorageBlobIsLive(arg0: Uint8Array): Promise<boolean> {
@@ -866,7 +872,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async getCallerUserProfile(): Promise<UserProfile | null> {
+    async getCallerUserProfile(): Promise<UserProfileWithRole | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
@@ -1135,7 +1141,7 @@ export class Backend implements backendInterface {
             return from_candid_record_n63(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
+    async getUserProfile(arg0: Principal): Promise<UserProfileWithRole | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
@@ -1264,6 +1270,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async v105_dischargeResident(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.v105_dischargeResident(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.v105_dischargeResident(arg0);
+            return result;
+        }
+    }
+    async v105_permanentlyDeleteResident(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.v105_permanentlyDeleteResident(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.v105_permanentlyDeleteResident(arg0);
+            return result;
+        }
+    }
 }
 function from_candid_AdministrationRoute_n38(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AdministrationRoute): AdministrationRoute {
     return from_candid_variant_n39(_uploadFile, _downloadFile, value);
@@ -1313,7 +1347,7 @@ function from_candid_opt_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8A
 function from_candid_opt_n46(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [bigint]): bigint | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_opt_n50(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfileWithRole]): UserProfileWithRole | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [boolean]): boolean | null {

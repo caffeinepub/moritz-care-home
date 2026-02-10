@@ -1,58 +1,62 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-09T21:42:01.450Z",
-  "summary": "Dashboard was modified to add admin-only Discharge and Delete controls with confirmation dialogs and query invalidation; backend main actor was modified to include a new migration module, and a new backend/migration.mo was added to mark long-discharged residents as archived. However, the diff summary also shows several unrelated frontend changes (startup fast-fail, print/report enhancements, opaque background styling) and introduces an auto-archive migration that is not requested.",
+  "generatedAt": "2026-02-10T00:14:45.280Z",
+  "summary": "REQ-3 is implemented via a new DiagnosticsIndicator component and buildInfo utility, and Dashboard/useQueries appear updated to support admin-gated actions with explicit error/retry handling. However, backend interface alignment (REQ-4) cannot be verified from the truncated backend diff, and there is no clear evidence that frontend generated declarations/candid alignment was updated. The diff summary file also indicates several unrelated UI/print/styling changes that were not requested.",
   "missing_requirements": [
     {
-      "id": "REQ-2",
-      "requirement": "Verify isCallerAdmin, dischargeResident, and permanentlyDeleteResident are available in generated frontend backend bindings and fix any candid/bindings mismatch preventing dashboard calls.",
-      "reason": "The diff summary shows Dashboard now calls useIsCallerAdmin/useDischargeResident/usePermanentlyDeleteResident, but it does not show any changes to the generated frontend backend bindings/candid output (or equivalent) to ensure these actor methods exist and match at runtime. backend/main.mo changes are truncated before any evidence of these methods, and no bindings files are shown as modified.",
+      "id": "REQ-4",
+      "requirement": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+      "reason": "The backend/main.mo diff is truncated and does not show the presence/implementation of isCallerAdmin, dischargeResident, or permanentlyDeleteResident, and the diff summary provides no evidence of candid/declaration regeneration or updates to ensure frontend declarations match the deployed backend interface.",
       "evidence": [
-        "backend/main.mo (truncated; no visible isCallerAdmin/dischargeResident/permanentlyDeleteResident definitions)",
-        "frontend/src/pages/Dashboard.tsx (imports useIsCallerAdmin/useDischargeResident/usePermanentlyDeleteResident)"
+        "backend/main.mo"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Automatic archival migration: marks discharged residents as archived after 30 days and wires migration into the backend actor.",
-      "reason": "BuildRequest is about exposing discharge and permanent delete actions and verifying admin/bindings. It does not request adding a migration or auto-archival behavior.",
+      "description": "Login page UI changes (opaque solid backgrounds, teal overlay, logo aspect ratio adjustments).",
+      "reason": "Not requested by any requirement; scope is specifically dashboard admin actions, gating errors, diagnostics indicator, and backend interface compatibility.",
       "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo (with migration = Migration.run)"
+        "frontend-file-summaries.txt (frontend/src/pages/LoginPage.tsx)"
       ]
     },
     {
-      "description": "Frontend startup fast-fail/health-check and retry/error-screen logic changes.",
-      "reason": "Not requested by REQ-1/REQ-2; unrelated to discharge/delete actions.",
+      "description": "Resident Profile print/report enhancements (combined print report, signature line toggle, loading state changes).",
+      "reason": "Not requested; unrelated to dashboard admin actions and diagnostics.",
       "evidence": [
-        "frontend-file-summaries.txt (\"frontend/src/App.tsx\": fast-fail startup logic, health check trigger, fail-fast timeout, comprehensive error screens, full retry handler)"
+        "frontend-file-summaries.txt (frontend/src/pages/ResidentProfile.tsx)"
       ]
     },
     {
-      "description": "Resident profile print/report enhancements (combined print report, signature line toggles, print layout overrides).",
-      "reason": "Not requested by REQ-1/REQ-2; unrelated to Dashboard discharge/delete actions.",
+      "description": "Widespread UI styling changes enforcing solid white backgrounds across many dialogs/components and global CSS/print layout overrides.",
+      "reason": "Not requested; introduces unrelated styling/print behavior changes outside the specified scope and constraints (compose UI components rather than editing UI library).",
       "evidence": [
-        "frontend-file-summaries.txt (\"frontend/src/pages/ResidentProfile.tsx\": combined print report and signature toggle)",
-        "frontend-file-summaries.txt (\"frontend/src/index.css\": enhanced print styles and fixed-width desktop layout override)"
+        "frontend-file-summaries.txt (frontend/src/index.css)",
+        "frontend-file-summaries.txt (frontend/src/components/AddResidentDialog.tsx)",
+        "frontend-file-summaries.txt (frontend/src/components/EditResidentDialog.tsx)",
+        "frontend-file-summaries.txt (frontend/src/components/AddMarRecordDialog.tsx)",
+        "frontend-file-summaries.txt (frontend/src/components/AddAdlRecordDialog.tsx)",
+        "frontend-file-summaries.txt (frontend/src/components/AddMedicationDialog.tsx)",
+        "frontend-file-summaries.txt (frontend/src/components/EditMedicationDialog.tsx)"
       ]
     },
     {
-      "description": "UI styling changes enforcing solid white/opaque backgrounds across login and many dialogs/forms.",
-      "reason": "Not requested by REQ-1/REQ-2; additionally risks violating the constraint about not editing immutable UI components (cannot be confirmed from summary, but the styling work itself is not part of the request).",
+      "description": "ProfileSetup changes (role field removal, new startup-safe profile save mutation usage, authorization error display).",
+      "reason": "Not requested; unrelated to dashboard admin action visibility/compatibility and diagnostics indicator.",
       "evidence": [
-        "frontend-file-summaries.txt (\"frontend/src/pages/LoginPage.tsx\": fully opaque solid backgrounds, overlay changes)",
-        "frontend-file-summaries.txt (multiple dialog components: \"solid white backgrounds...\")",
-        "frontend-file-summaries.txt (\"frontend/src/index.css\": solid white dialog enforcement)"
+        "frontend-file-summaries.txt (frontend/src/components/ProfileSetup.tsx)",
+        "frontend/src/hooks/useQueries.ts"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.55,
   "changed_files": [
     "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
+    "frontend/src/components/DiagnosticsIndicator.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/lib/buildInfo.ts",
     "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]

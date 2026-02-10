@@ -10,6 +10,8 @@ This document provides a publish-only deployment and smoke-test checklist for Ve
 - [ ] Confirm Internet Identity integration is configured correctly
 
 ## Deployment Steps
+
+### Option 1: Manual Deployment
 1. **Build the frontend:**
    ```bash
    cd frontend
@@ -26,22 +28,50 @@ This document provides a publish-only deployment and smoke-test checklist for Ve
    - Note the canister IDs for frontend and backend
    - Confirm the production URL is accessible
 
+### Option 2: Using the Retry Script (Recommended)
+The retry script automates the deployment process and captures full output for diagnosis.
+
+1. **Make the script executable (first time only):**
+   ```bash
+   chmod +x frontend/scripts/deploy_version_89_publish_only_retry.sh
+   ```
+
+2. **Run the deployment retry script:**
+   ```bash
+   ./frontend/scripts/deploy_version_89_publish_only_retry.sh
+   ```
+
+3. **Review the output:**
+   - The script will create timestamped log files in `frontend/deployment_logs/`
+   - On success: Canister IDs are saved to `canister_ids_[timestamp].txt`
+   - On failure: Full stdout/stderr is captured in `deploy_v89_retry_[timestamp].log`
+
+4. **If deployment fails:**
+   - Review the complete log file for error details
+   - The failing command and full error output will be preserved
+   - Use the log file for diagnosis and troubleshooting
+
 ## Post-Deployment Smoke Tests
 
-### Test 1: Unauthenticated User Flow
+After a successful deployment, execute the comprehensive smoke test checklist documented in `frontend/SMOKE_TEST_VERSION_89.md`.
+
+### Quick Smoke Test Summary
+The following tests must pass for a successful deployment:
+
+#### Test 1: Unauthenticated User Flow
 - [ ] Navigate to the production URL
 - [ ] Verify the Login page loads successfully
 - [ ] Confirm the Moritz Care Home logo is displayed correctly
 - [ ] Verify the login button is visible and functional
 - [ ] Check that no application data is visible before authentication
 
-### Test 2: Authentication Flow
+#### Test 2: Authentication Flow
 - [ ] Click the "Login" button
 - [ ] Verify Internet Identity authentication flow initiates
 - [ ] Complete authentication with a test identity
 - [ ] Confirm successful redirect back to the application
 
-### Test 3: Dashboard Access (Authenticated)
+#### Test 3: Dashboard Access (Authenticated)
 - [ ] After successful login, verify the Dashboard route (/) loads without errors
 - [ ] Confirm the resident list is displayed (or an explicit empty state if no residents exist)
 - [ ] Verify the following UI elements are present:
@@ -51,29 +81,29 @@ This document provides a publish-only deployment and smoke-test checklist for Ve
   - [ ] Room filter dropdown
   - [ ] Sort dropdown
   - [ ] "Add Resident" button (for admin users)
-- [ ] Check that no JavaScript errors appear in the browser console
-- [ ] Verify loading states resolve properly (no infinite spinners)
+- [ ] **Check that no JavaScript errors appear in the browser console**
+- [ ] **Verify loading states resolve properly (no infinite spinners)**
 
-### Test 4: Profile Setup (First-Time Users)
+#### Test 4: Profile Setup (First-Time Users)
 - [ ] For a new user (new Internet Identity), verify the profile setup modal appears
 - [ ] Confirm the modal requires: Name, Role, and Employee ID
 - [ ] Complete the profile setup
 - [ ] Verify the modal closes and the Dashboard loads
 
-### Test 5: Error Handling
-- [ ] Verify that any backend errors display appropriate error messages
-- [ ] Confirm retry buttons work if queries fail
-- [ ] Check that the logout functionality works correctly
+#### Test 5: Console Error Check (Critical)
+- [ ] **Explicitly check the browser console for JavaScript errors during the entire flow**
+- [ ] Document any errors found with full details
+- [ ] Verify no React errors, network errors, or API failures
 
-### Test 6: Resident Profile (If Residents Exist)
-- [ ] Click on a resident card to navigate to their profile
-- [ ] Verify the Resident Profile page loads without errors
-- [ ] Confirm all sections are visible:
-  - [ ] Resident information
-  - [ ] Medications table
-  - [ ] Print report functionality
-- [ ] Test the print functionality
-- [ ] Navigate back to the Dashboard
+#### Test 6: Logout Functionality
+- [ ] Verify the logout button is accessible
+- [ ] Click logout and confirm successful logout
+- [ ] Verify redirect to Login page
+- [ ] Confirm no application data remains visible
+
+### Detailed Smoke Test Documentation
+For step-by-step instructions and detailed acceptance criteria for each test, refer to:
+**`frontend/SMOKE_TEST_VERSION_89.md`**
 
 ## Critical Constraints
 **⚠️ IMPORTANT: This is a publish-only deployment.**
@@ -84,19 +114,23 @@ This document provides a publish-only deployment and smoke-test checklist for Ve
 
 ## Rollback Plan
 If any of the smoke tests fail:
-1. Document the specific failure(s)
-2. Revert to the previous stable version
-3. Investigate the issue in a development environment
-4. Do not proceed with the deployment until issues are resolved
+1. Document the specific failure(s) with full error details
+2. Review the deployment log file (if using the retry script)
+3. Revert to the previous stable version
+4. Investigate the issue in a development environment
+5. Do not proceed with the deployment until issues are resolved
 
 ## Success Criteria
 All of the following must be true for a successful deployment:
 - ✅ The production app loads successfully through the normal entry point
 - ✅ Unauthenticated users reach the Login page without errors
+- ✅ Login button is functional (not disabled or hidden)
 - ✅ Internet Identity authentication completes successfully
+- ✅ Application redirects back after authentication
 - ✅ The Dashboard route (/) loads without errors after login
+- ✅ Dashboard does not show infinite loading spinners
 - ✅ Resident list content displays correctly (or shows an explicit empty/error state)
-- ✅ No JavaScript console errors are present
+- ✅ **No JavaScript console errors are present during the entire flow**
 - ✅ No code changes or new features were introduced
 
 ## Deployment Sign-Off
@@ -105,6 +139,8 @@ All of the following must be true for a successful deployment:
 - **Deployment time:** _________________
 - **Frontend canister ID:** _________________
 - **Backend canister ID:** _________________
+- **Deployment method:** ☐ Manual ☐ Retry Script
+- **Deployment log file:** _________________ (if using retry script)
 - **All smoke tests passed:** ☐ Yes ☐ No
 - **Issues encountered:** _________________
 

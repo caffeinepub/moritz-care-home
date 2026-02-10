@@ -1,39 +1,48 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Dashboard application for managing residents.",
+  "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Discharging or deleting a resident is not available in the dashboard"
+    "Updated discharge and delete actions are not available in the live/production app after deploying Version 105."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-the-dashboard-ui-exposes-resident-discharge-and-permanent-delete-actions-for-administrators-including-clear-affordances-and-confirmation-dialogs-and-wire-these-actions-to-the-existing-react-query-mutations-usedischargeresident-usepermanentlydeleteresident-so-the-operations-can-be-performed-from-the-dashboard",
-      "title": "Ensure the Dashboard UI exposes resident discharge and permanent delete actions for administrators, including clear affordances and confirmation dialogs, and wire these actions to the existing React Query mutations (useDischargeResident, usePermanentlyDeleteResident) so the operations can be performed from the dashboard.",
+      "id": "feature-ensure-the-production-live-build-renders-the-admin-only-resident-actions-discharge-archive-delete-on-the-dashboard-for-authenticated-administrators-matching-version-105-behavior",
+      "title": "Ensure the production (live) build renders the admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-verify-backend-admin-check-integration-used-by-the-dashboard-iscalleradmin-and-resident-lifecycle-methods-dischargeresident-permanentlydeleteresident-are-available-in-the-generated-frontend-backend-bindings-and-behave-consistently-with-authorization-rules-fix-any-mismatch-preventing-the-dashboard-from-showing-or-executing-discharge-delete-actions",
-      "title": "Verify backend/admin-check integration used by the Dashboard (isCallerAdmin) and resident lifecycle methods (dischargeResident, permanentlyDeleteResident) are available in the generated frontend backend bindings and behave consistently with authorization rules; fix any mismatch preventing the Dashboard from showing or executing discharge/delete actions.",
+      "id": "feature-make-admin-permission-gating-failures-explicit-in-the-dashboard-ui-so-that-if-the-admin-check-cannot-be-completed-e-g-backend-incompatibility-or-authorization-query-failure-the-ui-clearly-explains-why-discharge-delete-actions-are-unavailable-and-provides-a-one-click-retry",
+      "title": "Make admin-permission gating failures explicit in the Dashboard UI so that if the admin check cannot be completed (e.g., backend incompatibility or authorization query failure), the UI clearly explains why Discharge/Delete actions are unavailable and provides a one-click retry.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
-    }
-  ],
-  "new_feature_requests": [
+    },
     {
-      "id": "AR-1",
-      "summary": "Add ability to discharge or delete a resident from the dashboard",
-      "reqIds": [],
-      "status": "pending"
+      "id": "feature-add-a-lightweight-production-diagnostics-indicator-visible-in-the-app-ui-that-displays-the-currently-running-frontend-build-identifier-version-and-the-backend-canister-id-the-frontend-is-connected-to-to-help-confirm-the-live-app-is-actually-serving-version-105-and-pointing-at-the-expected-backend",
+      "title": "Add a lightweight production diagnostics indicator (visible in the app UI) that displays the currently running frontend build identifier/version and the backend canister ID the frontend is connected to, to help confirm the live app is actually serving Version 105 and pointing at the expected backend.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-verify-and-align-backend-interface-compatibility-for-version-105-so-that-production-backend-exposes-the-admin-and-resident-lifecycle-methods-used-by-the-frontend-at-minimum-iscalleradmin-dischargeresident-permanentlydeleteresident-and-that-the-generated-frontend-declarations-match-the-deployed-backend-candid",
+      "title": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
     }
   ],
-  "projectName": "Enable discharge and permanent delete resident actions from Dashboard",
+  "new_feature_requests": [],
+  "projectName": "Fix missing discharge and permanently delete actions in production dashboard",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

@@ -70,6 +70,11 @@ export interface ADLRecord {
     date: bigint;
     activity: string;
 }
+export interface UserProfileWithRole {
+    name: string;
+    role: string;
+    employeeId: string;
+}
 export interface Pharmacy {
     id: bigint;
     name: string;
@@ -106,7 +111,6 @@ export interface WeightEntry {
 }
 export interface UserProfile {
     name: string;
-    role: string;
     employeeId: string;
 }
 export enum AdministrationRoute {
@@ -180,7 +184,7 @@ export interface backendInterface {
     getAllResidents(): Promise<Array<Resident>>;
     getAllResponsiblePersons(): Promise<Array<ResponsiblePerson>>;
     getAllRoomNumbers(): Promise<Array<string>>;
-    getCallerUserProfile(): Promise<UserProfile | null>;
+    getCallerUserProfile(): Promise<UserProfileWithRole | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDailyVitals(residentId: bigint): Promise<Array<DailyVitals>>;
     getDischargedResidents(): Promise<Array<Resident>>;
@@ -228,7 +232,7 @@ export interface backendInterface {
             totalResidents: bigint;
         };
     }>;
-    getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getUserProfile(user: Principal): Promise<UserProfileWithRole | null>;
     getWeightLog(residentId: bigint): Promise<Array<WeightEntry>>;
     healthCheck(): Promise<{
         message: string;
@@ -240,4 +244,6 @@ export interface backendInterface {
     updateMedication(residentId: bigint, medicationId: bigint, name: string, dosage: string, administrationTimes: Array<string>, prescribingPhysician: Physician | null, administrationRoute: AdministrationRoute, dosageQuantity: string, notes: string, status: MedicationStatus): Promise<void>;
     updateMedicationStatus(residentId: bigint, medicationId: bigint, status: MedicationStatus): Promise<void>;
     updateResident(id: bigint, firstName: string, lastName: string, dateOfBirth: bigint, admissionDate: bigint, status: ResidentStatus, roomNumber: string, roomType: RoomType, bed: string | null, physicians: Array<Physician>, pharmacy: Pharmacy | null, insurance: Insurance | null, medicaidNumber: string, medicareNumber: string, responsiblePersons: Array<ResponsiblePerson>, medications: Array<Medication>): Promise<void>;
+    v105_dischargeResident(id: bigint): Promise<void>;
+    v105_permanentlyDeleteResident(id: bigint): Promise<void>;
 }

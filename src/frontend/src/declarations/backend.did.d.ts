@@ -120,7 +120,8 @@ export type SortCriteria = { 'bed' : null } |
   { 'residentId' : null } |
   { 'name' : null } |
   { 'roomNumber' : null };
-export interface UserProfile {
+export interface UserProfile { 'name' : string, 'employeeId' : string }
+export interface UserProfileWithRole {
   'name' : string,
   'role' : string,
   'employeeId' : string,
@@ -269,7 +270,7 @@ export interface _SERVICE {
   'getAllResidents' : ActorMethod<[], Array<Resident>>,
   'getAllResponsiblePersons' : ActorMethod<[], Array<ResponsiblePerson>>,
   'getAllRoomNumbers' : ActorMethod<[], Array<string>>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfileWithRole]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getDailyVitals' : ActorMethod<[bigint], Array<DailyVitals>>,
   'getDischargedResidents' : ActorMethod<[], Array<Resident>>,
@@ -329,7 +330,7 @@ export interface _SERVICE {
       },
     }
   >,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfileWithRole]>,
   'getWeightLog' : ActorMethod<[bigint], Array<WeightEntry>>,
   'healthCheck' : ActorMethod<
     [],
@@ -378,6 +379,8 @@ export interface _SERVICE {
     ],
     undefined
   >,
+  'v105_dischargeResident' : ActorMethod<[bigint], undefined>,
+  'v105_permanentlyDeleteResident' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

@@ -12,9 +12,9 @@ import List "mo:core/List";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -211,6 +211,11 @@ actor {
 
   public type UserProfile = {
     name : Text;
+    employeeId : Text;
+  };
+
+  public type UserProfileWithRole = {
+    name : Text;
     role : Text;
     employeeId : Text;
   };
@@ -257,6 +262,15 @@ actor {
   var nextDailyVitalsId = 1;
   var nextWeightEntryId = 1;
 
+  // Helper function to convert UserRole to Text
+  func roleToText(role : AccessControl.UserRole) : Text {
+    switch (role) {
+      case (#admin) { "admin" };
+      case (#user) { "user" };
+      case (#guest) { "guest" };
+    };
+  };
+
   // Archive Helper - now as a shared function that can be called periodically
   public shared ({ caller }) func autoArchiveDischargedResidents() : async () {
     if (not AccessControl.hasPermission(accessControlState, caller, #admin)) {
@@ -292,27 +306,45 @@ actor {
   };
 
   // User Profile Management
-  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    // Allow any authenticated (non-anonymous) caller to check their profile
-    // This enables first-time users to see they have no profile (returns null)
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Anonymous users cannot access profiles");
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfileWithRole {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access profiles");
     };
-    userProfiles.get(caller);
+    
+    switch (userProfiles.get(caller)) {
+      case (null) { null };
+      case (?profile) {
+        let userRole = AccessControl.getUserRole(accessControlState, caller);
+        ?{
+          name = profile.name;
+          role = roleToText(userRole);
+          employeeId = profile.employeeId;
+        };
+      };
+    };
   };
 
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfileWithRole {
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own profile");
     };
-    userProfiles.get(user);
+    
+    switch (userProfiles.get(user)) {
+      case (null) { null };
+      case (?profile) {
+        let userRole = AccessControl.getUserRole(accessControlState, user);
+        ?{
+          name = profile.name;
+          role = roleToText(userRole);
+          employeeId = profile.employeeId;
+        };
+      };
+    };
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    // Allow any authenticated (non-anonymous) caller to save their profile
-    // This enables first-time users to create their profile without admin pre-registration
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Anonymous users cannot save profiles");
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
     userProfiles.add(caller, profile);
   };
@@ -1326,5 +1358,85 @@ actor {
       residentsByRoom = residentsByRoom.toArray();
       residentsByRoomType = residentsByRoomType.toArray();
     };
+  };
+
+  // ---------------------------------
+  // Version 105+ Compatibility Layer
+  // ---------------------------------
+
+  // Virtual 105 Compatibility Types (mirroring V105 actor)
+  module v105 {
+    public type ResidentStatus = {
+      #active;
+      #discharged;
+    };
+
+    public type RoomType = {
+      #solo;
+      #sharedRoom;
+    };
+
+    public type Resident = {
+      id : Nat;
+      firstName : Text;
+      lastName : Text;
+      dateOfBirth : Nat;
+      admissionDate : Int;
+      status : ResidentStatus;
+      roomNumber : Text;
+      roomType : RoomType;
+      bed : ?Text;
+      physicians : [Physician];
+      pharmacy : ?Pharmacy;
+      insurance : ?Insurance;
+      medicaidNumber : Text;
+      medicareNumber : Text;
+      responsiblePersons : [ResponsiblePerson];
+      medications : [Medication];
+      marRecords : [MedicationAdministrationRecord];
+      adlRecords : [ADLRecord];
+      dailyVitals : [DailyVitals];
+      weightLog : [WeightEntry];
+      dischargeTimestamp : ?Int;
+      isArchived : Bool;
+    };
+  };
+
+  // Converts current Resident to "mirrored" V105 Resident
+  func toV105Resident(resident : Resident) : v105.Resident {
+    let status : v105.ResidentStatus = switch (resident.status) {
+      case (#active) { #active };
+      case (#discharged) { #discharged };
+    };
+
+    let roomType : v105.RoomType = switch (resident.roomType) {
+      case (#solo) { #solo };
+      case (#sharedRoom) { #sharedRoom };
+    };
+
+    { resident with
+      status;
+      roomType;
+      dateOfBirth = if (resident.dateOfBirth < 0) {
+        0;
+      } else {
+        resident.dateOfBirth.toNat();
+      };
+    };
+  };
+
+  // Helper function to convert array of residents to v105 Resident
+  func toV105ResidentArray(residentsList : [Resident]) : [v105.Resident] {
+    residentsList.map(toV105Resident);
+  };
+
+  // 105-compatibility discharge function
+  public shared ({ caller }) func v105_dischargeResident(id : Nat) : async () {
+    await dischargeResident(id);
+  };
+
+  // 105-compatibility permanent delete function
+  public shared ({ caller }) func v105_permanentlyDeleteResident(id : Nat) : async () {
+    await permanentlyDeleteResident(id);
   };
 };

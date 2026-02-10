@@ -2,9 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-ensure-the-dashboard-ui-exposes-resident-discharge-and-permanent-delete-actions-for-administrators-including-clear-affordances-and-confirmation-dialogs-and-wire-these-actions-to-the-existing-react-query-mutations-usedischargeresident-usepermanentlydeleteresident-so-the-operations-can-be-performed-from-the-dashboard",
-      "featureTitle": "Ensure the Dashboard UI exposes resident discharge and permanent delete actions for administrators, including clear affordances and confirmation dialogs, and wire these actions to the existing React Query mutations (useDischargeResident, usePermanentlyDeleteResident) so the operations can be performed from the dashboard.",
+      "featureId": "feature-ensure-the-production-live-build-renders-the-admin-only-resident-actions-discharge-archive-delete-on-the-dashboard-for-authenticated-administrators-matching-version-105-behavior",
+      "featureTitle": "Ensure the production (live) build renders the admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.",
       "files": [
+        "frontend/src/hooks/useQueries.ts",
         "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
@@ -22,9 +23,10 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-verify-backend-admin-check-integration-used-by-the-dashboard-iscalleradmin-and-resident-lifecycle-methods-dischargeresident-permanentlydeleteresident-are-available-in-the-generated-frontend-backend-bindings-and-behave-consistently-with-authorization-rules-fix-any-mismatch-preventing-the-dashboard-from-showing-or-executing-discharge-delete-actions",
-      "featureTitle": "Verify backend/admin-check integration used by the Dashboard (isCallerAdmin) and resident lifecycle methods (dischargeResident, permanentlyDeleteResident) are available in the generated frontend backend bindings and behave consistently with authorization rules; fix any mismatch preventing the Dashboard from showing or executing discharge/delete actions.",
+      "featureId": "feature-make-admin-permission-gating-failures-explicit-in-the-dashboard-ui-so-that-if-the-admin-check-cannot-be-completed-e-g-backend-incompatibility-or-authorization-query-failure-the-ui-clearly-explains-why-discharge-delete-actions-are-unavailable-and-provides-a-one-click-retry",
+      "featureTitle": "Make admin-permission gating failures explicit in the Dashboard UI so that if the admin check cannot be completed (e.g., backend incompatibility or authorization query failure), the UI clearly explains why Discharge/Delete actions are unavailable and provides a one-click retry.",
       "files": [
+        "frontend/src/hooks/useQueries.ts",
         "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
@@ -38,6 +40,49 @@
       ],
       "testIds": [
         "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-lightweight-production-diagnostics-indicator-visible-in-the-app-ui-that-displays-the-currently-running-frontend-build-identifier-version-and-the-backend-canister-id-the-frontend-is-connected-to-to-help-confirm-the-live-app-is-actually-serving-version-105-and-pointing-at-the-expected-backend",
+      "featureTitle": "Add a lightweight production diagnostics indicator (visible in the app UI) that displays the currently running frontend build identifier/version and the backend canister ID the frontend is connected to, to help confirm the live app is actually serving Version 105 and pointing at the expected backend.",
+      "files": [
+        "frontend/src/components/DiagnosticsIndicator.tsx",
+        "frontend/src/lib/buildInfo.ts",
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-verify-and-align-backend-interface-compatibility-for-version-105-so-that-production-backend-exposes-the-admin-and-resident-lifecycle-methods-used-by-the-frontend-at-minimum-iscalleradmin-dischargeresident-permanentlydeleteresident-and-that-the-generated-frontend-declarations-match-the-deployed-backend-candid",
+      "featureTitle": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/Dashboard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
       ],
       "confidence": "high"
     }

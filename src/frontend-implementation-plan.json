@@ -1,56 +1,95 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Enable admin discharge and permanent delete actions from Dashboard",
+  "title": "Restore admin resident actions in production Dashboard with explicit gating + diagnostics",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Expose clear admin-only Dashboard controls for discharging and permanently deleting residents with explicit labels, confirmations, and live list updates via existing React Query mutations.",
+      "summary": "Make Discharge/Archive/Delete admin-only resident actions render and work reliably in production, including immediate list updates after mutations.",
       "acceptanceCriteria": [
-        "When logged in as an admin, each active resident card in the Dashboard shows an actionable control to discharge the resident.",
-        "When logged in as an admin, each resident card in the Dashboard shows an actionable control to permanently delete the resident (not hidden behind ambiguous/unlabeled UI).",
-        "Attempting to permanently delete prompts a confirmation dialog that clearly states the action is irreversible.",
-        "After a successful discharge, the resident no longer appears in the Active tab and appears in the Discharged tab without requiring a manual page refresh.",
-        "After a successful permanent delete, the resident disappears from all dashboard lists without requiring a manual page refresh.",
-        "If the caller is not an admin, the dashboard does not allow discharge/delete actions and shows an English error/toast message if an action is attempted by any means."
+        "When logged in as an admin user in production, each active resident card shows a visible Discharge button and each resident card shows a visible Delete button (in addition to Archive).",
+        "Clicking Discharge updates the resident status to discharged and moves the resident from Active to Discharged lists without requiring a hard refresh.",
+        "Clicking Delete permanently removes the resident and the resident no longer appears in any resident list after the mutation completes.",
+        "No console error occurs related to missing actor methods (e.g., 'isCallerAdmin method not found', 'dischargeResident method not found', 'permanentlyDeleteResident method not found')."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/Dashboard.tsx",
-          "operation": "modify",
-          "description": "Update resident cards to provide explicit, clearly labeled admin actions for Discharge and Permanent Delete (avoid icon-only affordances for delete). Use the existing shadcn-ui AlertDialog component to add confirmation dialogs, including irreversible wording for permanent delete, and (optionally) a confirmation for discharge. Add a defensive admin gate in the discharge/delete handlers (in addition to hiding controls) so non-admin attempts trigger an English toast and no mutation call is made. Ensure successful mutations rely on React Query cache invalidation so Active/Discharged/All lists update without manual refresh. Verify the component's usage instructions before implementing."
-        },
-        {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Ensure useDischargeResident and usePermanentlyDeleteResident invalidate the specific resident list queries used by the Dashboard (e.g., active/discharged/all) so tab contents refresh immediately after success. Keep using the existing mutations (useDischargeResident, usePermanentlyDeleteResident) and ensure errors propagate so the Dashboard can show English toasts for authorization and other failures."
+          "description": "Harden admin + resident lifecycle hooks for production: avoid calling missing actor methods; add compatibility fallbacks for discharge/delete (e.g., prefer current methods, but if unavailable use Version-105 compatible methods exposed on the actor); ensure successful mutations invalidate/refetch resident lists so Active/Discharged tabs update without refresh."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Ensure admin-only actions are rendered based on the resolved admin-gating state and that post-mutation UX triggers appropriate React Query updates (no hard refresh). Keep Discharge visible only for active residents, and Delete visible for all residents for admins."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Validate that frontend backend bindings and authorization checks support isCallerAdmin, dischargeResident, and permanentlyDeleteResident without runtime binding mismatches, and make the Dashboard resilient to authorization/binding failures.",
+      "summary": "Expose admin-permission gating failures in the Dashboard with a clear compatibility/error message and one-click retry so missing actions are always explainable.",
       "acceptanceCriteria": [
-        "The frontend can successfully call isCallerAdmin and receives the expected boolean for an admin principal.",
-        "The frontend can successfully call dischargeResident and permanentlyDeleteResident for an admin principal.",
-        "Non-admin principals receive an authorization error from dischargeResident and permanentlyDeleteResident.",
-        "No runtime errors occur due to missing actor methods or mismatched candid/bindings when loading the Dashboard."
+        "If the admin check query errors, the Dashboard shows a prominent, user-readable error state indicating admin actions may not be available and includes a Retry action.",
+        "If the admin check query fails due to missing backend methods (compatibility issue), the Dashboard error message explicitly states that the backend appears out of date/incompatible.",
+        "The absence of Discharge/Delete buttons is always explainable by one of: (a) user is not an admin, or (b) admin check is still loading, or (c) admin check failed and an error banner is visible."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/backend.d.ts",
-          "operation": "modify",
-          "description": "Verify the generated frontend backend bindings include isCallerAdmin, dischargeResident, and permanentlyDeleteResident with correct names and return types, and correct any mismatches that would cause runtime errors when the Dashboard loads or calls these functions (keep changes limited to binding/type alignment)."
-        },
-        {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Harden authorization/admin-check integration by adding safe, user-meaningful error handling for isCallerAdmin/dischargeResident/permanentlyDeleteResident calls (e.g., clear English errors when actor methods are unavailable or authorization traps occur), while preserving existing Internet Identity flow. Ensure hook-level failures do not crash the Dashboard render path."
+          "description": "Improve useIsCallerAdmin to (1) detect compatibility issues (missing method) and (2) fall back to an alternate admin determination strategy available in declarations (e.g., role query) when possible; classify errors so the UI can distinguish 'not admin' vs 'check failed' vs 'backend incompatible' without console method-not-found errors."
         },
         {
           "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Handle admin-check loading/error states explicitly so the Dashboard does not crash or incorrectly hide actions due to transient binding/authorization issues; default to non-admin behavior on admin-check failure and surface an English toast/banner if appropriate. Keep discharge/delete execution wired to the existing React Query mutations."
+          "description": "Update the Dashboard admin-gating UI to show: loading state, explicit 'not an admin' explanation when admin check succeeds false, and an error banner with clear compatibility wording when the admin check fails (including missing-method detection) plus a one-click Retry that re-runs the admin check."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Add an unobtrusive in-app production diagnostics indicator showing frontend build identifier/version and the backend canister ID in use (no backend changes).",
+      "acceptanceCriteria": [
+        "The Dashboard (or a globally accessible area) displays a frontend build identifier (e.g., a version string) and the backend canister ID currently in use.",
+        "The diagnostics indicator is readable but unobtrusive (e.g., small text in footer/header) and uses English labels.",
+        "The values update appropriately between local/dev and production builds and do not require backend changes to render."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/lib/buildInfo.ts",
+          "operation": "create",
+          "description": "Add a small utility to derive a frontend build identifier/version from build-time environment (e.g., Vite env variables) with sensible fallbacks for local/dev, without requiring backend changes."
+        },
+        {
+          "path": "frontend/src/components/DiagnosticsIndicator.tsx",
+          "operation": "create",
+          "description": "Create a lightweight UI component that displays English-labeled diagnostics: frontend build identifier/version (from buildInfo) and backend canister ID (from existing getBackendDiagnostics()). Use existing UI primitives (compose; do not edit frontend/src/components/ui). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "Render the DiagnosticsIndicator in an unobtrusive location on the Dashboard (e.g., header/footer area) so it is visible in production for confirmation of frontend build + connected backend canister ID. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Align frontend runtime behavior with Version 105 backend interface expectations by adding compatibility handling and surfacing mismatches, preventing stale-declaration/method-missing failures in production UI paths.",
+      "acceptanceCriteria": [
+        "The deployed backend canister used by production includes callable methods for admin check and resident discharge/delete that match the frontend actor expectations.",
+        "The frontend build does not ship with stale declarations that omit these methods when connecting to production.",
+        "A production smoke check confirms the admin check succeeds and returns true for an admin principal, enabling the admin actions UI."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Implement runtime interface-compatibility guards for admin/discharge/delete flows: prefer current actor methods when present, otherwise fall back to Version-105 compatible methods if present; when neither exists, throw a clearly worded 'backend appears out of date/incompatible' error that the UI can display (and avoid raw method-not-found console errors)."
+        },
+        {
+          "path": "frontend/src/pages/Dashboard.tsx",
+          "operation": "modify",
+          "description": "When compatibility errors occur (admin check or mutations), display a clear, user-readable message indicating the backend appears out of date/incompatible and provide a one-click retry; optionally include minimal diagnostic context (e.g., connected canister ID via existing diagnostics helper) to support production smoke checks."
         }
       ]
     }

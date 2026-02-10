@@ -1,58 +1,90 @@
 {
   "kind": "build_request",
-  "title": "Enable discharge and permanent delete resident actions from Dashboard",
+  "title": "Fix missing discharge and permanently delete actions in production dashboard",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Ensure the Dashboard UI exposes resident discharge and permanent delete actions for administrators, including clear affordances and confirmation dialogs, and wire these actions to the existing React Query mutations (useDischargeResident, usePermanentlyDeleteResident) so the operations can be performed from the dashboard.",
-      "target": "frontend",
+      "text": "Ensure the production (live) build renders the admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "recent-messages-user-1"
+          "msg-6"
         ],
         "quotes": [
-          "discharging or deleting a resident is not available in the dashboard"
+          "updated discharge and delete actions are not available in the live app"
         ]
       },
       "acceptanceCriteria": [
-        "When logged in as an admin, each active resident card in the Dashboard shows an actionable control to discharge the resident.",
-        "When logged in as an admin, each resident card in the Dashboard shows an actionable control to permanently delete the resident (not hidden behind ambiguous/unlabeled UI).",
-        "Attempting to permanently delete prompts a confirmation dialog that clearly states the action is irreversible.",
-        "After a successful discharge, the resident no longer appears in the Active tab and appears in the Discharged tab without requiring a manual page refresh.",
-        "After a successful permanent delete, the resident disappears from all dashboard lists without requiring a manual page refresh.",
-        "If the caller is not an admin, the dashboard does not allow discharge/delete actions and shows an English error/toast message if an action is attempted by any means."
+        "When logged in as an admin user in production, each active resident card shows a visible Discharge button and each resident card shows a visible Delete button (in addition to Archive).",
+        "Clicking Discharge updates the resident status to discharged and moves the resident from Active to Discharged lists without requiring a hard refresh.",
+        "Clicking Delete permanently removes the resident and the resident no longer appears in any resident list after the mutation completes.",
+        "No console error occurs related to missing actor methods (e.g., 'isCallerAdmin method not found', 'dischargeResident method not found', 'permanentlyDeleteResident method not found')."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Verify backend/admin-check integration used by the Dashboard (isCallerAdmin) and resident lifecycle methods (dischargeResident, permanentlyDeleteResident) are available in the generated frontend backend bindings and behave consistently with authorization rules; fix any mismatch preventing the Dashboard from showing or executing discharge/delete actions.",
-      "target": "both",
+      "text": "Make admin-permission gating failures explicit in the Dashboard UI so that if the admin check cannot be completed (e.g., backend incompatibility or authorization query failure), the UI clearly explains why Discharge/Delete actions are unavailable and provides a one-click retry.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages-user-1"
+          "msg-6"
         ],
         "quotes": [
-          "discharging or deleting a resident is not available in the dashboard"
+          "updated discharge and delete actions are not available in the live app"
         ]
       },
       "acceptanceCriteria": [
-        "The frontend can successfully call isCallerAdmin and receives the expected boolean for an admin principal.",
-        "The frontend can successfully call dischargeResident and permanentlyDeleteResident for an admin principal.",
-        "Non-admin principals receive an authorization error from dischargeResident and permanentlyDeleteResident.",
-        "No runtime errors occur due to missing actor methods or mismatched candid/bindings when loading the Dashboard."
+        "If the admin check query errors, the Dashboard shows a prominent, user-readable error state indicating admin actions may not be available and includes a Retry action.",
+        "If the admin check query fails due to missing backend methods (compatibility issue), the Dashboard error message explicitly states that the backend appears out of date/incompatible.",
+        "The absence of Discharge/Delete buttons is always explainable by one of: (a) user is not an admin, or (b) admin check is still loading, or (c) admin check failed and an error banner is visible."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Add a lightweight production diagnostics indicator (visible in the app UI) that displays the currently running frontend build identifier/version and the backend canister ID the frontend is connected to, to help confirm the live app is actually serving Version 105 and pointing at the expected backend.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "updated discharge and delete actions are not available in the live app"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Dashboard (or a globally accessible area) displays a frontend build identifier (e.g., a version string) and the backend canister ID currently in use.",
+        "The diagnostics indicator is readable but unobtrusive (e.g., small text in footer/header) and uses English labels.",
+        "The values update appropriately between local/dev and production builds and do not require backend changes to render."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Verify and align backend interface compatibility for Version 105 so that production backend exposes the admin and resident lifecycle methods used by the frontend (at minimum: isCallerAdmin, dischargeResident, permanentlyDeleteResident) and that the generated frontend declarations match the deployed backend candid.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "updated discharge and delete actions are not available in the live app"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The deployed backend canister used by production includes callable methods for admin check and resident discharge/delete that match the frontend actor expectations.",
+        "The frontend build does not ship with stale declarations that omit these methods when connecting to production.",
+        "A production smoke check confirms the admin check succeeds and returns true for an admin principal, enabling the admin actions UI."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
-    "Do not edit files under frontend/src/components/ui or any frontend immutablePaths (compose components instead).",
-    "Use English for all user-facing text."
+    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or anything in frontend/src/components/ui (compose instead).",
+    "Keep all backend logic within the single Motoko actor in backend/main.mo; add backend/migration.mo only if state migration is required."
   ],
   "nonGoals": [
-    "Implementing new authentication providers beyond Internet Identity.",
-    "Adding a new database or external persistence layer.",
-    "Adding real-time updates via WebSockets or similar."
+    "Adding new resident lifecycle states beyond active/discharged.",
+    "Implementing a new authentication provider (Internet Identity only).",
+    "Introducing external databases or non-IC backend services."
   ],
   "imageRequirements": {
     "required": [],

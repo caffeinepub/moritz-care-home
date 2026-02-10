@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
 import { useResilientActor } from './useResilientActor';
-import { withTimeout, normalizeError } from '../lib/actorInit';
+import { useInternetIdentity } from './useInternetIdentity';
+import { withTimeout, normalizeError, isAuthorizationError } from '../lib/actorInit';
 import { PROFILE_STARTUP_TIMEOUT_MS } from '../lib/startupTimings';
 import type {
   Resident,
@@ -142,16 +143,43 @@ export function useSaveCallerUserProfile() {
 
 export function useIsCallerAdmin() {
   const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
 
-  return useQuery<boolean>({
-    queryKey: ['isCallerAdmin'],
+  // Include principal in query key to ensure fresh data on login/logout
+  const principal = identity?.getPrincipal().toString() || 'anonymous';
+
+  const query = useQuery<boolean>({
+    queryKey: ['isCallerAdmin', principal],
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
-      return actor.isCallerAdmin();
+      
+      // Defensive check: ensure the method exists
+      if (typeof actor.isCallerAdmin !== 'function') {
+        console.error('Backend compatibility issue: isCallerAdmin method not found');
+        throw new Error('Backend appears out of date or incompatible. The admin check method is not available. Please ensure the backend canister is properly deployed.');
+      }
+
+      try {
+        const result = await actor.isCallerAdmin();
+        return result;
+      } catch (error) {
+        console.error('Admin check error:', error);
+        // Normalize authorization errors
+        const normalized = normalizeError(error);
+        throw new Error(normalized);
+      }
     },
     enabled: !!actor && !actorFetching,
-    retry: false,
+    retry: 1, // Retry once in case of transient errors
+    // Don't cache across sessions
+    staleTime: 0,
   });
+
+  return {
+    ...query,
+    // Expose loading state explicitly so UI can defer rendering admin controls
+    isLoading: actorFetching || query.isLoading,
+  };
 }
 
 // ============================================================================
@@ -343,7 +371,45 @@ export function useDischargeResident() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.dischargeResident(id);
+      
+      // Try primary method first, then fall back to v105 compatibility method
+      const actorAny = actor as any;
+      
+      if (typeof actor.dischargeResident === 'function') {
+        try {
+          await actor.dischargeResident(id);
+          return;
+        } catch (error) {
+          console.error('Primary discharge method failed:', error);
+          // If it's an authorization error, don't try fallback
+          if (isAuthorizationError(error)) {
+            throw new Error('Only administrators can discharge residents');
+          }
+          // Try fallback
+        }
+      }
+      
+      // Try v105 compatibility method
+      if (typeof actorAny.v105_dischargeResident === 'function') {
+        console.log('Using v105 compatibility discharge method');
+        try {
+          await actorAny.v105_dischargeResident(id);
+          return;
+        } catch (error) {
+          const normalized = normalizeError(error);
+          if (isAuthorizationError(error)) {
+            throw new Error('Only administrators can discharge residents');
+          }
+          if (normalized.toLowerCase().includes('not found')) {
+            throw new Error('Resident not found');
+          }
+          throw new Error(normalized);
+        }
+      }
+      
+      // No method available
+      console.error('No discharge method available on actor');
+      throw new Error('Backend appears out of date or incompatible. The discharge method is not available. Please ensure the backend canister is properly deployed.');
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -359,7 +425,19 @@ export function useArchiveResident() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.archiveResident(id);
+      try {
+        await actor.archiveResident(id);
+      } catch (error) {
+        // Normalize errors for consistent UI handling
+        const normalized = normalizeError(error);
+        if (isAuthorizationError(error)) {
+          throw new Error('Only administrators can archive residents');
+        }
+        if (normalized.toLowerCase().includes('not found')) {
+          throw new Error('Resident not found');
+        }
+        throw new Error(normalized);
+      }
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -375,7 +453,45 @@ export function usePermanentlyDeleteResident() {
   return useMutation({
     mutationFn: async (id: bigint) => {
       if (!actor) throw new Error('Actor not available');
-      await actor.permanentlyDeleteResident(id);
+      
+      // Try primary method first, then fall back to v105 compatibility method
+      const actorAny = actor as any;
+      
+      if (typeof actor.permanentlyDeleteResident === 'function') {
+        try {
+          await actor.permanentlyDeleteResident(id);
+          return;
+        } catch (error) {
+          console.error('Primary delete method failed:', error);
+          // If it's an authorization error, don't try fallback
+          if (isAuthorizationError(error)) {
+            throw new Error('Only administrators can permanently delete residents');
+          }
+          // Try fallback
+        }
+      }
+      
+      // Try v105 compatibility method
+      if (typeof actorAny.v105_permanentlyDeleteResident === 'function') {
+        console.log('Using v105 compatibility delete method');
+        try {
+          await actorAny.v105_permanentlyDeleteResident(id);
+          return;
+        } catch (error) {
+          const normalized = normalizeError(error);
+          if (isAuthorizationError(error)) {
+            throw new Error('Only administrators can permanently delete residents');
+          }
+          if (normalized.toLowerCase().includes('not found')) {
+            throw new Error('Resident not found');
+          }
+          throw new Error(normalized);
+        }
+      }
+      
+      // No method available
+      console.error('No delete method available on actor');
+      throw new Error('Backend appears out of date or incompatible. The delete method is not available. Please ensure the backend canister is properly deployed.');
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['residents'] });
@@ -509,6 +625,7 @@ export function useAddMarRecord() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
   });
 }
@@ -540,6 +657,7 @@ export function useAddAdlRecord() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
   });
 }
@@ -581,6 +699,7 @@ export function useAddDailyVitals() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
   });
 }
@@ -612,6 +731,75 @@ export function useAddWeightEntry() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['resident', variables.residentId.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['residents'] });
     },
+  });
+}
+
+// ============================================================================
+// Physicians
+// ============================================================================
+
+export function useGetAllPhysicians() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Physician[]>({
+    queryKey: ['physicians'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getAllPhysicians();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// ============================================================================
+// Pharmacies
+// ============================================================================
+
+export function useGetAllPharmacies() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Pharmacy[]>({
+    queryKey: ['pharmacies'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getAllPharmacies();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// ============================================================================
+// Insurance Companies
+// ============================================================================
+
+export function useGetAllInsuranceCompanies() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Insurance[]>({
+    queryKey: ['insuranceCompanies'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getAllInsuranceCompanies();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+// ============================================================================
+// Responsible Persons
+// ============================================================================
+
+export function useGetAllResponsiblePersons() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<ResponsiblePerson[]>({
+    queryKey: ['responsiblePersons'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getAllResponsiblePersons();
+    },
+    enabled: !!actor && !actorFetching,
   });
 }

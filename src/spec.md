@@ -1,13 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Allow administrators to discharge or permanently delete residents directly from the Dashboard, with clear UI controls, confirmations, and correct authorization behavior.
+**Goal:** Restore admin-only resident lifecycle actions (Discharge, Archive, Delete) in the production Dashboard and make production/compatibility issues clearly diagnosable in-app.
 
 **Planned changes:**
-- Add clearly labeled Dashboard controls on each resident card for admins to discharge a resident and to permanently delete a resident.
-- Add confirmation dialog for permanent delete that explicitly states the action is irreversible.
-- Wire the Dashboard controls to existing React Query mutations (`useDischargeResident`, `usePermanentlyDeleteResident`) and ensure lists update immediately after success (no manual refresh).
-- Ensure non-admin users cannot perform these actions from the Dashboard; show an English error/toast if an attempt is made.
-- Verify and fix (if needed) the generated frontend bindings/integration for `isCallerAdmin`, `dischargeResident`, and `permanentlyDeleteResident` so the Dashboard can both display and execute these actions without runtime errors, while preserving backend authorization rules.
+- Ensure the production build renders admin-only Resident actions (Discharge, Archive, Delete) on the Dashboard for authenticated administrators, matching Version 105 behavior.
+- Make admin-permission gating explicit in the Dashboard UI with clear loading/error states; when the admin check fails (including missing backend methods), show an explanatory banner and a one-click Retry.
+- Add a lightweight in-app diagnostics indicator showing the current frontend build identifier/version and the backend canister ID the frontend is connected to.
+- Verify and align production backend interface compatibility so required methods exist (isCallerAdmin, dischargeResident, permanentlyDeleteResident) and frontend declarations match the deployed backend candid.
 
-**User-visible outcome:** Admin users can discharge or permanently delete residents from the Dashboard with clear actions and confirmations, and resident lists update immediately; non-admin users are prevented from doing so and see an English error message if attempted.
+**User-visible outcome:** Admin users in production can Discharge and permanently Delete residents directly from resident cards (with immediate list updates), and the UI clearly indicates whether actions are unavailable due to non-admin status, loading, or a compatibility/error state—plus shows the running frontend version and connected backend canister ID.
