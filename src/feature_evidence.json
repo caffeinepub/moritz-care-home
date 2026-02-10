@@ -1,4 +1,66 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-add-an-operator-script-to-restart-the-backend-canister-on-the-ic-network-and-ensure-the-backend-canister-is-started-after-deploy-create-a-new-script-at-frontend-scripts-restart-backend-canister-sh-that-checks-backend-canister-status-on-network-ic-if-the-canister-is-stopped-starts-it-supports-an-explicit-restart-mode-that-performs-stop-start-writes-clear-english-console-output-and-exits-non-zero-on-failure-update-frontend-scripts-redeploy-production-sh-to-run-the-backend-start-restart-logic-after-dfx-deploy-network-ic-completes-so-a-stopped-backend-is-brought-back-online-automatically-as-part-of-the-standard-redeploy-flow",
+      "featureTitle": "Add an operator script to restart the backend canister on the IC network and ensure the backend canister is started after deploy.\n\n- Create a new script at frontend/scripts/restart_backend_canister.sh that:\n  - Checks backend canister status on network ic.\n  - If the canister is stopped, starts it.\n  - Supports an explicit \"restart\" mode that performs stop+start.\n  - Writes clear, English console output and exits non-zero on failure.\n- Update frontend/scripts/redeploy_production.sh to run the backend start/restart logic after `dfx deploy --network ic` completes, so a stopped backend is brought back online automatically as part of the standard redeploy flow.",
+      "files": [
+        "frontend/scripts/redeploy_production.sh",
+        "frontend/scripts/restart_backend_canister.sh"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-production-deployment-runbook-to-include-explicit-backend-canister-status-verification-and-restart-instructions-update-frontend-deployment-checklist-md-to-add-a-dedicated-subsection-that-shows-how-to-check-backend-status-dfx-canister-network-ic-status-backend-shows-how-to-start-or-restart-the-backend-canister-references-the-new-frontend-scripts-restart-backend-canister-sh-script-as-the-preferred-method-clarifies-that-the-deployment-process-should-confirm-the-backend-canister-is-not-in-a-stopped-state-after-deployment",
+      "featureTitle": "Update the production deployment runbook to include explicit backend canister status verification and restart instructions.\n\n- Update frontend/DEPLOYMENT_CHECKLIST.md to add a dedicated subsection that:\n  - Shows how to check backend status (`dfx canister --network ic status backend`).\n  - Shows how to start or restart the backend canister.\n  - References the new `frontend/scripts/restart_backend_canister.sh` script as the preferred method.\n  - Clarifies that the deployment process should confirm the backend canister is not in a stopped state after deployment.",
+      "files": [
+        "frontend/DEPLOYMENT_CHECKLIST.md"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-improve-the-frontend-startup-error-experience-to-guide-operators-when-the-backend-canister-is-stopped-update-the-startuperrorscreen-ui-to-display-an-explicit-english-troubleshooting-hint-when-the-health-check-indicates-the-backend-canister-is-stopped-the-hint-must-include-the-backend-canister-id-already-shown-in-diagnostics-the-exact-command-s-or-reference-to-the-repo-script-to-start-restart-the-backend-canister-do-not-require-authentication-changes-this-is-informational-guidance-only",
+      "featureTitle": "Improve the frontend startup error experience to guide operators when the backend canister is stopped.\n\n- Update the StartupErrorScreen UI to display an explicit, English troubleshooting hint when the health check indicates the backend canister is stopped.\n- The hint must include:\n  - The backend canister ID already shown in diagnostics.\n  - The exact command(s) or reference to the repo script to start/restart the backend canister.\n- Do not require authentication changes; this is informational guidance only.",
+      "files": [
+        "frontend/src/components/StartupErrorScreen.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

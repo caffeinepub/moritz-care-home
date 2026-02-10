@@ -1,6 +1,62 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Regenerate backend authorization modules to stop canister crash (frontend-only plan)",
-  "requirements": []
+  "title": "Canister restart operator script, deployment runbook updates, and improved stopped-canister guidance",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Add an operator script to start/restart the backend canister on IC and invoke it automatically after production redeploys.",
+      "acceptanceCriteria": [
+        "A new script `frontend/scripts/restart_backend_canister.sh` exists and can be executed on a machine with dfx installed.",
+        "Running the script when the backend canister is stopped results in the canister being started (verified by `dfx canister --network ic status backend`).",
+        "Running the script in restart mode results in a stop+start cycle for the backend canister (verified by status output).",
+        "`frontend/scripts/redeploy_production.sh` triggers the backend start/restart step after deployment so that a stopped canister is started without manual intervention.",
+        "All script output is in English and failures return a non-zero exit code."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/scripts/restart_backend_canister.sh",
+          "operation": "create",
+          "description": "Create an operator script that checks `dfx canister --network ic status backend`, starts the canister if stopped, and supports a \"restart\" mode to stop+start. Ensure clear English console output, robust error handling, and non-zero exit codes on failure."
+        },
+        {
+          "path": "frontend/scripts/redeploy_production.sh",
+          "operation": "modify",
+          "description": "After `dfx deploy --network ic` completes successfully, invoke `frontend/scripts/restart_backend_canister.sh` (default start-if-stopped behavior) so that a stopped backend canister is brought back online as part of the standard redeploy flow. Ensure failures in the restart/start step are logged in English and cause a non-zero exit."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Update the production deployment checklist with explicit backend canister status verification and start/restart instructions.",
+      "acceptanceCriteria": [
+        "frontend/DEPLOYMENT_CHECKLIST.md includes step-by-step, English instructions for checking backend canister status and starting/restarting it.",
+        "The checklist references `frontend/scripts/restart_backend_canister.sh` and indicates it as the recommended approach.",
+        "Checklist text explicitly includes the backend status command and what to do if the canister is stopped."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/DEPLOYMENT_CHECKLIST.md",
+          "operation": "modify",
+          "description": "Add a dedicated subsection documenting how to verify backend status using `dfx canister --network ic status backend`, and how to start/restart it (preferably via `frontend/scripts/restart_backend_canister.sh`, and optionally via explicit dfx start/stop commands). Clarify that operators should confirm the backend is not stopped after deployment. Ensure all added text is in English."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Enhance StartupErrorScreen to show operator troubleshooting guidance when the health check indicates the backend canister is stopped.",
+      "acceptanceCriteria": [
+        "When healthCheckResult.message indicates \"Backend canister is stopped\", StartupErrorScreen shows a clear troubleshooting section in English with start/restart guidance.",
+        "The guidance includes the backend canister ID from diagnostics and references the restart script and/or the dfx command to start/restart.",
+        "No changes are made to immutable frontend paths (e.g., useInternetIdentity/useActor/main.tsx/ui components)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/StartupErrorScreen.tsx",
+          "operation": "modify",
+          "description": "Update the UI to conditionally render an explicit English troubleshooting section when `healthCheckResult.message` is exactly/clearly indicating \"Backend canister is stopped\". The guidance must include the backend canister ID from `backendDiagnostics.canisterId` and include the exact operator commands and/or preferred repo script reference (e.g., `./frontend/scripts/restart_backend_canister.sh` and `dfx canister --network ic start backend`, with restart guidance). Do not modify any files under `frontend/src/components/ui` and do not touch authentication-related hooks or app entry files."
+        }
+      ]
+    }
+  ]
 }

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, RefreshCw, LogOut, Info, Server, Network, Activity, Loader2 } from 'lucide-react';
+import { AlertCircle, RefreshCw, LogOut, Info, Server, Network, Activity, Loader2, Terminal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import type { BackendDiagnostics, HealthCheckResult } from '../lib/startupDiagnostics';
 
@@ -29,6 +29,11 @@ export default function StartupErrorScreen({
   healthCheckResult,
   showLogout = true,
 }: StartupErrorScreenProps) {
+  // Check if the error is specifically about a stopped canister
+  const isStoppedCanister = healthCheckResult?.message?.includes('Backend canister is stopped') || 
+                           healthCheckResult?.message?.includes('canister is stopped') ||
+                           error?.message?.includes('canister is stopped');
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 via-orange-50 to-red-50 px-4">
       <Card className="w-full max-w-2xl">
@@ -49,6 +54,40 @@ export default function StartupErrorScreen({
                 <div className="flex-1">
                   <h3 className="font-semibold text-red-900">Error Details</h3>
                   <p className="mt-1 text-sm text-red-700">{error.message}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stopped Canister Troubleshooting */}
+          {isStoppedCanister && (
+            <div className="rounded-lg bg-orange-50 border border-orange-200 p-4">
+              <div className="flex items-start gap-3">
+                <Terminal className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-900">Backend Canister is Stopped</h3>
+                  <p className="mt-2 text-sm text-orange-800">
+                    The backend canister needs to be started by an operator with controller permissions.
+                  </p>
+                  
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-medium text-orange-900">Operator Instructions:</p>
+                    
+                    <div className="rounded bg-orange-100 p-3 font-mono text-xs text-orange-900">
+                      <p className="mb-2"># Backend Canister ID:</p>
+                      <p className="mb-3 font-semibold">{backendDiagnostics.canisterId}</p>
+                      
+                      <p className="mb-2"># Option 1: Use the restart script (recommended)</p>
+                      <p className="mb-3">./frontend/scripts/restart_backend_canister.sh</p>
+                      
+                      <p className="mb-2"># Option 2: Manual dfx command</p>
+                      <p>dfx canister --network ic start backend</p>
+                    </div>
+                    
+                    <p className="text-xs text-orange-700 mt-2">
+                      After starting the canister, refresh this page to reconnect.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

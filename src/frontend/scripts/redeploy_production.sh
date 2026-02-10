@@ -152,6 +152,37 @@ fi
 
 log "Canister IDs successfully written to: ${CANISTER_IDS_FILE}"
 
+# Step 4: Start/restart backend canister
+log ""
+log "Step 4: Starting backend canister if stopped..."
+
+# Check if restart script exists
+RESTART_SCRIPT="frontend/scripts/restart_backend_canister.sh"
+if [ -f "${RESTART_SCRIPT}" ]; then
+    log "Executing backend canister restart script..."
+    if bash "${RESTART_SCRIPT}" 2>&1 | tee -a "${LOG_FILE}"; then
+        log "✅ Backend canister start/restart completed successfully"
+    else
+        EXIT_CODE=$?
+        log "⚠️  WARNING: Backend canister start/restart failed (exit code: ${EXIT_CODE})"
+        log "The deployment completed, but the backend canister may be stopped."
+        log "You may need to manually start it with:"
+        log "  dfx canister --network ic start backend"
+        log "Or run the restart script manually:"
+        log "  ./frontend/scripts/restart_backend_canister.sh"
+    fi
+else
+    log "⚠️  WARNING: Restart script not found at ${RESTART_SCRIPT}"
+    log "Attempting to start backend canister directly..."
+    if dfx canister --network ic start backend 2>&1 | tee -a "${LOG_FILE}"; then
+        log "✅ Backend canister started successfully"
+    else
+        log "⚠️  WARNING: Could not start backend canister"
+        log "You may need to start it manually with:"
+        log "  dfx canister --network ic start backend"
+    fi
+fi
+
 # Success summary
 log ""
 log "=========================================="
@@ -177,6 +208,7 @@ log "1. Review the canister IDs in: ${CANISTER_IDS_FILE}"
 log "2. Run post-deployment smoke tests (see frontend/DEPLOYMENT_CHECKLIST.md)"
 log "3. Verify diagnostics indicator shows: v${BUILD_VERSION}-${GIT_COMMIT:0:7}"
 log "4. Verify backend canister ID matches: ${BACKEND_ID}"
+log "5. Verify backend canister is running with: dfx canister --network ic status backend"
 log ""
 
 exit 0
