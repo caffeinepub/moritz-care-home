@@ -1,23 +1,26 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Investigating and fixing backend connection/startup failures caused by missing authorization modules; rebuilding authorization folder so the backend can run.",
-  "architectural_notes": [],
+  "summary": "New project",
+  "architectural_notes": [
+    "Backend authorization is implemented via Motoko modules backend/authorization/access-control.mo and backend/authorization/MixinAuthorization.mo; main.mo depends on them and they must define required functions for canister initialization.",
+    "Authorization model should use role-based access control with roles: admin, editor, viewer."
+  ],
   "known_issues": [
-    "Backend depends on missing/empty authorization modules (backend/authorization/access-control.mo and backend/authorization/MixinAuthorization.mo), causing permission checks/init to fail and canister to be unreachable."
+    "Backend canister stops/traps on startup because authorization modules (access-control.mo and MixinAuthorization.mo) are empty/missing required functions; backend configuration/health check fails."
   ],
   "isFixRequest": true,
   "existing_features": [],
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Recreate/restore missing backend authorization modules (access-control.mo, MixinAuthorization.mo) to resolve canister startup/connectivity issues",
+      "summary": "Regenerate backend authorization modules (access-control.mo and MixinAuthorization.mo) implementing admin/editor/viewer role-based authorization so the canister compiles and starts",
       "reqIds": [],
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Recreate the missing Motoko authorization module at `backend/authorization/access-control.mo` so that `backend/main.mo` can compile and the canister can start. The module must provide a non-trapping `initState()` function and the permission-checking functions used by `backend/main.mo` (at minimum: `hasPermission(state, caller, role)` and `isAdmin(state, caller)`), supporting the role tags referenced in `backend/main.mo` (`#admin` and `#user`).",
+      "summary": "Create valid, non-empty Motoko implementations for the missing authorization modules at `backend/authorization/access-control.mo` and `backend/authorization/MixinAuthorization.mo` so the backend canister compiles and no longer traps on initialization.",
       "reqIds": [
         "REQ-1"
       ],
@@ -25,14 +28,22 @@
     },
     {
       "id": "AR-3",
-      "summary": "Recreate the missing Motoko authorization mixin at `backend/authorization/MixinAuthorization.mo` so that `backend/main.mo` can compile and include it (`include MixinAuthorization(accessControlState);`). The mixin must accept the access control state created by `AccessControl.initState()` and must not trap during actor initialization. Any public/shared/query methods exported by the mixin must be safe to call and must not require unavailable dependencies.",
+      "summary": "Implement role-based authorization using the confirmed role structure: admin, editor, viewer. Ensure the authorization API matches how `backend/main.mo` calls it (e.g., `AccessControl.initState()`, `AccessControl.hasPermission(state, caller, #admin)`, `AccessControl.hasPermission(state, caller, #user)`, and `AccessControl.isAdmin(state, caller)`), and ensure `include MixinAuthorization(accessControlState);` composes correctly in `backend/main.mo`.",
       "reqIds": [
         "REQ-2"
       ],
       "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Ensure the authorization state is safely initialized and persistent across upgrades where applicable, following the project’s single-actor architecture (all Motoko logic in `backend/main.mo`) and without introducing additional backend services.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
     }
   ],
-  "projectName": "Restore missing backend authorization modules to fix canister startup/connectivity",
+  "projectName": "Regenerate backend authorization modules to stop canister crash",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

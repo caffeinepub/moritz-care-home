@@ -1,73 +1,81 @@
 {
   "kind": "build_request",
-  "title": "Restore missing backend authorization modules to fix canister startup/connectivity",
+  "title": "Regenerate backend authorization modules to stop canister crash",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Recreate the missing Motoko authorization module at `backend/authorization/access-control.mo` so that `backend/main.mo` can compile and the canister can start. The module must provide a non-trapping `initState()` function and the permission-checking functions used by `backend/main.mo` (at minimum: `hasPermission(state, caller, role)` and `isAdmin(state, caller)`), supporting the role tags referenced in `backend/main.mo` (`#admin` and `#user`).",
+      "text": "Create valid, non-empty Motoko implementations for the missing authorization modules at `backend/authorization/access-control.mo` and `backend/authorization/MixinAuthorization.mo` so the backend canister compiles and no longer traps on initialization.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-5",
-          "msg-6"
+          "msg-1",
+          "msg-2",
+          "msg-3"
         ],
         "quotes": [
-          "The `authorization` modules your backend depends on are missing.",
-          "backend/authorization/access-control.mo",
-          "yes please"
+          "Backend Canister Stopped",
+          "The missing modules are:\n- backend/authorization/access-control.mo\n- backend/authorization/MixinAuthorization.mo",
+          "regenerate the authorization modules"
         ]
       },
       "acceptanceCriteria": [
-        "`dfx build` succeeds with the recreated `backend/authorization/access-control.mo` present.",
-        "Canister initialization no longer traps due to `AccessControl.initState()` or missing symbols.",
-        "All existing calls in `backend/main.mo` to `AccessControl.initState`, `AccessControl.hasPermission`, and `AccessControl.isAdmin` typecheck and run without trapping."
+        "`dfx build` (or equivalent Caffeine build) succeeds with no missing-module or missing-function errors.",
+        "Backend canister installs and remains running (no immediate trap on initialization).",
+        "The frontend startup health check no longer reports 'Backend canister is stopped' when the backend is deployed correctly."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Recreate the missing Motoko authorization mixin at `backend/authorization/MixinAuthorization.mo` so that `backend/main.mo` can compile and include it (`include MixinAuthorization(accessControlState);`). The mixin must accept the access control state created by `AccessControl.initState()` and must not trap during actor initialization. Any public/shared/query methods exported by the mixin must be safe to call and must not require unavailable dependencies.",
+      "text": "Implement role-based authorization using the confirmed role structure: admin, editor, viewer. Ensure the authorization API matches how `backend/main.mo` calls it (e.g., `AccessControl.initState()`, `AccessControl.hasPermission(state, caller, #admin)`, `AccessControl.hasPermission(state, caller, #user)`, and `AccessControl.isAdmin(state, caller)`), and ensure `include MixinAuthorization(accessControlState);` composes correctly in `backend/main.mo`.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-5",
-          "msg-6"
+          "msg-4",
+          "msg-5"
         ],
         "quotes": [
-          "backend/authorization/MixinAuthorization.mo",
-          "Just tell me if I should fix the authorization folder now.",
-          "yes please"
+          "Should the regenerated authorization modules use the same role structure we discussed earlier (admin, editor, viewer)",
+          "yes"
         ]
       },
       "acceptanceCriteria": [
-        "`dfx build` succeeds with the recreated `backend/authorization/MixinAuthorization.mo` present.",
-        "The `include MixinAuthorization(accessControlState);` line in `backend/main.mo` compiles unchanged.",
-        "Canister reaches Running state after deployment (no init-time trap attributable to the authorization mixin)."
+        "`backend/main.mo` compiles without changing its existing authorization call sites (`initState`, `hasPermission`, `isAdmin`, and `MixinAuthorization(...)`).",
+        "Authorization checks in `backend/main.mo` continue to enforce admin-only operations (e.g., resident creation/edit/discharge/archive/delete) and user-level read operations as currently coded.",
+        "Role identifiers for admin/editor/viewer exist and are usable for gating additional operations, even if `backend/main.mo` currently only gates by `#admin` and `#user`."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Ensure the authorization state is safely initialized and persistent across upgrades where applicable, following the project’s single-actor architecture (all Motoko logic in `backend/main.mo`) and without introducing additional backend services.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Until those two files contain valid role‑based authorization code, the canister will stop every time."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Authorization initialization is idempotent (does not trap if called more than once during typical lifecycle/deployment flows).",
+        "If stable storage is used for authorization state, upgrades do not lose role assignments (or a clear default initialization behavior is provided that does not crash).",
+        "No additional canisters/services are introduced; changes remain compatible with the existing single-actor backend structure."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single-actor architecture with all business logic in `backend/main.mo`.",
-    "Do not modify files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, or `frontend/src/components/ui`.",
-    "Use English for any user-facing text."
+    "Backend must remain a single-actor Motoko canister; do not introduce additional backend services.",
+    "Do not edit frontend immutable paths: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, and anything under `frontend/src/components/ui`.",
+    "Use English for any user-facing text (e.g., trap messages)."
   ],
   "nonGoals": [
-    "Implementing new product features unrelated to authorization restoration.",
-    "Refactoring existing resident/physician/pharmacy/insurance business logic in `backend/main.mo` beyond what is required to restore compilation and startup.",
-    "Adding third-party authentication providers (only Internet Identity is supported)."
+    "Redesigning the frontend UI/UX or adding new frontend features unrelated to fixing the backend canister crash.",
+    "Adding third-party authentication providers (only Internet Identity is supported).",
+    "Adding external databases or non-Motoko backend components."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

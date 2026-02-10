@@ -1,6 +1,6 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Frontend-only plan: no changes required for backend authorization module restoration",
+  "title": "Regenerate backend authorization modules to stop canister crash (frontend-only plan)",
   "requirements": []
 }

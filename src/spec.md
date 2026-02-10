@@ -1,10 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Restore missing backend authorization modules so the Motoko canister compiles and starts successfully.
+**Goal:** Restore backend canister stability by regenerating missing authorization modules with valid role-based access control so the canister compiles, installs, and does not trap on initialization.
 
 **Planned changes:**
-- Recreate `backend/authorization/access-control.mo` with a non-trapping `initState()` and the permission-checking functions used by `backend/main.mo` (including `hasPermission(state, caller, role)` and `isAdmin(state, caller)`), supporting the `#admin` and `#user` role tags referenced in `backend/main.mo`.
-- Recreate `backend/authorization/MixinAuthorization.mo` so `backend/main.mo` can compile with `include MixinAuthorization(accessControlState);`, ensuring the mixin accepts the access control state from `AccessControl.initState()` and does not trap during actor initialization.
+- Implement non-empty Motoko modules at `backend/authorization/access-control.mo` and `backend/authorization/MixinAuthorization.mo` to resolve missing-module issues and prevent initialization traps.
+- Add role-based authorization with roles admin/editor/viewer, exposing an API compatible with existing `backend/main.mo` call sites (`initState`, `hasPermission`, `isAdmin`) and ensuring `include MixinAuthorization(accessControlState);` composes correctly.
+- Ensure authorization state initialization is safe/idempotent and persists across upgrades where applicable, without introducing additional backend canisters/services.
 
-**User-visible outcome:** The canister deploys and reaches Running state again (no startup/initialization trap related to missing authorization modules), with existing authorization calls continuing to work.
+**User-visible outcome:** When deployed correctly, the backend canister builds and stays running, and the frontend no longer reports that the backend canister is stopped due to authorization module failures.
