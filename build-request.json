@@ -1,0 +1,94 @@
+{
+  "kind": "build_request",
+  "title": "Fix live app stuck on 'Loading profile' screen",
+  "projectName": "Moritz Care Home",
+  "priority": "high",
+  "requirements": [
+    {
+      "id": "REQ-14",
+      "text": "In `frontend/src/App.tsx`, investigate and fix the logic that causes the app to hang indefinitely on the 'Loading profile' screen after the 'Connecting to backend' step. After the actor/backend connection is confirmed, the app must proceed to either the Dashboard, ProfileSetup, or an error screen within a bounded time. Add a timeout guard (e.g., 10–15 seconds) around the profile-loading phase so that if `getUserProfile` or equivalent query does not resolve, the app transitions to an actionable error or retry state rather than hanging forever.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "live app is stucked on Loading profile"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The app never hangs indefinitely on 'Loading profile' — it either loads successfully or shows an error/retry UI within a bounded timeout.",
+        "If the profile query times out or errors, the user sees a clear message with a retry option.",
+        "If the profile query succeeds, the app navigates to Dashboard or ProfileSetup as appropriate.",
+        "The timeout value is sourced from `frontend/src/lib/startupTimings.ts` or a new constant defined there."
+      ]
+    },
+    {
+      "id": "REQ-15",
+      "text": "In `frontend/src/hooks/useQueries.ts`, ensure the `useGetCallerUserProfile` (or equivalent profile-fetching query) is configured with an explicit `staleTime`, `retry` limit (e.g., max 2 retries), and a `queryFn` timeout so that a slow or unresponsive backend call does not cause indefinite loading. The query must reject/fail gracefully if the backend does not respond within a reasonable window (e.g., 10 seconds).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "live app is stucked on Loading profile"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The profile query has an explicit retry limit (≤ 2 retries) so it does not loop indefinitely.",
+        "The profile query has a timeout so it fails fast if the backend is unresponsive.",
+        "A failed profile query surfaces an error state in App.tsx rather than keeping the loading spinner active."
+      ]
+    },
+    {
+      "id": "REQ-16",
+      "text": "In `backend/main.mo`, ensure the `getUserProfile` (or equivalent profile retrieval) function does not block indefinitely or throw an unhandled error for the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`. If the principal is not yet registered, the function must return a typed result (e.g., `#err(#NotFound)`) rather than trapping or hanging, so the frontend can handle the 'no profile yet' case and route to ProfileSetup.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "live app is stucked on Loading profile"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Calling `getUserProfile` for an unregistered principal returns a typed error result (e.g., `#err(#NotFound)`) without trapping.",
+        "The hardcoded admin principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` does not cause the function to hang or throw.",
+        "The frontend correctly interprets a `#NotFound` profile response as 'navigate to ProfileSetup'."
+      ]
+    },
+    {
+      "id": "REQ-17",
+      "text": "In `frontend/src/components/ProfileSetup.tsx`, ensure that if the user already has a profile on the backend (i.e., the profile query returned data), the ProfileSetup component is not rendered and the user is redirected to the Dashboard. Add a guard in `App.tsx` so the routing logic does not incorrectly send a user with an existing profile to ProfileSetup, which could cause a circular loading loop.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "live app is stucked on Loading profile"
+        ]
+      },
+      "acceptanceCriteria": [
+        "A user with an existing profile is never shown the ProfileSetup screen.",
+        "After profile data resolves successfully, the app routes directly to Dashboard.",
+        "There is no circular redirect between 'Loading profile' → ProfileSetup → 'Loading profile'."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not modify files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or frontend/src/components/ui.",
+    "All backend changes must remain within the single-actor pattern in backend/main.mo."
+  ],
+  "nonGoals": [
+    "Redesigning the full authentication or startup flow beyond fixing the profile-loading hang.",
+    "Changing the Internet Identity integration or AuthClient logic.",
+    "Adding new backend data models or endpoints unrelated to profile loading."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

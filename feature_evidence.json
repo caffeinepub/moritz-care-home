@@ -1,0 +1,66 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-in-frontend-src-app-tsx-investigate-and-fix-the-logic-that-causes-the-app-to-hang-indefinitely-on-the-loading-profile-screen-after-the-connecting-to-backend-step-after-the-actor-backend-connection-is-confirmed-the-app-must-proceed-to-either-the-dashboard-profilesetup-or-an-error-screen-within-a-bounded-time-add-a-timeout-guard-e-g-10-15-seconds-around-the-profile-loading-phase-so-that-if-getuserprofile-or-equivalent-query-does-not-resolve-the-app-transitions-to-an-actionable-error-or-retry-state-rather-than-hanging-forever",
+      "featureTitle": "In `frontend/src/App.tsx`, investigate and fix the logic that causes the app to hang indefinitely on the 'Loading profile' screen after the 'Connecting to backend' step. After the actor/backend connection is confirmed, the app must proceed to either the Dashboard, ProfileSetup, or an error screen within a bounded time. Add a timeout guard (e.g., 10–15 seconds) around the profile-loading phase so that if `getUserProfile` or equivalent query does not resolve, the app transitions to an actionable error or retry state rather than hanging forever.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/lib/startupTimings.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-14"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-frontend-src-hooks-usequeries-ts-ensure-the-usegetcalleruserprofile-or-equivalent-profile-fetching-query-is-configured-with-an-explicit-staletime-retry-limit-e-g-max-2-retries-and-a-queryfn-timeout-so-that-a-slow-or-unresponsive-backend-call-does-not-cause-indefinite-loading-the-query-must-reject-fail-gracefully-if-the-backend-does-not-respond-within-a-reasonable-window-e-g-10-seconds",
+      "featureTitle": "In `frontend/src/hooks/useQueries.ts`, ensure the `useGetCallerUserProfile` (or equivalent profile-fetching query) is configured with an explicit `staleTime`, `retry` limit (e.g., max 2 retries), and a `queryFn` timeout so that a slow or unresponsive backend call does not cause indefinite loading. The query must reject/fail gracefully if the backend does not respond within a reasonable window (e.g., 10 seconds).",
+      "files": [
+        "frontend/src/hooks/useQueries.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-15"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-frontend-src-components-profilesetup-tsx-ensure-that-if-the-user-already-has-a-profile-on-the-backend-i-e-the-profile-query-returned-data-the-profilesetup-component-is-not-rendered-and-the-user-is-redirected-to-the-dashboard-add-a-guard-in-app-tsx-so-the-routing-logic-does-not-incorrectly-send-a-user-with-an-existing-profile-to-profilesetup-which-could-cause-a-circular-loading-loop",
+      "featureTitle": "In `frontend/src/components/ProfileSetup.tsx`, ensure that if the user already has a profile on the backend (i.e., the profile query returned data), the ProfileSetup component is not rendered and the user is redirected to the Dashboard. Add a guard in `App.tsx` so the routing logic does not incorrectly send a user with an existing profile to ProfileSetup, which could cause a circular loading loop.",
+      "files": [
+        "frontend/src/App.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "blob-storage@4.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-17"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

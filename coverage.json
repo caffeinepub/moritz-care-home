@@ -1,0 +1,91 @@
+{
+  "kind": "coverage_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-28T02:55:21.322Z",
+  "sources": {
+    "buildRequest": true,
+    "implementationPlan": true
+  },
+  "requirements": {
+    "total": 4,
+    "implemented": 3,
+    "items": [
+      {
+        "id": "REQ-14",
+        "summary": "In `frontend/src/App.tsx`, investigate and fix the logic that causes the app to hang indefinitely on the 'Loading profile' screen after the 'Connecting to backend' step. After the actor/backend connection is confirmed, the app must proceed to either the Dashboard, ProfileSetup, or an error screen within a bounded time. Add a timeout guard (e.g., 10–15 seconds) around the profile-loading phase so that if `getUserProfile` or equivalent query does not resolve, the app transitions to an actionable error or retry state rather than hanging forever.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/lib/startupTimings.ts",
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/lib/startupTimings.ts",
+          "frontend/src/App.tsx"
+        ]
+      },
+      {
+        "id": "REQ-15",
+        "summary": "In `frontend/src/hooks/useQueries.ts`, ensure the `useGetCallerUserProfile` (or equivalent profile-fetching query) is configured with an explicit `staleTime`, `retry` limit (e.g., max 2 retries), and a `queryFn` timeout so that a slow or unresponsive backend call does not cause indefinite loading. The query must reject/fail gracefully if the backend does not respond within a reasonable window (e.g., 10 seconds).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-16",
+        "summary": "In `backend/main.mo`, ensure the `getUserProfile` (or equivalent profile retrieval) function does not block indefinitely or throw an unhandled error for the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`. If the principal is not yet registered, the function must return a typed result (e.g., `#err(#NotFound)`) rather than trapping or hanging, so the frontend can handle the 'no profile yet' case and route to ProfileSetup.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-17",
+        "summary": "In `frontend/src/components/ProfileSetup.tsx`, ensure that if the user already has a profile on the backend (i.e., the profile query returned data), the ProfileSetup component is not rendered and the user is redirected to the Dashboard. Add a guard in `App.tsx` so the routing logic does not incorrectly send a user with an existing profile to ProfileSetup, which could cause a circular loading loop.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/App.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/App.tsx"
+        ]
+      }
+    ]
+  },
+  "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "build-request.json",
+    "feature_evidence.json",
+    "frontend-file-summaries.txt",
+    "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/AddAdlRecordDialog.tsx",
+    "frontend/src/components/AddDailyVitalsDialog.tsx",
+    "frontend/src/components/AddMarRecordDialog.tsx",
+    "frontend/src/components/AddMedicationDialog.tsx",
+    "frontend/src/components/AddResidentDialog.tsx",
+    "frontend/src/components/AddWeightEntryDialog.tsx",
+    "frontend/src/components/EditMedicationDialog.tsx",
+    "frontend/src/components/EditResidentDialog.tsx",
+    "frontend/src/components/ProfileSetup.tsx",
+    "frontend/src/components/StartupErrorScreen.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/hooks/useResilientActor.ts",
+    "frontend/src/lib/dateUtils.ts",
+    "frontend/src/lib/residentEnumMapping.ts",
+    "frontend/src/lib/startupTimings.ts",
+    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/pages/ResidentProfile.tsx",
+    "project_state.json",
+    "scratch/component-selection.json",
+    "spec.md",
+    "spec_vs_diff_report.json"
+  ]
+}

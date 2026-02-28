@@ -1,0 +1,61 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Fix live app stuck on 'Loading profile' screen",
+  "requirements": [
+    {
+      "id": "REQ-14",
+      "summary": "Add timeout guard and error handling to App.tsx profile-loading logic to prevent indefinite hang",
+      "acceptanceCriteria": [
+        "The app never hangs indefinitely on 'Loading profile' — it either loads successfully or shows an error/retry UI within a bounded timeout.",
+        "If the profile query times out or errors, the user sees a clear message with a retry option.",
+        "If the profile query succeeds, the app navigates to Dashboard or ProfileSetup as appropriate.",
+        "The timeout value is sourced from `frontend/src/lib/startupTimings.ts` or a new constant defined there."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/lib/startupTimings.ts",
+          "operation": "modify",
+          "description": "Add a new constant PROFILE_QUERY_TIMEOUT (e.g., 10000-15000ms) to define the maximum wait time for profile loading. This constant will be used in App.tsx to enforce a bounded timeout on the profile query phase."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Implement a timeout guard around the profile-loading phase using the PROFILE_QUERY_TIMEOUT constant from startupTimings.ts. After the actor/backend connection is confirmed, start a watchdog timer that transitions the app to the StartupErrorScreen with a 'profile timeout' error if the profile query does not resolve within the timeout window. Ensure that when the profile query succeeds, the app routes to Dashboard (if profile exists) or ProfileSetup (if profile is null) without delay. Add logic to display a clear error message with a retry option if the timeout is triggered. Verify that the routing logic does not send a user with an existing profile to ProfileSetup (see REQ-17)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-15",
+      "summary": "Configure profile query in useQueries.ts with explicit retry limit, staleTime, and timeout to prevent indefinite loading",
+      "acceptanceCriteria": [
+        "The profile query has an explicit retry limit (≤ 2 retries) so it does not loop indefinitely.",
+        "The profile query has a timeout so it fails fast if the backend is unresponsive.",
+        "A failed profile query surfaces an error state in App.tsx rather than keeping the loading spinner active."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Modify the useGetCallerUserProfile query hook to include explicit staleTime (e.g., 30000ms), retry configuration with a maximum of 2 retries, and a timeout within the queryFn so that slow or unresponsive backend calls fail gracefully. Ensure the query rejects/fails if the backend does not respond within a reasonable window (e.g., 10 seconds from startupTimings.ts). The failed query state must be surfaced to App.tsx so it can transition to an error/retry screen instead of hanging indefinitely on 'Loading profile'."
+        }
+      ]
+    },
+    {
+      "id": "REQ-17",
+      "summary": "Add guard in App.tsx routing logic to prevent users with existing profiles from being sent to ProfileSetup",
+      "acceptanceCriteria": [
+        "A user with an existing profile is never shown the ProfileSetup screen.",
+        "After profile data resolves successfully, the app routes directly to Dashboard.",
+        "There is no circular redirect between 'Loading profile' → ProfileSetup → 'Loading profile'."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Add a guard in the routing logic that ensures if the profile query returns a valid UserProfileWithRole object (not null), the user is routed directly to Dashboard and never to ProfileSetup. Prevent circular redirects by checking the profile state before deciding the destination route. Only navigate to ProfileSetup when the profile query succeeds but returns null (indicating no profile exists yet). Ensure that the routing logic does not trigger re-renders or re-queries that could cause the 'Loading profile' state to reappear after a profile is successfully loaded."
+        }
+      ]
+    }
+  ]
+}

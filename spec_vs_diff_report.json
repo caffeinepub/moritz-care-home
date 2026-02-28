@@ -1,0 +1,65 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-28T02:55:21.318Z",
+  "summary": "The diff implements most of the required fixes for the 'Loading profile' hang. REQ-14 (App.tsx timeout guard), REQ-15 (useQueries.ts explicit staleTime/retry/timeout), and REQ-16 (backend getUserProfile typed error) appear to be addressed. REQ-17 (ProfileSetup guard against re-showing for users with existing profiles) is partially addressed via App.tsx routing logic but the ProfileSetup component itself lacks an internal redirect guard. One notable concern: the backend main.mo diff is truncated so full verification of REQ-16 is limited.",
+  "missing_requirements": [
+    {
+      "id": "REQ-17",
+      "requirement": "In frontend/src/components/ProfileSetup.tsx, ensure that if the user already has a profile on the backend, the ProfileSetup component is not rendered and the user is redirected to the Dashboard. Add a guard in App.tsx so the routing logic does not incorrectly send a user with an existing profile to ProfileSetup.",
+      "reason": "The ProfileSetup.tsx diff shows no internal guard or redirect logic that checks whether the user already has a profile before rendering. The component simply renders the form unconditionally when mounted. While App.tsx may have routing guards mentioned in file-summaries.txt, the explicit guard inside ProfileSetup.tsx as required is absent from the component file.",
+      "evidence": [
+        "frontend/src/components/ProfileSetup.tsx"
+      ]
+    }
+  ],
+  "hallucinated_features": [
+    {
+      "description": "A migration module (backend/migration.mo) was added that transforms OldUserProfile to NewUserProfileWithRole by adding a default 'user' role field.",
+      "reason": "The BuildRequest does not mention adding a migration module or changing profile data models. The non-goals explicitly state adding new backend data models unrelated to profile loading should be avoided. The migration.mo file itself was not requested.",
+      "evidence": [
+        "backend/migration.mo"
+      ]
+    },
+    {
+      "description": "A useResilientActor hook was added as a new actor creation abstraction with timeout and admin initialization logic.",
+      "reason": "The BuildRequest does not mention creating a useResilientActor hook. The constraints state not to modify useActor.ts, and this appears to be a parallel alternative actor hook not requested in any requirement.",
+      "evidence": [
+        "frontend/src/hooks/useResilientActor.ts"
+      ]
+    },
+    {
+      "description": "UserProfileWithRole type with a role field is used in the profile query, replacing or extending the original UserProfile type.",
+      "reason": "The BuildRequest does not request adding a role field to the user profile type. The requirements only ask for fixing the loading hang and ensuring getUserProfile returns typed errors. Introducing a role field is an unrequested data model change.",
+      "evidence": [
+        "frontend/src/hooks/useQueries.ts",
+        "backend/main.mo"
+      ]
+    }
+  ],
+  "confidence": 0.72,
+  "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/App.tsx",
+    "frontend/src/components/AddAdlRecordDialog.tsx",
+    "frontend/src/components/AddDailyVitalsDialog.tsx",
+    "frontend/src/components/AddMarRecordDialog.tsx",
+    "frontend/src/components/AddMedicationDialog.tsx",
+    "frontend/src/components/AddResidentDialog.tsx",
+    "frontend/src/components/AddWeightEntryDialog.tsx",
+    "frontend/src/components/EditMedicationDialog.tsx",
+    "frontend/src/components/EditResidentDialog.tsx",
+    "frontend/src/components/ProfileSetup.tsx",
+    "frontend/src/components/StartupErrorScreen.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/hooks/useResilientActor.ts",
+    "frontend/src/lib/dateUtils.ts",
+    "frontend/src/lib/residentEnumMapping.ts",
+    "frontend/src/lib/startupTimings.ts",
+    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/pages/ResidentProfile.tsx",
+    "project_state.json"
+  ]
+}

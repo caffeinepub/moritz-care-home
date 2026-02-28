@@ -1,0 +1,176 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 13,
+  "summary": "New project",
+  "architectural_notes": [],
+  "known_issues": [
+    "Profile Setup can throw `baselineAccess ... data is undefined` when ensureRegisteredUser/baseline registration fails (e.g., missing caffeineUserToken/caffeineAdminToken URL params).",
+    "Repeated build failures when attempting to add principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` as admin; authorization/AccessControl file location not confirmed.",
+    "Backend health check fails with 'Unauthorized: Only users can perform health check'; backend configuration (Host, Canister ID) is missing/unknown.",
+    "Live app takes a long time to load on 'Connecting to backend' screen — backend connection/initialization is slow.",
+    "Canister ID still shows 'Not configured' on the 'Connecting to backend' screen in production (Version 133).",
+    "Live app gets stuck on 'Loading profile' screen after the 'Connecting to backend' step."
+  ],
+  "isFixRequest": true,
+  "existing_features": [
+    {
+      "id": "feature-ensure-the-backend-canister-id-and-host-environment-variables-are-correctly-injected-into-the-frontend-build-so-that-startupdiagnostics-ts-can-resolve-them-at-runtime-the-diagnosticsindicator-and-startuperrorscreen-must-display-a-valid-canister-id-and-host-instead-of-unknown-configuration-missing",
+      "title": "Ensure the backend canister ID and host environment variables are correctly injected into the frontend build so that `startupDiagnostics.ts` can resolve them at runtime. The DiagnosticsIndicator and StartupErrorScreen must display a valid Canister ID and Host instead of 'Unknown (configuration missing)'.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-reduce-the-startup-connection-timeout-constants-in-frontend-src-lib-startuptimings-ts-to-lower-values-appropriate-for-a-live-ic-deployment-so-the-app-no-longer-spends-excessive-time-waiting-on-the-connecting-to-backend-screen-actor-creation-health-check-and-admin-init-timeouts-should-be-tightened-to-avoid-unnecessary-waiting-when-the-backend-is-reachable",
+      "title": "Reduce the startup connection timeout constants in `frontend/src/lib/startupTimings.ts` to lower values appropriate for a live IC deployment, so the app no longer spends excessive time waiting on the 'Connecting to backend' screen. Actor creation, health check, and admin init timeouts should be tightened to avoid unnecessary waiting when the backend is reachable.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-app-tsx-and-frontend-src-hooks-useresilientactor-ts-ensure-the-startup-flow-does-not-perform-redundant-sequential-async-calls-e-g-separate-actor-creation-admin-init-health-check-each-with-full-timeouts-stacked-where-possible-parallelise-independent-startup-checks-or-short-circuit-early-once-backend-connectivity-is-confirmed-so-total-perceived-load-time-is-minimised",
+      "title": "In `frontend/src/App.tsx` and `frontend/src/hooks/useResilientActor.ts`, ensure the startup flow does not perform redundant sequential async calls (e.g., separate actor creation + admin init + health check each with full timeouts stacked). Where possible, parallelise independent startup checks or short-circuit early once backend connectivity is confirmed, so total perceived load time is minimised.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-lib-startupdiagnostics-ts-update-the-getbackendenvinfo-function-to-correctly-read-the-injected-canister-id-environment-variable-name-that-matches-what-is-defined-in-the-vite-config-e-g-import-meta-env-vite-canister-id-backend-if-the-variable-name-currently-used-does-not-match-the-one-injected-at-build-time-align-them-so-the-value-is-never-undefined-or-empty-in-production",
+      "title": "In `frontend/src/lib/startupDiagnostics.ts`, update the `getBackendEnvInfo` function to correctly read the injected canister ID environment variable name that matches what is defined in the Vite config (e.g., `import.meta.env.VITE_CANISTER_ID_BACKEND`). If the variable name currently used does not match the one injected at build time, align them so the value is never `undefined` or empty in production.",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-scripts-redeploy-production-sh-and-frontend-scripts-clean-redeploy-production-sh-verify-that-after-dfx-deploy-the-canister-id-is-extracted-from-the-deployment-output-or-from-canister-ids-json-and-written-into-the-frontend-env-file-e-g-as-vite-canister-id-backend-id-before-npm-run-build-is-executed-so-the-canister-id-is-always-baked-into-the-production-bundle",
+      "title": "In `frontend/scripts/redeploy_production.sh` and `frontend/scripts/clean_redeploy_production.sh`, verify that after `dfx deploy` the canister ID is extracted from the deployment output (or from `canister_ids.json`) and written into the frontend `.env` file (e.g., as `VITE_CANISTER_ID_BACKEND=<id>`) before `npm run build` is executed, so the canister ID is always baked into the production bundle.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-app-tsx-investigate-and-fix-the-logic-that-causes-the-app-to-hang-indefinitely-on-the-loading-profile-screen-after-the-connecting-to-backend-step-after-the-actor-backend-connection-is-confirmed-the-app-must-proceed-to-either-the-dashboard-profilesetup-or-an-error-screen-within-a-bounded-time-add-a-timeout-guard-e-g-10-15-seconds-around-the-profile-loading-phase-so-that-if-getuserprofile-or-equivalent-query-does-not-resolve-the-app-transitions-to-an-actionable-error-or-retry-state-rather-than-hanging-forever",
+      "title": "In `frontend/src/App.tsx`, investigate and fix the logic that causes the app to hang indefinitely on the 'Loading profile' screen after the 'Connecting to backend' step. After the actor/backend connection is confirmed, the app must proceed to either the Dashboard, ProfileSetup, or an error screen within a bounded time. Add a timeout guard (e.g., 10–15 seconds) around the profile-loading phase so that if `getUserProfile` or equivalent query does not resolve, the app transitions to an actionable error or retry state rather than hanging forever.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-hooks-usequeries-ts-ensure-the-usegetcalleruserprofile-or-equivalent-profile-fetching-query-is-configured-with-an-explicit-staletime-retry-limit-e-g-max-2-retries-and-a-queryfn-timeout-so-that-a-slow-or-unresponsive-backend-call-does-not-cause-indefinite-loading-the-query-must-reject-fail-gracefully-if-the-backend-does-not-respond-within-a-reasonable-window-e-g-10-seconds",
+      "title": "In `frontend/src/hooks/useQueries.ts`, ensure the `useGetCallerUserProfile` (or equivalent profile-fetching query) is configured with an explicit `staleTime`, `retry` limit (e.g., max 2 retries), and a `queryFn` timeout so that a slow or unresponsive backend call does not cause indefinite loading. The query must reject/fail gracefully if the backend does not respond within a reasonable window (e.g., 10 seconds).",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-frontend-src-components-profilesetup-tsx-ensure-that-if-the-user-already-has-a-profile-on-the-backend-i-e-the-profile-query-returned-data-the-profilesetup-component-is-not-rendered-and-the-user-is-redirected-to-the-dashboard-add-a-guard-in-app-tsx-so-the-routing-logic-does-not-incorrectly-send-a-user-with-an-existing-profile-to-profilesetup-which-could-cause-a-circular-loading-loop",
+      "title": "In `frontend/src/components/ProfileSetup.tsx`, ensure that if the user already has a profile on the backend (i.e., the profile query returned data), the ProfileSetup component is not rendered and the user is redirected to the Dashboard. Add a guard in `App.tsx` so the routing logic does not incorrectly send a user with an existing profile to ProfileSetup, which could cause a circular loading loop.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Add principal ID hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae as an application administrator",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Grant administrator permissions to the Principal ID `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` so that this identity is recognized by backend authorization as an application administrator (i.e., passes all `#admin` permission checks and returns `true` from `isCallerAdmin()`).",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "In the backend main actor, ensure that the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` is always recognized as an administrator. This must be done by hardcoding this principal into the authorization/access-control logic so that any call to `isCallerAdmin()` (or equivalent admin-permission check) returns `true` for this principal, regardless of whether it was registered through URL params or any other mechanism.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Ensure the baseline/profile registration flow in the backend does not fail for the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`. If `ensureRegisteredUser` or baseline registration requires a `caffeineAdminToken` or `caffeineUserToken`, add a bypass or auto-register this principal so that the frontend no longer receives `baselineAccess ... data is undefined` for this identity.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "In the backend main actor (backend/main.mo), make the `healthCheck` function publicly accessible without requiring caller authentication. The health check endpoint must return a successful response for any caller, including anonymous principals, so that the frontend startup diagnostics can confirm backend connectivity without the user being logged in.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "In the backend main actor (backend/main.mo), hardcode the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` as a permanently recognized administrator. Any call to `isCallerAdmin()` or equivalent admin-permission check must return `true` for this principal unconditionally, regardless of registration state or URL token params.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "In the backend main actor (backend/main.mo), add an auto-registration bypass for the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae` in `ensureRegisteredUser` and any baseline registration flow. This principal must be auto-registered (or treated as already registered) without requiring a `caffeineAdminToken` or `caffeineUserToken`, so the frontend never receives `baselineAccess data is undefined` for this identity.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Reduce or eliminate the long loading time when the app displays 'Connecting to backend' — investigate and optimize the backend connection/initialization so the app loads faster.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "In `backend/main.mo`, ensure the `healthCheck` function is a public query (not an update call) accessible without authentication, so the frontend startup diagnostics receive a response as fast as possible without incurring consensus latency. If it is currently an update call or requires authentication, change it to a public query that returns success for any caller including anonymous principals.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "In `frontend/vite.config.ts` (or equivalent Vite configuration), ensure that the backend canister ID environment variable (e.g., `VITE_CANISTER_ID_BACKEND` or `CANISTER_ID_BACKEND`) and the IC host variable are explicitly injected into the Vite `define` or `env` block at build time, so that `frontend/src/lib/startupDiagnostics.ts` can read them at runtime. The values must be sourced from the `.env` file generated by `dfx deploy` (typically `.env` or `canister_ids.json`), not hardcoded.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Fix live app getting stuck on 'Loading profile' screen — investigate and resolve the profile loading hang so the app proceeds past this step.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "In `backend/main.mo`, ensure the `getUserProfile` (or equivalent profile retrieval) function does not block indefinitely or throw an unhandled error for the principal `hrxqg-aty7r-ze5hr-pldpb-ool7h-fy2rn-npy5t-lvtmr-lccbl-bdj53-pae`. If the principal is not yet registered, the function must return a typed result (e.g., `#err(#NotFound)`) rather than trapping or hanging, so the frontend can handle the 'no profile yet' case and route to ProfileSetup.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "status": "pending"
+    }
+  ],
+  "projectName": "Add a specific Principal as application administrator",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}
