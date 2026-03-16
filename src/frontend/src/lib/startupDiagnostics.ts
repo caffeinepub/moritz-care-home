@@ -1,149 +1,190 @@
 /**
- * Startup diagnostics utilities for troubleshooting backend connection issues
+ * Startup diagnostics utilities.
+ * Provides health check and backend target information for the startup flow.
  */
 
-import { createActorWithConfig } from '../config';
+import { createActorWithConfig } from "../config";
+
+export type HealthCheckStatus = "pending" | "passed" | "failed" | "timed-out";
 
 export interface BackendDiagnostics {
   canisterId: string;
-  network: string;
   host: string;
+  environment: string;
 }
 
 export interface HealthCheckResult {
-  success: boolean;
+  status: HealthCheckStatus;
   message: string;
   timestamp?: number;
-  status?: 'pending' | 'passed' | 'failed' | 'timed-out';
+  durationMs?: number;
+  success: boolean;
 }
 
 /**
- * Derives backend target information from the frontend configuration
- * Never includes secrets like admin tokens
- * @returns Backend diagnostics information with explicit fallback labels
+ * Extract backend diagnostics from environment variables.
+ * Reads VITE_CANISTER_ID_BACKEND (injected by the Vite build from frontend/.env)
+ * with fallbacks for other common naming conventions.
  */
 export function getBackendDiagnostics(): BackendDiagnostics {
-  const diagnostics: BackendDiagnostics = {
-    canisterId: 'Unknown (configuration missing)',
-    network: 'Unknown (configuration missing)',
-    host: 'Unknown (configuration missing)',
-  };
+  // Primary: VITE_CANISTER_ID_BACKEND written by deployment scripts to frontend/.env
+  const canisterId =
+    (import.meta.env.VITE_CANISTER_ID_BACKEND as string | undefined) ||
+    (import.meta.env.VITE_BACKEND_CANISTER_ID as string | undefined) ||
+    (import.meta.env.CANISTER_ID_BACKEND as string | undefined) ||
+    (import.meta.env.BACKEND_CANISTER_ID as string | undefined) ||
+    null;
 
-  try {
-    // Try to extract canister ID from environment or config
-    const envJson = (window as any).__ENV__;
-    if (envJson && typeof envJson === 'object') {
-      if (envJson.BACKEND_CANISTER_ID && typeof envJson.BACKEND_CANISTER_ID === 'string') {
-        diagnostics.canisterId = envJson.BACKEND_CANISTER_ID;
-      }
-      if (envJson.DFX_NETWORK && typeof envJson.DFX_NETWORK === 'string') {
-        diagnostics.network = envJson.DFX_NETWORK;
-      }
-      if (envJson.IC_HOST && typeof envJson.IC_HOST === 'string') {
-        // Sanitize host to remove any query parameters or secrets
-        try {
-          const url = new URL(envJson.IC_HOST);
-          diagnostics.host = `${url.protocol}//${url.host}${url.pathname}`.replace(/\/$/, '');
-        } catch {
-          // If URL parsing fails, just use the host as-is but sanitize
-          diagnostics.host = envJson.IC_HOST.split('?')[0];
-        }
-      }
-    }
+  // Try various env var names for network/host
+  const dfxNetwork =
+    (import.meta.env.VITE_DFX_NETWORK as string | undefined) ||
+    (import.meta.env.DFX_NETWORK as string | undefined) ||
+    (import.meta.env.VITE_NETWORK as string | undefined) ||
+    null;
 
-    // Fallback: try to detect from window location
-    if (diagnostics.network === 'Unknown (configuration missing)') {
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        diagnostics.network = 'local (detected from hostname)';
-        if (diagnostics.host === 'Unknown (configuration missing)') {
-          diagnostics.host = 'http://localhost:4943 (default)';
-        }
-      } else if (window.location.hostname.endsWith('.ic0.app') || window.location.hostname.endsWith('.icp0.io')) {
-        diagnostics.network = 'ic (detected from hostname)';
-        if (diagnostics.host === 'Unknown (configuration missing)') {
-          diagnostics.host = 'https://ic0.app (default)';
-        }
-      }
+  const host =
+    (import.meta.env.VITE_HOST as string | undefined) ||
+    (import.meta.env.VITE_IC_HOST as string | undefined) ||
+    (import.meta.env.IC_HOST as string | undefined) ||
+    null;
+
+  // Derive host from network if not explicitly set
+  let resolvedHost: string;
+  if (host) {
+    resolvedHost = host;
+  } else if (dfxNetwork === "ic" || dfxNetwork === "mainnet") {
+    resolvedHost = "https://ic0.app";
+  } else if (dfxNetwork === "local") {
+    resolvedHost = "http://localhost:4943";
+  } else if (dfxNetwork) {
+    resolvedHost = `https://${dfxNetwork}.ic0.app`;
+  } else {
+    // Try to infer from current location
+    const loc = window.location.hostname;
+    if (loc === "localhost" || loc === "127.0.0.1") {
+      resolvedHost = "http://localhost:4943";
+    } else {
+      resolvedHost = "https://ic0.app";
     }
-  } catch (error) {
-    console.warn('Failed to extract backend diagnostics:', error);
   }
 
-  return diagnostics;
+  const environment =
+    dfxNetwork || (resolvedHost.includes("localhost") ? "local" : "ic");
+
+  return {
+    canisterId: canisterId || "Not configured",
+    host: resolvedHost,
+    environment,
+  };
 }
 
 /**
- * Performs a health check against the backend
- * Uses the public healthCheck endpoint that doesn't require authentication
- * Idempotent and safe to call multiple times during startup
- * Returns explicit status: pending, passed, failed, or timed-out
- * @returns Health check result with success status and message
+ * Alias for getBackendDiagnostics — returns canisterId and host only.
+ * Used by deployment-aware components that only need the two core values.
  */
-export async function performHealthCheck(): Promise<HealthCheckResult> {
-  const HEALTH_CHECK_TIMEOUT = 10000; // 10 seconds
+export function getBackendEnvInfo(): { canisterId: string; host: string } {
+  const { canisterId, host } = getBackendDiagnostics();
+  return { canisterId, host };
+}
+
+/**
+ * Perform a health check against the backend canister.
+ * Creates an anonymous actor internally — no authentication required.
+ * Returns a HealthCheckResult with status, message, and timing information.
+ * Uses a short timeout (5s) since healthCheck is a query call on IC.
+ */
+export async function performHealthCheck(
+  timeoutMs = 5000,
+): Promise<HealthCheckResult> {
+  const startTime = Date.now();
 
   try {
-    // Create an anonymous actor for health check
+    // Create an anonymous actor for the health check
     const actor = await Promise.race([
       createActorWithConfig(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Health check actor creation timed out')), HEALTH_CHECK_TIMEOUT)
+        setTimeout(
+          () => reject(new Error("Actor creation timed out")),
+          timeoutMs,
+        ),
       ),
     ]);
 
-    // Call the public healthCheck endpoint
     const result = await Promise.race([
       (actor as any).healthCheck(),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Health check call timed out')), HEALTH_CHECK_TIMEOUT)
+        setTimeout(
+          () => reject(new Error("Health check call timed out")),
+          timeoutMs,
+        ),
       ),
     ]);
 
-    if (result && result.message) {
+    const durationMs = Date.now() - startTime;
+
+    return {
+      status: "passed",
+      success: true,
+      message: result?.message ?? "Backend is reachable",
+      timestamp: result?.timestamp ? Number(result.timestamp) : undefined,
+      durationMs,
+    };
+  } catch (err: unknown) {
+    const durationMs = Date.now() - startTime;
+    const rawMessage = err instanceof Error ? err.message : String(err);
+
+    if (rawMessage.includes("timed out") || rawMessage.includes("timeout")) {
       return {
-        success: true,
-        message: result.message,
-        timestamp: result.timestamp ? Number(result.timestamp) : undefined,
-        status: 'passed',
+        status: "timed-out",
+        success: false,
+        message: "Health check timed out",
+        durationMs,
+      };
+    }
+
+    if (
+      rawMessage.includes("is stopped") ||
+      rawMessage.includes("canister is stopped")
+    ) {
+      return {
+        status: "failed",
+        success: false,
+        message: "Backend canister is stopped",
+        durationMs,
+      };
+    }
+
+    if (
+      rawMessage.includes("not found") ||
+      rawMessage.includes("does not exist") ||
+      rawMessage.includes("IC0301")
+    ) {
+      return {
+        status: "failed",
+        success: false,
+        message: "Backend canister not found or not deployed",
+        durationMs,
+      };
+    }
+
+    if (
+      rawMessage.includes("fetch") ||
+      rawMessage.includes("network") ||
+      rawMessage.includes("NetworkError")
+    ) {
+      return {
+        status: "failed",
+        success: false,
+        message: "Network error: Unable to reach backend",
+        durationMs,
       };
     }
 
     return {
-      success: true,
-      message: 'Backend is reachable',
-      status: 'passed',
-    };
-  } catch (error) {
-    console.error('Health check failed:', error);
-    
-    let message = 'Backend is not reachable';
-    let status: 'failed' | 'timed-out' = 'failed';
-    
-    if (error instanceof Error) {
-      const errorMsg = error.message.toLowerCase();
-      
-      if (errorMsg.includes('timed out') || errorMsg.includes('timeout')) {
-        message = 'Health check timed out after 10 seconds';
-        status = 'timed-out';
-      } else if (errorMsg.includes('is stopped') || errorMsg.includes('canister is stopped')) {
-        message = 'Backend canister is stopped';
-        status = 'failed';
-      } else if (errorMsg.includes('not found') || errorMsg.includes('does not exist')) {
-        message = 'Backend canister not found or not deployed';
-        status = 'failed';
-      } else if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
-        message = 'Network error: Unable to reach backend';
-        status = 'failed';
-      } else {
-        message = `Health check failed: ${error.message}`;
-        status = 'failed';
-      }
-    }
-
-    return {
+      status: "failed",
       success: false,
-      message,
-      status,
+      message: `Health check failed: ${rawMessage}`,
+      durationMs,
     };
   }
 }

@@ -1,112 +1,128 @@
-import { useState } from 'react';
-import { useAddWeightEntry } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { dateStringToNanoseconds } from '../lib/dateUtils';
-import type { Resident } from '../backend';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useAddWeightEntry } from "../hooks/useQueries";
+import type { Resident } from "../hooks/useQueries";
 
 interface AddWeightEntryDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  resident: Resident | null;
+  resident: Resident;
+  children?: React.ReactNode;
 }
 
-export default function AddWeightEntryDialog({ open, onOpenChange, resident }: AddWeightEntryDialogProps) {
-  const [measurementDate, setMeasurementDate] = useState('');
-  const [weight, setWeight] = useState('');
-  const [weightUnit, setWeightUnit] = useState<'lbs' | 'kg'>('lbs');
-  const [notes, setNotes] = useState('');
+export default function AddWeightEntryDialog({
+  resident,
+  children,
+}: AddWeightEntryDialogProps) {
+  const [open, setOpen] = useState(false);
+  const { mutate: addWeightEntry, isPending } = useAddWeightEntry();
 
-  const addWeightEntry = useAddWeightEntry();
+  const [weight, setWeight] = useState("");
+  const [weightUnit, setWeightUnit] = useState("lbs");
+  const [measurementDate, setMeasurementDate] = useState("");
+  const [notes, setNotes] = useState("");
 
   const resetForm = () => {
-    setMeasurementDate('');
-    setWeight('');
-    setWeightUnit('lbs');
-    setNotes('');
+    setWeight("");
+    setWeightUnit("lbs");
+    setMeasurementDate("");
+    setNotes("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!resident || !measurementDate || !weight) {
-      toast.error('Please fill in all required fields');
+    if (!weight || !measurementDate) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
-    try {
-      const measurementDateNanoseconds = dateStringToNanoseconds(measurementDate);
-      const weightValue = parseFloat(weight);
+    const weightValue = Number.parseFloat(weight);
+    // Convert date string to nanoseconds as number (local Resident type uses number)
+    const timestamp = new Date(measurementDate).getTime() * 1_000_000;
 
-      await addWeightEntry.mutateAsync({
+    addWeightEntry(
+      {
         residentId: resident.id,
         weight: weightValue,
         weightUnit,
-        measurementDate: measurementDateNanoseconds,
-        notes,
-      });
-
-      resetForm();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding weight entry:', error);
-    }
+        measurementDate: timestamp,
+        notes: notes.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast.success("Weight entry recorded successfully.");
+          resetForm();
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : "Failed to record weight entry.",
+          );
+        },
+      },
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white border-border">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button variant="outline" size="sm">
+            Add Weight Entry
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="bg-white">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add Weight Entry</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Record weight measurement for {resident?.firstName} {resident?.lastName}
-          </DialogDescription>
+          <DialogTitle>Record Weight Entry</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="measurementDate" className="text-foreground">
-              Measurement Date <span className="text-red-500">*</span>
-            </Label>
+            <Label>Measurement Date *</Label>
             <Input
-              id="measurementDate"
               type="date"
               value={measurementDate}
               onChange={(e) => setMeasurementDate(e.target.value)}
-              required
-              className="bg-white border-input text-foreground"
+              className="bg-white"
             />
           </div>
-
-          <div className="grid gap-4 grid-cols-2">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="weight" className="text-foreground">
-                Weight <span className="text-red-500">*</span>
-              </Label>
+              <Label>Weight *</Label>
               <Input
-                id="weight"
                 type="number"
                 step="0.1"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
-                placeholder="150"
-                required
-                className="bg-white border-input text-foreground"
+                placeholder="e.g. 150"
+                className="bg-white"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="weightUnit" className="text-foreground">
-                Unit <span className="text-red-500">*</span>
-              </Label>
-              <Select value={weightUnit} onValueChange={(value) => setWeightUnit(value as 'lbs' | 'kg')}>
-                <SelectTrigger id="weightUnit" className="bg-white border-input text-foreground">
+              <Label>Unit</Label>
+              <Select value={weightUnit} onValueChange={setWeightUnit}>
+                <SelectTrigger className="bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
@@ -116,36 +132,36 @@ export default function AddWeightEntryDialog({ open, onOpenChange, resident }: A
               </Select>
             </div>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="notes" className="text-foreground">
-              Notes
-            </Label>
+            <Label>Notes</Label>
             <Textarea
-              id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional observations or notes"
+              placeholder="Optional notes"
+              className="bg-white"
               rows={3}
-              className="bg-white border-input text-foreground"
             />
           </div>
-
-          <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={addWeightEntry.isPending} className="bg-white">
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={addWeightEntry.isPending} className="bg-primary text-primary-foreground">
-              {addWeightEntry.isPending ? (
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
+                  Recording...
                 </>
               ) : (
-                'Add Weight'
+                "Record Weight"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

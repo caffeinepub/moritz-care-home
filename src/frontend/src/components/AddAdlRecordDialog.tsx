@@ -1,121 +1,141 @@
-import { useState } from 'react';
-import { useAddAdlRecord } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { dateStringToNanoseconds } from '../lib/dateUtils';
-import type { Resident } from '../backend';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useAddAdlRecord } from "../hooks/useQueries";
+import type { Resident } from "../hooks/useQueries";
 
 interface AddAdlRecordDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  resident: Resident | null;
+  resident: Resident;
+  children?: React.ReactNode;
 }
 
-const ACTIVITIES = [
-  'Bathing',
-  'Dressing',
-  'Toileting',
-  'Transferring',
-  'Continence',
-  'Feeding',
-  'Grooming',
-  'Walking',
-  'Medication Management',
+const ACTIVITY_TYPES = [
+  "Bathing",
+  "Dressing",
+  "Grooming",
+  "Oral Care",
+  "Toileting",
+  "Transferring",
+  "Ambulation",
+  "Eating",
+  "Meal Setup",
+  "Other",
 ];
 
 const ASSISTANCE_LEVELS = [
-  'Independent',
-  'Supervision',
-  'Minimal Assistance',
-  'Moderate Assistance',
-  'Maximum Assistance',
-  'Total Dependence',
+  "Independent",
+  "Supervision",
+  "Limited Assistance",
+  "Extensive Assistance",
+  "Total Dependence",
+  "Activity Did Not Occur",
 ];
 
-export default function AddAdlRecordDialog({ open, onOpenChange, resident }: AddAdlRecordDialogProps) {
-  const [date, setDate] = useState('');
-  const [activity, setActivity] = useState('');
-  const [assistanceLevel, setAssistanceLevel] = useState('');
-  const [staffNotes, setStaffNotes] = useState('');
+export default function AddAdlRecordDialog({
+  resident,
+  children,
+}: AddAdlRecordDialogProps) {
+  const [open, setOpen] = useState(false);
+  const { mutate: addAdlRecord, isPending } = useAddAdlRecord();
 
-  const addAdlRecord = useAddAdlRecord();
+  const [date, setDate] = useState("");
+  const [activity, setActivity] = useState("");
+  const [assistanceLevel, setAssistanceLevel] = useState("");
+  const [staffNotes, setStaffNotes] = useState("");
 
   const resetForm = () => {
-    setDate('');
-    setActivity('');
-    setAssistanceLevel('');
-    setStaffNotes('');
+    setDate("");
+    setActivity("");
+    setAssistanceLevel("");
+    setStaffNotes("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!resident || !date || !activity || !assistanceLevel) {
-      toast.error('Please fill in all required fields');
+    if (!date || !activity || !assistanceLevel) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
-    try {
-      const dateNanoseconds = dateStringToNanoseconds(date);
+    const timestamp = new Date(date).getTime() * 1_000_000;
 
-      await addAdlRecord.mutateAsync({
+    addAdlRecord(
+      {
         residentId: resident.id,
-        date: dateNanoseconds,
+        date: timestamp,
         activity,
         assistanceLevel,
-        staffNotes,
-      });
-
-      resetForm();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding ADL record:', error);
-    }
+        staffNotes: staffNotes.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast.success("ADL record added successfully.");
+          resetForm();
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to add ADL record.",
+          );
+        },
+      },
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white border-border">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button variant="outline" size="sm">
+            Add ADL Record
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="bg-white">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add ADL Record</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Record activities of daily living for {resident?.firstName} {resident?.lastName}
-          </DialogDescription>
+          <DialogTitle>Add ADL Record</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="date" className="text-foreground">
-              Date <span className="text-red-500">*</span>
-            </Label>
+            <Label>Date *</Label>
             <Input
-              id="date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              required
-              className="bg-white border-input text-foreground"
+              className="bg-white"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="activity" className="text-foreground">
-              Activity <span className="text-red-500">*</span>
-            </Label>
+            <Label>Activity *</Label>
             <Select value={activity} onValueChange={setActivity}>
-              <SelectTrigger id="activity" className="bg-white border-input text-foreground">
-                <SelectValue placeholder="Select an activity" />
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select activity" />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                {ACTIVITIES.map((act) => (
-                  <SelectItem key={act} value={act}>
-                    {act}
+                {ACTIVITY_TYPES.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -123,17 +143,15 @@ export default function AddAdlRecordDialog({ open, onOpenChange, resident }: Add
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="assistanceLevel" className="text-foreground">
-              Assistance Level <span className="text-red-500">*</span>
-            </Label>
+            <Label>Assistance Level *</Label>
             <Select value={assistanceLevel} onValueChange={setAssistanceLevel}>
-              <SelectTrigger id="assistanceLevel" className="bg-white border-input text-foreground">
+              <SelectTrigger className="bg-white">
                 <SelectValue placeholder="Select assistance level" />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                {ASSISTANCE_LEVELS.map((level) => (
-                  <SelectItem key={level} value={level}>
-                    {level}
+                {ASSISTANCE_LEVELS.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {l}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -141,34 +159,36 @@ export default function AddAdlRecordDialog({ open, onOpenChange, resident }: Add
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="staffNotes" className="text-foreground">
-              Staff Notes
-            </Label>
+            <Label>Staff Notes</Label>
             <Textarea
-              id="staffNotes"
               value={staffNotes}
               onChange={(e) => setStaffNotes(e.target.value)}
-              placeholder="Additional observations or notes"
-              rows={4}
-              className="bg-white border-input text-foreground"
+              placeholder="Optional notes"
+              className="bg-white"
+              rows={3}
             />
           </div>
 
-          <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={addAdlRecord.isPending} className="bg-white">
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={addAdlRecord.isPending} className="bg-primary text-primary-foreground">
-              {addAdlRecord.isPending ? (
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adding...
                 </>
               ) : (
-                'Add Record'
+                "Add Record"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,117 +1,123 @@
-import { useActor } from '../hooks/useActor';
-import { getBuildIdentifier, getBuildInfo, isBuildMetadataMissing, getBuildIdentifierWithFallback } from '../lib/buildInfo';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info, AlertTriangle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Activity, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import React from "react";
+import { getBuildInfo } from "../lib/buildInfo";
+import { getBackendDiagnostics } from "../lib/startupDiagnostics";
 
-/**
- * Diagnostics indicator component displaying frontend build version and backend canister ID with runtime fallback for missing build metadata.
- */
 export default function DiagnosticsIndicator() {
-  const { actor } = useActor();
+  const diagnostics = getBackendDiagnostics();
   const buildInfo = getBuildInfo();
-  const buildId = getBuildIdentifier();
-  const metadataMissing = isBuildMetadataMissing();
-  const [fallbackBuildId, setFallbackBuildId] = useState<string | null>(null);
-  const [fallbackLoaded, setFallbackLoaded] = useState(false);
 
-  // Try to load build metadata from runtime file if missing
-  useEffect(() => {
-    if (metadataMissing && !fallbackLoaded) {
-      getBuildIdentifierWithFallback().then((id) => {
-        setFallbackBuildId(id);
-        setFallbackLoaded(true);
-      });
-    }
-  }, [metadataMissing, fallbackLoaded]);
+  const hasCanisterId = diagnostics.canisterId !== "Not configured";
+  const hasMetadata = buildInfo.hasMetadata;
 
-  // Extract canister ID from actor if available
-  const getCanisterId = (): string => {
-    if (!actor) return 'Not connected';
-    
-    try {
-      // Try to get canister ID from the actor's agent
-      const canisterId = (actor as any)._canisterId?.toString();
-      if (canisterId) {
-        // Shorten for display
-        return canisterId.length > 15 
-          ? `${canisterId.substring(0, 8)}...${canisterId.substring(canisterId.length - 5)}`
-          : canisterId;
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-    
-    return 'Unknown';
-  };
-
-  const canisterId = getCanisterId();
-
-  // Determine display values with fallback
-  const effectiveBuildId = fallbackBuildId || buildId;
-  const frontendDisplay = metadataMissing && !fallbackBuildId ? 'Unknown' : (effectiveBuildId || 'Unknown');
-  const showWarning = (metadataMissing && !fallbackBuildId) || canisterId === 'Not connected' || canisterId === 'Unknown';
+  const isHealthy = hasCanisterId;
+  const hasWarning = !hasCanisterId || !hasMetadata;
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            {showWarning ? (
-              <AlertTriangle className="h-3 w-3 text-yellow-600" />
+          <button
+            type="button"
+            className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono transition-colors hover:bg-muted/50"
+            aria-label="Backend diagnostics"
+          >
+            {hasWarning ? (
+              <AlertTriangle className="w-3.5 h-3.5 text-warning" />
             ) : (
-              <Info className="h-3 w-3" />
+              <Activity className="w-3.5 h-3.5 text-success" />
             )}
-            <span className="hidden sm:inline">
-              Frontend: <span className="font-mono">{frontendDisplay}</span>
+            <span className="text-muted-foreground hidden sm:inline">
+              {hasCanisterId
+                ? `${diagnostics.canisterId.slice(0, 8)}...`
+                : "No canister"}
             </span>
-            <span className="text-gray-400">|</span>
-            <span className="hidden md:inline">
-              Backend: <span className="font-mono">{canisterId}</span>
-            </span>
-            <Badge variant="outline" className="text-xs">
-              {buildInfo.environment}
-            </Badge>
-          </div>
+          </button>
         </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1 text-xs">
-            {metadataMissing && !fallbackBuildId && (
-              <div className="mb-2 rounded bg-yellow-100 p-2 text-yellow-800">
-                <span className="font-semibold">⚠️ Missing build metadata</span>
-                <p className="mt-1 text-xs">
-                  The frontend may not have deployed correctly. Build environment variables were not injected.
-                </p>
-              </div>
+        <TooltipContent side="bottom" className="max-w-xs p-3 space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            {isHealthy ? (
+              <CheckCircle className="w-4 h-4 text-success flex-shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0" />
             )}
-            <div>
-              <span className="font-semibold">Frontend Build:</span>{' '}
-              {metadataMissing && !fallbackBuildId ? 'Unknown (missing metadata)' : (effectiveBuildId || 'Unknown')}
-            </div>
-            {buildInfo.timestamp && (
-              <div>
-                <span className="font-semibold">Build Time:</span>{' '}
-                {new Date(buildInfo.timestamp).toLocaleString()}
-              </div>
-            )}
-            <div>
-              <span className="font-semibold">Backend Canister:</span> {canisterId}
-            </div>
-            <div>
-              <span className="font-semibold">Environment:</span> {buildInfo.environment}
-            </div>
-            {buildInfo.version && (
-              <div>
-                <span className="font-semibold">Version:</span> {buildInfo.version}
-              </div>
-            )}
-            {buildInfo.commit && (
-              <div>
-                <span className="font-semibold">Commit:</span> {buildInfo.commit}
-              </div>
-            )}
+            <span className="font-semibold text-sm">Backend Diagnostics</span>
           </div>
+
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Canister ID</span>
+              <span className="font-mono text-right break-all">
+                {hasCanisterId ? (
+                  diagnostics.canisterId
+                ) : (
+                  <span className="text-warning">Not configured</span>
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Host</span>
+              <span className="font-mono text-right">{diagnostics.host}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Environment</span>
+              <span className="font-mono text-right">
+                {diagnostics.environment}
+              </span>
+            </div>
+          </div>
+
+          {buildInfo.hasMetadata && (
+            <div className="border-t border-border pt-2 space-y-1 text-xs">
+              <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                <Info className="w-3 h-3" />
+                <span>Build Info</span>
+              </div>
+              {buildInfo.buildId && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Build ID</span>
+                  <span className="font-mono text-right">
+                    {buildInfo.buildId}
+                  </span>
+                </div>
+              )}
+              {buildInfo.buildTime && (
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Built</span>
+                  <span className="font-mono text-right">
+                    {buildInfo.buildTime}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!hasMetadata && (
+            <div className="border-t border-border pt-2">
+              <p className="text-xs text-muted-foreground">
+                Missing build metadata — deploy via{" "}
+                <code className="bg-muted px-1 rounded">
+                  redeploy_production.sh
+                </code>{" "}
+                to inject build info.
+              </p>
+            </div>
+          )}
+
+          {!hasCanisterId && (
+            <div className="border-t border-border pt-2">
+              <p className="text-xs text-warning">
+                Canister ID not found in environment variables. Check Vite
+                config and deployment setup.
+              </p>
+            </div>
+          )}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

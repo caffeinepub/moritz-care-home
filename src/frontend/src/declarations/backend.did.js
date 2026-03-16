@@ -19,15 +19,39 @@ export const _CaffeineStorageRefillResult = IDL.Record({
   'success' : IDL.Opt(IDL.Bool),
   'topped_up_amount' : IDL.Opt(IDL.Nat),
 });
-export const MedicationStatus = IDL.Variant({
-  'active' : IDL.Null,
-  'discontinued' : IDL.Null,
+export const RoomType = IDL.Variant({
+  'solo' : IDL.Null,
+  'sharedRoom' : IDL.Null,
 });
 export const Physician = IDL.Record({
   'id' : IDL.Nat,
   'name' : IDL.Text,
   'specialty' : IDL.Text,
   'contactNumber' : IDL.Text,
+});
+export const Pharmacy = IDL.Record({
+  'id' : IDL.Nat,
+  'name' : IDL.Text,
+  'address' : IDL.Text,
+  'contactNumber' : IDL.Text,
+});
+export const Insurance = IDL.Record({
+  'id' : IDL.Nat,
+  'address' : IDL.Text,
+  'companyName' : IDL.Text,
+  'contactNumber' : IDL.Text,
+  'policyNumber' : IDL.Text,
+});
+export const ResponsiblePerson = IDL.Record({
+  'id' : IDL.Nat,
+  'relationship' : IDL.Text,
+  'name' : IDL.Text,
+  'address' : IDL.Text,
+  'contactNumber' : IDL.Text,
+});
+export const MedicationStatus = IDL.Variant({
+  'active' : IDL.Null,
+  'discontinued' : IDL.Null,
 });
 export const AdministrationRoute = IDL.Variant({
   'injection' : IDL.Null,
@@ -53,109 +77,17 @@ export const Medication = IDL.Record({
   'notes' : IDL.Text,
   'dosageQuantity' : IDL.Text,
 });
-export const RoomType = IDL.Variant({
-  'solo' : IDL.Null,
-  'sharedRoom' : IDL.Null,
-});
-export const Pharmacy = IDL.Record({
-  'id' : IDL.Nat,
-  'name' : IDL.Text,
-  'address' : IDL.Text,
-  'contactNumber' : IDL.Text,
-});
-export const Insurance = IDL.Record({
-  'id' : IDL.Nat,
-  'address' : IDL.Text,
-  'companyName' : IDL.Text,
-  'contactNumber' : IDL.Text,
-  'policyNumber' : IDL.Text,
-});
-export const ResponsiblePerson = IDL.Record({
-  'id' : IDL.Nat,
-  'relationship' : IDL.Text,
-  'name' : IDL.Text,
-  'address' : IDL.Text,
-  'contactNumber' : IDL.Text,
-});
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const ResidentStatus = IDL.Variant({
-  'active' : IDL.Null,
-  'discharged' : IDL.Null,
-});
-export const WeightEntry = IDL.Record({
-  'id' : IDL.Nat,
-  'weight' : IDL.Float64,
-  'residentId' : IDL.Nat,
-  'weightUnit' : IDL.Text,
-  'notes' : IDL.Text,
-  'measurementDate' : IDL.Int,
-});
-export const MedicationAdministrationRecord = IDL.Record({
-  'id' : IDL.Nat,
-  'medication' : Medication,
-  'notes' : IDL.Text,
-  'administrationTime' : IDL.Int,
-  'administeredBy' : IDL.Text,
-});
-export const ADLRecord = IDL.Record({
-  'id' : IDL.Nat,
-  'residentId' : IDL.Nat,
-  'staffNotes' : IDL.Text,
-  'assistanceLevel' : IDL.Text,
-  'date' : IDL.Int,
-  'activity' : IDL.Text,
-});
-export const DailyVitals = IDL.Record({
-  'id' : IDL.Nat,
-  'residentId' : IDL.Nat,
-  'bloodGlucose' : IDL.Opt(IDL.Nat),
-  'respiratoryRate' : IDL.Nat,
-  'temperature' : IDL.Float64,
-  'pulseRate' : IDL.Nat,
-  'oxygenSaturation' : IDL.Nat,
-  'measurementDateTime' : IDL.Int,
-  'notes' : IDL.Text,
-  'bloodPressureDiastolic' : IDL.Nat,
-  'bloodPressureSystolic' : IDL.Nat,
-});
-export const Resident = IDL.Record({
-  'id' : IDL.Nat,
-  'bed' : IDL.Opt(IDL.Text),
-  'status' : ResidentStatus,
-  'weightLog' : IDL.Vec(WeightEntry),
-  'dateOfBirth' : IDL.Int,
-  'admissionDate' : IDL.Int,
-  'marRecords' : IDL.Vec(MedicationAdministrationRecord),
-  'adlRecords' : IDL.Vec(ADLRecord),
-  'isArchived' : IDL.Bool,
-  'roomNumber' : IDL.Text,
-  'insurance' : IDL.Opt(Insurance),
-  'medications' : IDL.Vec(Medication),
-  'pharmacy' : IDL.Opt(Pharmacy),
-  'dailyVitals' : IDL.Vec(DailyVitals),
-  'responsiblePersons' : IDL.Vec(ResponsiblePerson),
-  'dischargeTimestamp' : IDL.Opt(IDL.Int),
-  'medicaidNumber' : IDL.Text,
-  'physicians' : IDL.Vec(Physician),
-  'lastName' : IDL.Text,
-  'roomType' : RoomType,
-  'medicareNumber' : IDL.Text,
-  'firstName' : IDL.Text,
-});
-export const UserProfile = IDL.Record({
+export const UserProfileWithRole = IDL.Record({
   'name' : IDL.Text,
+  'role' : IDL.Text,
   'employeeId' : IDL.Text,
 });
-export const SortCriteria = IDL.Variant({
-  'bed' : IDL.Null,
-  'residentId' : IDL.Null,
-  'name' : IDL.Null,
-  'roomNumber' : IDL.Null,
-});
+export const ProfileSetupError = IDL.Variant({ 'NotFound' : IDL.Null });
 
 export const idlService = IDL.Service({
   '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -185,50 +117,7 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-  'addAdlRecord' : IDL.Func(
-      [IDL.Nat, IDL.Int, IDL.Text, IDL.Text, IDL.Text],
-      [],
-      [],
-    ),
-  'addDailyVitals' : IDL.Func(
-      [
-        IDL.Nat,
-        IDL.Float64,
-        IDL.Nat,
-        IDL.Nat,
-        IDL.Nat,
-        IDL.Nat,
-        IDL.Nat,
-        IDL.Opt(IDL.Nat),
-        IDL.Int,
-        IDL.Text,
-      ],
-      [],
-      [],
-    ),
-  'addInsurance' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
-  'addMarRecord' : IDL.Func(
-      [IDL.Nat, Medication, IDL.Int, IDL.Text, IDL.Text],
-      [],
-      [],
-    ),
-  'addMedication' : IDL.Func(
-      [
-        IDL.Nat,
-        IDL.Text,
-        IDL.Text,
-        IDL.Vec(IDL.Text),
-        IDL.Opt(Physician),
-        AdministrationRoute,
-        IDL.Text,
-        IDL.Text,
-      ],
-      [],
-      [],
-    ),
-  'addPharmacy' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
-  'addPhysician' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
-  'addResident' : IDL.Func(
+  'addResidentAccessControl' : IDL.Func(
       [
         IDL.Text,
         IDL.Text,
@@ -248,224 +137,20 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
-  'addResponsiblePerson' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
-      [],
-      [],
-    ),
-  'addWeightEntry' : IDL.Func(
-      [IDL.Nat, IDL.Float64, IDL.Text, IDL.Int, IDL.Text],
-      [],
-      [],
-    ),
-  'archiveResident' : IDL.Func([IDL.Nat], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'autoArchiveDischargedResidents' : IDL.Func([], [], []),
-  'calculateAge' : IDL.Func([IDL.Int], [IDL.Int], ['query']),
-  'checkUpgradeHealth' : IDL.Func(
-      [],
-      [
-        IDL.Record({
-          'residents' : IDL.Nat,
-          'nextResidentId' : IDL.Nat,
-          'userProfiles' : IDL.Nat,
-        }),
-      ],
-      ['query'],
-    ),
-  'dischargeResident' : IDL.Func([IDL.Nat], [], []),
-  'editMedication' : IDL.Func(
-      [
-        IDL.Nat,
-        IDL.Nat,
-        IDL.Text,
-        IDL.Text,
-        IDL.Vec(IDL.Text),
-        IDL.Opt(Physician),
-        AdministrationRoute,
-        IDL.Text,
-        IDL.Text,
-      ],
-      [],
-      [],
-    ),
   'ensureRegisteredUser' : IDL.Func([], [], []),
-  'findResidentByRoom' : IDL.Func([IDL.Text], [IDL.Opt(Resident)], ['query']),
-  'generateAdlReport' : IDL.Func([IDL.Nat], [IDL.Vec(ADLRecord)], ['query']),
-  'generateFullMedicationReport' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Vec(Medication)],
-      ['query'],
-    ),
-  'generateMarReport' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Vec(MedicationAdministrationRecord)],
-      ['query'],
-    ),
-  'generateMedicationReport' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Vec(Medication)],
-      ['query'],
-    ),
-  'generateResidentProfileReport' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Opt(Resident)],
-      ['query'],
-    ),
-  'getActiveResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-  'getAllInsuranceCompanies' : IDL.Func([], [IDL.Vec(Insurance)], ['query']),
-  'getAllPharmacies' : IDL.Func([], [IDL.Vec(Pharmacy)], ['query']),
-  'getAllPhysicians' : IDL.Func([], [IDL.Vec(Physician)], ['query']),
-  'getAllResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-  'getAllResponsiblePersons' : IDL.Func(
-      [],
-      [IDL.Vec(ResponsiblePerson)],
-      ['query'],
-    ),
-  'getAllRoomNumbers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getDailyVitals' : IDL.Func([IDL.Nat], [IDL.Vec(DailyVitals)], ['query']),
-  'getDischargedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-  'getFilteredAndSortedResidents' : IDL.Func(
-      [IDL.Opt(ResidentStatus), IDL.Opt(SortCriteria)],
-      [IDL.Vec(Resident)],
-      ['query'],
-    ),
-  'getInsurance' : IDL.Func([IDL.Nat], [IDL.Opt(Insurance)], ['query']),
-  'getNonArchivedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-  'getPharmacy' : IDL.Func([IDL.Nat], [IDL.Opt(Pharmacy)], ['query']),
-  'getPhysician' : IDL.Func([IDL.Nat], [IDL.Opt(Physician)], ['query']),
-  'getResident' : IDL.Func([IDL.Nat], [IDL.Opt(Resident)], ['query']),
-  'getResidentCounts' : IDL.Func(
-      [],
-      [
-        IDL.Record({
-          'activeResidents' : IDL.Nat,
-          'archivedResidents' : IDL.Nat,
-          'dischargedResidents' : IDL.Nat,
-          'totalResidents' : IDL.Nat,
-        }),
-      ],
-      ['query'],
-    ),
-  'getResidentRoomMap' : IDL.Func(
-      [],
-      [IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))],
-      ['query'],
-    ),
-  'getResidentStatistics' : IDL.Func(
-      [],
-      [
-        IDL.Record({
-          'residentsByRoom' : IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text, IDL.Text)),
-          'activeResidents' : IDL.Nat,
-          'residentsByRoomType' : IDL.Vec(
-            IDL.Tuple(IDL.Nat, IDL.Text, RoomType)
-          ),
-          'dischargedResidents' : IDL.Nat,
-          'totalResidents' : IDL.Nat,
-        }),
-      ],
-      ['query'],
-    ),
-  'getResidentsByRoom' : IDL.Func([IDL.Text], [IDL.Vec(Resident)], ['query']),
-  'getResidentsByRoomType' : IDL.Func(
-      [RoomType],
-      [IDL.Vec(Resident)],
-      ['query'],
-    ),
-  'getResponsiblePerson' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Opt(ResponsiblePerson)],
-      ['query'],
-    ),
-  'getSystemDiagnostics' : IDL.Func(
-      [IDL.Bool],
-      [
-        IDL.Record({
-          'nextIdCounters' : IDL.Record({
-            'nextPharmacyId' : IDL.Nat,
-            'nextResponsiblePersonId' : IDL.Nat,
-            'nextResidentId' : IDL.Nat,
-            'nextPhysicianId' : IDL.Nat,
-            'nextInsuranceId' : IDL.Nat,
-            'nextMedicationId' : IDL.Nat,
-            'nextWeightEntryId' : IDL.Nat,
-            'nextMarId' : IDL.Nat,
-            'nextAdlId' : IDL.Nat,
-            'nextDailyVitalsId' : IDL.Nat,
-          }),
-          'sampleData' : IDL.Opt(IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))),
-          'aggregateCounts' : IDL.Record({
-            'activeResidents' : IDL.Nat,
-            'archivedResidents' : IDL.Nat,
-            'dischargedResidents' : IDL.Nat,
-            'totalResidents' : IDL.Nat,
-          }),
-        }),
-      ],
-      ['query'],
-    ),
-  'getUserProfile' : IDL.Func(
+  'getUserProfileWithRole' : IDL.Func(
       [IDL.Principal],
-      [IDL.Opt(UserProfile)],
+      [IDL.Variant({ 'ok' : UserProfileWithRole, 'err' : ProfileSetupError })],
       ['query'],
     ),
-  'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
   'healthCheck' : IDL.Func(
       [],
       [IDL.Record({ 'message' : IDL.Text, 'timestamp' : IDL.Opt(IDL.Int) })],
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'permanentlyDeleteResident' : IDL.Func([IDL.Nat], [], []),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-  'updateMedication' : IDL.Func(
-      [
-        IDL.Nat,
-        IDL.Nat,
-        IDL.Text,
-        IDL.Text,
-        IDL.Vec(IDL.Text),
-        IDL.Opt(Physician),
-        AdministrationRoute,
-        IDL.Text,
-        IDL.Text,
-        MedicationStatus,
-      ],
-      [],
-      [],
-    ),
-  'updateMedicationStatus' : IDL.Func(
-      [IDL.Nat, IDL.Nat, MedicationStatus],
-      [],
-      [],
-    ),
-  'updateResident' : IDL.Func(
-      [
-        IDL.Nat,
-        IDL.Text,
-        IDL.Text,
-        IDL.Int,
-        IDL.Int,
-        ResidentStatus,
-        IDL.Text,
-        RoomType,
-        IDL.Opt(IDL.Text),
-        IDL.Vec(Physician),
-        IDL.Opt(Pharmacy),
-        IDL.Opt(Insurance),
-        IDL.Text,
-        IDL.Text,
-        IDL.Vec(ResponsiblePerson),
-        IDL.Vec(Medication),
-      ],
-      [Resident],
-      [],
-    ),
-  'v105_dischargeResident' : IDL.Func([IDL.Nat], [], []),
-  'v105_permanentlyDeleteResident' : IDL.Func([IDL.Nat], [], []),
 });
 
 export const idlInitArgs = [];
@@ -482,15 +167,36 @@ export const idlFactory = ({ IDL }) => {
     'success' : IDL.Opt(IDL.Bool),
     'topped_up_amount' : IDL.Opt(IDL.Nat),
   });
-  const MedicationStatus = IDL.Variant({
-    'active' : IDL.Null,
-    'discontinued' : IDL.Null,
-  });
+  const RoomType = IDL.Variant({ 'solo' : IDL.Null, 'sharedRoom' : IDL.Null });
   const Physician = IDL.Record({
     'id' : IDL.Nat,
     'name' : IDL.Text,
     'specialty' : IDL.Text,
     'contactNumber' : IDL.Text,
+  });
+  const Pharmacy = IDL.Record({
+    'id' : IDL.Nat,
+    'name' : IDL.Text,
+    'address' : IDL.Text,
+    'contactNumber' : IDL.Text,
+  });
+  const Insurance = IDL.Record({
+    'id' : IDL.Nat,
+    'address' : IDL.Text,
+    'companyName' : IDL.Text,
+    'contactNumber' : IDL.Text,
+    'policyNumber' : IDL.Text,
+  });
+  const ResponsiblePerson = IDL.Record({
+    'id' : IDL.Nat,
+    'relationship' : IDL.Text,
+    'name' : IDL.Text,
+    'address' : IDL.Text,
+    'contactNumber' : IDL.Text,
+  });
+  const MedicationStatus = IDL.Variant({
+    'active' : IDL.Null,
+    'discontinued' : IDL.Null,
   });
   const AdministrationRoute = IDL.Variant({
     'injection' : IDL.Null,
@@ -516,106 +222,17 @@ export const idlFactory = ({ IDL }) => {
     'notes' : IDL.Text,
     'dosageQuantity' : IDL.Text,
   });
-  const RoomType = IDL.Variant({ 'solo' : IDL.Null, 'sharedRoom' : IDL.Null });
-  const Pharmacy = IDL.Record({
-    'id' : IDL.Nat,
-    'name' : IDL.Text,
-    'address' : IDL.Text,
-    'contactNumber' : IDL.Text,
-  });
-  const Insurance = IDL.Record({
-    'id' : IDL.Nat,
-    'address' : IDL.Text,
-    'companyName' : IDL.Text,
-    'contactNumber' : IDL.Text,
-    'policyNumber' : IDL.Text,
-  });
-  const ResponsiblePerson = IDL.Record({
-    'id' : IDL.Nat,
-    'relationship' : IDL.Text,
-    'name' : IDL.Text,
-    'address' : IDL.Text,
-    'contactNumber' : IDL.Text,
-  });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
-  const ResidentStatus = IDL.Variant({
-    'active' : IDL.Null,
-    'discharged' : IDL.Null,
-  });
-  const WeightEntry = IDL.Record({
-    'id' : IDL.Nat,
-    'weight' : IDL.Float64,
-    'residentId' : IDL.Nat,
-    'weightUnit' : IDL.Text,
-    'notes' : IDL.Text,
-    'measurementDate' : IDL.Int,
-  });
-  const MedicationAdministrationRecord = IDL.Record({
-    'id' : IDL.Nat,
-    'medication' : Medication,
-    'notes' : IDL.Text,
-    'administrationTime' : IDL.Int,
-    'administeredBy' : IDL.Text,
-  });
-  const ADLRecord = IDL.Record({
-    'id' : IDL.Nat,
-    'residentId' : IDL.Nat,
-    'staffNotes' : IDL.Text,
-    'assistanceLevel' : IDL.Text,
-    'date' : IDL.Int,
-    'activity' : IDL.Text,
-  });
-  const DailyVitals = IDL.Record({
-    'id' : IDL.Nat,
-    'residentId' : IDL.Nat,
-    'bloodGlucose' : IDL.Opt(IDL.Nat),
-    'respiratoryRate' : IDL.Nat,
-    'temperature' : IDL.Float64,
-    'pulseRate' : IDL.Nat,
-    'oxygenSaturation' : IDL.Nat,
-    'measurementDateTime' : IDL.Int,
-    'notes' : IDL.Text,
-    'bloodPressureDiastolic' : IDL.Nat,
-    'bloodPressureSystolic' : IDL.Nat,
-  });
-  const Resident = IDL.Record({
-    'id' : IDL.Nat,
-    'bed' : IDL.Opt(IDL.Text),
-    'status' : ResidentStatus,
-    'weightLog' : IDL.Vec(WeightEntry),
-    'dateOfBirth' : IDL.Int,
-    'admissionDate' : IDL.Int,
-    'marRecords' : IDL.Vec(MedicationAdministrationRecord),
-    'adlRecords' : IDL.Vec(ADLRecord),
-    'isArchived' : IDL.Bool,
-    'roomNumber' : IDL.Text,
-    'insurance' : IDL.Opt(Insurance),
-    'medications' : IDL.Vec(Medication),
-    'pharmacy' : IDL.Opt(Pharmacy),
-    'dailyVitals' : IDL.Vec(DailyVitals),
-    'responsiblePersons' : IDL.Vec(ResponsiblePerson),
-    'dischargeTimestamp' : IDL.Opt(IDL.Int),
-    'medicaidNumber' : IDL.Text,
-    'physicians' : IDL.Vec(Physician),
-    'lastName' : IDL.Text,
-    'roomType' : RoomType,
-    'medicareNumber' : IDL.Text,
-    'firstName' : IDL.Text,
-  });
-  const UserProfile = IDL.Record({
+  const UserProfileWithRole = IDL.Record({
     'name' : IDL.Text,
+    'role' : IDL.Text,
     'employeeId' : IDL.Text,
   });
-  const SortCriteria = IDL.Variant({
-    'bed' : IDL.Null,
-    'residentId' : IDL.Null,
-    'name' : IDL.Null,
-    'roomNumber' : IDL.Null,
-  });
+  const ProfileSetupError = IDL.Variant({ 'NotFound' : IDL.Null });
   
   return IDL.Service({
     '_caffeineStorageBlobIsLive' : IDL.Func(
@@ -645,50 +262,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
-    'addAdlRecord' : IDL.Func(
-        [IDL.Nat, IDL.Int, IDL.Text, IDL.Text, IDL.Text],
-        [],
-        [],
-      ),
-    'addDailyVitals' : IDL.Func(
-        [
-          IDL.Nat,
-          IDL.Float64,
-          IDL.Nat,
-          IDL.Nat,
-          IDL.Nat,
-          IDL.Nat,
-          IDL.Nat,
-          IDL.Opt(IDL.Nat),
-          IDL.Int,
-          IDL.Text,
-        ],
-        [],
-        [],
-      ),
-    'addInsurance' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
-    'addMarRecord' : IDL.Func(
-        [IDL.Nat, Medication, IDL.Int, IDL.Text, IDL.Text],
-        [],
-        [],
-      ),
-    'addMedication' : IDL.Func(
-        [
-          IDL.Nat,
-          IDL.Text,
-          IDL.Text,
-          IDL.Vec(IDL.Text),
-          IDL.Opt(Physician),
-          AdministrationRoute,
-          IDL.Text,
-          IDL.Text,
-        ],
-        [],
-        [],
-      ),
-    'addPharmacy' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
-    'addPhysician' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
-    'addResident' : IDL.Func(
+    'addResidentAccessControl' : IDL.Func(
         [
           IDL.Text,
           IDL.Text,
@@ -708,224 +282,25 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
-    'addResponsiblePerson' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
-        [],
-        [],
-      ),
-    'addWeightEntry' : IDL.Func(
-        [IDL.Nat, IDL.Float64, IDL.Text, IDL.Int, IDL.Text],
-        [],
-        [],
-      ),
-    'archiveResident' : IDL.Func([IDL.Nat], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'autoArchiveDischargedResidents' : IDL.Func([], [], []),
-    'calculateAge' : IDL.Func([IDL.Int], [IDL.Int], ['query']),
-    'checkUpgradeHealth' : IDL.Func(
-        [],
-        [
-          IDL.Record({
-            'residents' : IDL.Nat,
-            'nextResidentId' : IDL.Nat,
-            'userProfiles' : IDL.Nat,
-          }),
-        ],
-        ['query'],
-      ),
-    'dischargeResident' : IDL.Func([IDL.Nat], [], []),
-    'editMedication' : IDL.Func(
-        [
-          IDL.Nat,
-          IDL.Nat,
-          IDL.Text,
-          IDL.Text,
-          IDL.Vec(IDL.Text),
-          IDL.Opt(Physician),
-          AdministrationRoute,
-          IDL.Text,
-          IDL.Text,
-        ],
-        [],
-        [],
-      ),
     'ensureRegisteredUser' : IDL.Func([], [], []),
-    'findResidentByRoom' : IDL.Func([IDL.Text], [IDL.Opt(Resident)], ['query']),
-    'generateAdlReport' : IDL.Func([IDL.Nat], [IDL.Vec(ADLRecord)], ['query']),
-    'generateFullMedicationReport' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Vec(Medication)],
-        ['query'],
-      ),
-    'generateMarReport' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Vec(MedicationAdministrationRecord)],
-        ['query'],
-      ),
-    'generateMedicationReport' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Vec(Medication)],
-        ['query'],
-      ),
-    'generateResidentProfileReport' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Opt(Resident)],
-        ['query'],
-      ),
-    'getActiveResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-    'getAllInsuranceCompanies' : IDL.Func([], [IDL.Vec(Insurance)], ['query']),
-    'getAllPharmacies' : IDL.Func([], [IDL.Vec(Pharmacy)], ['query']),
-    'getAllPhysicians' : IDL.Func([], [IDL.Vec(Physician)], ['query']),
-    'getAllResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-    'getAllResponsiblePersons' : IDL.Func(
-        [],
-        [IDL.Vec(ResponsiblePerson)],
-        ['query'],
-      ),
-    'getAllRoomNumbers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getDailyVitals' : IDL.Func([IDL.Nat], [IDL.Vec(DailyVitals)], ['query']),
-    'getDischargedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-    'getFilteredAndSortedResidents' : IDL.Func(
-        [IDL.Opt(ResidentStatus), IDL.Opt(SortCriteria)],
-        [IDL.Vec(Resident)],
-        ['query'],
-      ),
-    'getInsurance' : IDL.Func([IDL.Nat], [IDL.Opt(Insurance)], ['query']),
-    'getNonArchivedResidents' : IDL.Func([], [IDL.Vec(Resident)], ['query']),
-    'getPharmacy' : IDL.Func([IDL.Nat], [IDL.Opt(Pharmacy)], ['query']),
-    'getPhysician' : IDL.Func([IDL.Nat], [IDL.Opt(Physician)], ['query']),
-    'getResident' : IDL.Func([IDL.Nat], [IDL.Opt(Resident)], ['query']),
-    'getResidentCounts' : IDL.Func(
-        [],
-        [
-          IDL.Record({
-            'activeResidents' : IDL.Nat,
-            'archivedResidents' : IDL.Nat,
-            'dischargedResidents' : IDL.Nat,
-            'totalResidents' : IDL.Nat,
-          }),
-        ],
-        ['query'],
-      ),
-    'getResidentRoomMap' : IDL.Func(
-        [],
-        [IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))],
-        ['query'],
-      ),
-    'getResidentStatistics' : IDL.Func(
-        [],
-        [
-          IDL.Record({
-            'residentsByRoom' : IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text, IDL.Text)),
-            'activeResidents' : IDL.Nat,
-            'residentsByRoomType' : IDL.Vec(
-              IDL.Tuple(IDL.Nat, IDL.Text, RoomType)
-            ),
-            'dischargedResidents' : IDL.Nat,
-            'totalResidents' : IDL.Nat,
-          }),
-        ],
-        ['query'],
-      ),
-    'getResidentsByRoom' : IDL.Func([IDL.Text], [IDL.Vec(Resident)], ['query']),
-    'getResidentsByRoomType' : IDL.Func(
-        [RoomType],
-        [IDL.Vec(Resident)],
-        ['query'],
-      ),
-    'getResponsiblePerson' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Opt(ResponsiblePerson)],
-        ['query'],
-      ),
-    'getSystemDiagnostics' : IDL.Func(
-        [IDL.Bool],
-        [
-          IDL.Record({
-            'nextIdCounters' : IDL.Record({
-              'nextPharmacyId' : IDL.Nat,
-              'nextResponsiblePersonId' : IDL.Nat,
-              'nextResidentId' : IDL.Nat,
-              'nextPhysicianId' : IDL.Nat,
-              'nextInsuranceId' : IDL.Nat,
-              'nextMedicationId' : IDL.Nat,
-              'nextWeightEntryId' : IDL.Nat,
-              'nextMarId' : IDL.Nat,
-              'nextAdlId' : IDL.Nat,
-              'nextDailyVitalsId' : IDL.Nat,
-            }),
-            'sampleData' : IDL.Opt(IDL.Vec(IDL.Tuple(IDL.Nat, IDL.Text))),
-            'aggregateCounts' : IDL.Record({
-              'activeResidents' : IDL.Nat,
-              'archivedResidents' : IDL.Nat,
-              'dischargedResidents' : IDL.Nat,
-              'totalResidents' : IDL.Nat,
-            }),
-          }),
-        ],
-        ['query'],
-      ),
-    'getUserProfile' : IDL.Func(
+    'getUserProfileWithRole' : IDL.Func(
         [IDL.Principal],
-        [IDL.Opt(UserProfile)],
+        [
+          IDL.Variant({
+            'ok' : UserProfileWithRole,
+            'err' : ProfileSetupError,
+          }),
+        ],
         ['query'],
       ),
-    'getWeightLog' : IDL.Func([IDL.Nat], [IDL.Vec(WeightEntry)], ['query']),
     'healthCheck' : IDL.Func(
         [],
         [IDL.Record({ 'message' : IDL.Text, 'timestamp' : IDL.Opt(IDL.Int) })],
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'permanentlyDeleteResident' : IDL.Func([IDL.Nat], [], []),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
-    'updateMedication' : IDL.Func(
-        [
-          IDL.Nat,
-          IDL.Nat,
-          IDL.Text,
-          IDL.Text,
-          IDL.Vec(IDL.Text),
-          IDL.Opt(Physician),
-          AdministrationRoute,
-          IDL.Text,
-          IDL.Text,
-          MedicationStatus,
-        ],
-        [],
-        [],
-      ),
-    'updateMedicationStatus' : IDL.Func(
-        [IDL.Nat, IDL.Nat, MedicationStatus],
-        [],
-        [],
-      ),
-    'updateResident' : IDL.Func(
-        [
-          IDL.Nat,
-          IDL.Text,
-          IDL.Text,
-          IDL.Int,
-          IDL.Int,
-          ResidentStatus,
-          IDL.Text,
-          RoomType,
-          IDL.Opt(IDL.Text),
-          IDL.Vec(Physician),
-          IDL.Opt(Pharmacy),
-          IDL.Opt(Insurance),
-          IDL.Text,
-          IDL.Text,
-          IDL.Vec(ResponsiblePerson),
-          IDL.Vec(Medication),
-        ],
-        [Resident],
-        [],
-      ),
-    'v105_dischargeResident' : IDL.Func([IDL.Nat], [], []),
-    'v105_permanentlyDeleteResident' : IDL.Func([IDL.Nat], [], []),
   });
 };
 

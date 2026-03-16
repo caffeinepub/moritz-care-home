@@ -1,298 +1,229 @@
-import { useState } from 'react';
-import { useAddDailyVitals } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { dateStringToNanoseconds } from '../lib/dateUtils';
-import type { Resident } from '../backend';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useAddDailyVitals } from "../hooks/useQueries";
+import type { Resident } from "../hooks/useQueries";
 
 interface AddDailyVitalsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  resident: Resident | null;
+  resident: Resident;
+  children?: React.ReactNode;
 }
 
-export default function AddDailyVitalsDialog({ open, onOpenChange, resident }: AddDailyVitalsDialogProps) {
-  const [measurementDate, setMeasurementDate] = useState('');
-  const [measurementTime, setMeasurementTime] = useState('');
-  const [temperature, setTemperature] = useState('');
-  const [temperatureUnit, setTemperatureUnit] = useState<'F' | 'C'>('F');
-  const [bloodPressureSystolic, setBloodPressureSystolic] = useState('');
-  const [bloodPressureDiastolic, setBloodPressureDiastolic] = useState('');
-  const [pulseRate, setPulseRate] = useState('');
-  const [respiratoryRate, setRespiratoryRate] = useState('');
-  const [oxygenSaturation, setOxygenSaturation] = useState('');
-  const [bloodGlucose, setBloodGlucose] = useState('');
-  const [notes, setNotes] = useState('');
+export default function AddDailyVitalsDialog({
+  resident,
+  children,
+}: AddDailyVitalsDialogProps) {
+  const [open, setOpen] = useState(false);
+  const { mutate: addDailyVitals, isPending } = useAddDailyVitals();
 
-  const addDailyVitals = useAddDailyVitals();
+  const [measurementDateTime, setMeasurementDateTime] = useState("");
+  const [temperatureF, setTemperatureF] = useState("");
+  const [bpSystolic, setBpSystolic] = useState("");
+  const [bpDiastolic, setBpDiastolic] = useState("");
+  const [pulseRate, setPulseRate] = useState("");
+  const [respiratoryRate, setRespiratoryRate] = useState("");
+  const [oxygenSaturation, setOxygenSaturation] = useState("");
+  const [bloodGlucose, setBloodGlucose] = useState("");
+  const [notes, setNotes] = useState("");
 
   const resetForm = () => {
-    setMeasurementDate('');
-    setMeasurementTime('');
-    setTemperature('');
-    setTemperatureUnit('F');
-    setBloodPressureSystolic('');
-    setBloodPressureDiastolic('');
-    setPulseRate('');
-    setRespiratoryRate('');
-    setOxygenSaturation('');
-    setBloodGlucose('');
-    setNotes('');
+    setMeasurementDateTime("");
+    setTemperatureF("");
+    setBpSystolic("");
+    setBpDiastolic("");
+    setPulseRate("");
+    setRespiratoryRate("");
+    setOxygenSaturation("");
+    setBloodGlucose("");
+    setNotes("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (
-      !resident ||
-      !measurementDate ||
-      !measurementTime ||
-      !temperature ||
-      !bloodPressureSystolic ||
-      !bloodPressureDiastolic ||
+      !measurementDateTime ||
+      !temperatureF ||
+      !bpSystolic ||
+      !bpDiastolic ||
       !pulseRate ||
       !respiratoryRate ||
       !oxygenSaturation
     ) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields.");
       return;
     }
 
-    try {
-      const dateTimeString = `${measurementDate}T${measurementTime}`;
-      const measurementDateTimeNanoseconds = dateStringToNanoseconds(dateTimeString);
+    const tempF = Number.parseFloat(temperatureF);
+    const tempC = ((tempF - 32) * 5) / 9;
+    const timestamp = new Date(measurementDateTime).getTime() * 1_000_000;
 
-      let tempInFahrenheit = parseFloat(temperature);
-      if (temperatureUnit === 'C') {
-        tempInFahrenheit = (tempInFahrenheit * 9) / 5 + 32;
-      }
-
-      await addDailyVitals.mutateAsync({
+    addDailyVitals(
+      {
         residentId: resident.id,
-        temperature: tempInFahrenheit,
-        bloodPressureSystolic: BigInt(bloodPressureSystolic),
-        bloodPressureDiastolic: BigInt(bloodPressureDiastolic),
-        pulseRate: BigInt(pulseRate),
-        respiratoryRate: BigInt(respiratoryRate),
-        oxygenSaturation: BigInt(oxygenSaturation),
-        bloodGlucose: bloodGlucose ? BigInt(bloodGlucose) : null,
-        measurementDateTime: measurementDateTimeNanoseconds,
-        notes,
-      });
-
-      resetForm();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding daily vitals:', error);
-    }
+        temperature: tempC,
+        bloodPressureSystolic: Number.parseInt(bpSystolic),
+        bloodPressureDiastolic: Number.parseInt(bpDiastolic),
+        pulseRate: Number.parseInt(pulseRate),
+        respiratoryRate: Number.parseInt(respiratoryRate),
+        oxygenSaturation: Number.parseInt(oxygenSaturation),
+        bloodGlucose: bloodGlucose ? Number.parseInt(bloodGlucose) : undefined,
+        measurementDateTime: timestamp,
+        notes: notes.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast.success("Vitals recorded successfully.");
+          resetForm();
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to record vitals.",
+          );
+        },
+      },
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white border-border">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button variant="outline" size="sm">
+            Add Vitals
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="bg-white">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add Daily Vitals</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Record vital signs for {resident?.firstName} {resident?.lastName}
-          </DialogDescription>
+          <DialogTitle>Record Daily Vitals</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="measurementDate" className="text-foreground">
-                Measurement Date <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="measurementDate"
-                type="date"
-                value={measurementDate}
-                onChange={(e) => setMeasurementDate(e.target.value)}
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="measurementTime" className="text-foreground">
-                Measurement Time <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="measurementTime"
-                type="time"
-                value={measurementTime}
-                onChange={(e) => setMeasurementTime(e.target.value)}
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label>Date & Time *</Label>
+            <Input
+              type="datetime-local"
+              value={measurementDateTime}
+              onChange={(e) => setMeasurementDateTime(e.target.value)}
+              className="bg-white"
+            />
           </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="temperature" className="text-foreground">
-                Temperature <span className="text-red-500">*</span>
-              </Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Temperature (°F) *</Label>
               <Input
-                id="temperature"
                 type="number"
                 step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(e.target.value)}
+                value={temperatureF}
+                onChange={(e) => setTemperatureF(e.target.value)}
                 placeholder="98.6"
-                required
-                className="bg-white border-input text-foreground"
+                className="bg-white"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="temperatureUnit" className="text-foreground">
-                Unit <span className="text-red-500">*</span>
-              </Label>
-              <Select value={temperatureUnit} onValueChange={(value) => setTemperatureUnit(value as 'F' | 'C')}>
-                <SelectTrigger id="temperatureUnit" className="bg-white border-input text-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="F">°F</SelectItem>
-                  <SelectItem value="C">°C</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="bloodPressureSystolic" className="text-foreground">
-                Blood Pressure (Systolic) <span className="text-red-500">*</span>
-              </Label>
+              <Label>Pulse Rate (bpm) *</Label>
               <Input
-                id="bloodPressureSystolic"
-                type="number"
-                value={bloodPressureSystolic}
-                onChange={(e) => setBloodPressureSystolic(e.target.value)}
-                placeholder="120"
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bloodPressureDiastolic" className="text-foreground">
-                Blood Pressure (Diastolic) <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="bloodPressureDiastolic"
-                type="number"
-                value={bloodPressureDiastolic}
-                onChange={(e) => setBloodPressureDiastolic(e.target.value)}
-                placeholder="80"
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="pulseRate" className="text-foreground">
-                Pulse Rate (bpm) <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="pulseRate"
                 type="number"
                 value={pulseRate}
                 onChange={(e) => setPulseRate(e.target.value)}
                 placeholder="72"
-                required
-                className="bg-white border-input text-foreground"
+                className="bg-white"
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="respiratoryRate" className="text-foreground">
-                Respiratory Rate (breaths/min) <span className="text-red-500">*</span>
-              </Label>
+              <Label>BP Systolic (mmHg) *</Label>
               <Input
-                id="respiratoryRate"
+                type="number"
+                value={bpSystolic}
+                onChange={(e) => setBpSystolic(e.target.value)}
+                placeholder="120"
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>BP Diastolic (mmHg) *</Label>
+              <Input
+                type="number"
+                value={bpDiastolic}
+                onChange={(e) => setBpDiastolic(e.target.value)}
+                placeholder="80"
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Respiratory Rate *</Label>
+              <Input
                 type="number"
                 value={respiratoryRate}
                 onChange={(e) => setRespiratoryRate(e.target.value)}
                 placeholder="16"
-                required
-                className="bg-white border-input text-foreground"
+                className="bg-white"
               />
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="oxygenSaturation" className="text-foreground">
-                Oxygen Saturation (%) <span className="text-red-500">*</span>
-              </Label>
+              <Label>O₂ Saturation (%) *</Label>
               <Input
-                id="oxygenSaturation"
                 type="number"
                 value={oxygenSaturation}
                 onChange={(e) => setOxygenSaturation(e.target.value)}
                 placeholder="98"
-                min="0"
-                max="100"
-                required
-                className="bg-white border-input text-foreground"
+                className="bg-white"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bloodGlucose" className="text-foreground">
-                Blood Glucose (mg/dL)
-              </Label>
+            <div className="space-y-2 col-span-2">
+              <Label>Blood Glucose (mg/dL)</Label>
               <Input
-                id="bloodGlucose"
                 type="number"
                 value={bloodGlucose}
                 onChange={(e) => setBloodGlucose(e.target.value)}
-                placeholder="100"
-                className="bg-white border-input text-foreground"
+                placeholder="Optional"
+                className="bg-white"
               />
             </div>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="notes" className="text-foreground">
-              Notes
-            </Label>
+            <Label>Notes</Label>
             <Textarea
-              id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional observations or notes"
+              placeholder="Optional notes"
+              className="bg-white"
               rows={3}
-              className="bg-white border-input text-foreground"
             />
           </div>
-
-          <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={addDailyVitals.isPending} className="bg-white">
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={addDailyVitals.isPending} className="bg-primary text-primary-foreground">
-              {addDailyVitals.isPending ? (
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
+                  Recording...
                 </>
               ) : (
-                'Add Vitals'
+                "Record Vitals"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

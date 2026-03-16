@@ -1,13 +1,19 @@
-import { useInternetIdentity } from '../hooks/useInternetIdentity';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Loader2, Heart } from 'lucide-react';
-import BrandLogo from '@/components/BrandLogo';
+import BrandLogo from "@/components/BrandLogo";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Heart, Loader2, LogIn } from "lucide-react";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
 export default function LoginPage() {
   const { login, loginStatus } = useInternetIdentity();
 
-  const isLoggingIn = loginStatus === 'logging-in';
+  const isLoggingIn = loginStatus === "logging-in";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
@@ -15,10 +21,13 @@ export default function LoginPage() {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: 'url(/assets/moritzcarehome.jpg)',
+          backgroundImage: "url(/assets/moritzcarehome.jpg)",
         }}
       >
-        <div className="absolute inset-0 bg-teal-900 opacity-100" style={{ opacity: 1 }} />
+        <div
+          className="absolute inset-0 bg-teal-900 opacity-100"
+          style={{ opacity: 1 }}
+        />
       </div>
 
       {/* Login Card */}
@@ -28,7 +37,9 @@ export default function LoginPage() {
             <div className="flex justify-center">
               <BrandLogo size="xl" mode="rectangular" />
             </div>
-            <CardTitle className="text-3xl font-bold text-gray-900">Moritz Care Home</CardTitle>
+            <CardTitle className="text-3xl font-bold text-gray-900">
+              Moritz Care Home
+            </CardTitle>
             <CardDescription className="text-base text-gray-600">
               Assisted Living Management System
             </CardDescription>
@@ -68,7 +79,8 @@ export default function LoginPage() {
         {/* Footer */}
         <footer className="mt-8 text-center text-sm text-white">
           <p className="flex items-center justify-center gap-1">
-            © 2026. Built with <Heart className="h-4 w-4 fill-red-400 text-red-400" /> using{' '}
+            © 2026. Built with{" "}
+            <Heart className="h-4 w-4 fill-red-400 text-red-400" /> using{" "}
             <a
               href="https://caffeine.ai"
               target="_blank"

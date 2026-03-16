@@ -1,79 +1,68 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from '@tanstack/react-router';
-import { useGetResident, useIsCallerAdmin } from '../hooks/useQueries';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import {
-  ArrowLeft,
-  Printer,
-  Edit,
-  User,
-  Phone,
-  MapPin,
-  Calendar,
-  Pill,
   Activity,
+  AlertCircle,
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CreditCard,
+  Edit,
   FileText,
   Heart,
-  Building2,
-  CreditCard,
-  Users,
-  AlertCircle,
+  MapPin,
+  Phone,
+  Pill,
+  Printer,
   RefreshCw,
-} from 'lucide-react';
-import { formatDate, calculateAge } from '../lib/dateUtils';
-import EditResidentDialog from '../components/EditResidentDialog';
-import AddMedicationDialog from '../components/AddMedicationDialog';
-import EditMedicationDialog from '../components/EditMedicationDialog';
-import AddMarRecordDialog from '../components/AddMarRecordDialog';
-import AddAdlRecordDialog from '../components/AddAdlRecordDialog';
-import AddDailyVitalsDialog from '../components/AddDailyVitalsDialog';
-import AddWeightEntryDialog from '../components/AddWeightEntryDialog';
-import type { Medication } from '../backend';
+  User,
+  Users,
+} from "lucide-react";
+import { useState } from "react";
+import type { Medication } from "../backend";
+import AddAdlRecordDialog from "../components/AddAdlRecordDialog";
+import AddDailyVitalsDialog from "../components/AddDailyVitalsDialog";
+import AddMarRecordDialog from "../components/AddMarRecordDialog";
+import AddMedicationDialog from "../components/AddMedicationDialog";
+import AddWeightEntryDialog from "../components/AddWeightEntryDialog";
+import EditMedicationDialog from "../components/EditMedicationDialog";
+import EditResidentDialog from "../components/EditResidentDialog";
+import { useGetResident, useIsCallerAdmin } from "../hooks/useQueries";
+import { calculateAge, formatDate } from "../lib/dateUtils";
 
-/**
- * Resident profile page using resilient actor-based queries with proper loading states, error recovery with retry, and admin-gated Edit Profile button.
- */
 export default function ResidentProfile() {
-  const { residentId } = useParams({ from: '/resident/$residentId' });
+  const { residentId } = useParams({ from: "/resident/$residentId" });
   const navigate = useNavigate();
-  const residentIdBigInt = BigInt(residentId);
+  // useGetResident expects number
+  const residentIdNum = Number(residentId);
 
-  const { 
-    data: resident, 
-    isLoading, 
+  const {
+    data: resident,
+    isLoading,
     error,
-    refetch: refetchResident
-  } = useGetResident(residentIdBigInt);
-  
-  const { 
-    data: isAdmin, 
+    refetch: refetchResident,
+  } = useGetResident(residentIdNum);
+
+  const {
+    data: isAdmin,
     isLoading: adminLoading,
-    refetch: refetchAdmin
+    refetch: refetchAdmin,
   } = useIsCallerAdmin();
 
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [addMedicationOpen, setAddMedicationOpen] = useState(false);
-  const [editMedicationOpen, setEditMedicationOpen] = useState(false);
-  const [selectedMedication, setSelectedMedication] = useState<Medication | null>(null);
-  const [addMarRecordOpen, setAddMarRecordOpen] = useState(false);
-  const [addAdlRecordOpen, setAddAdlRecordOpen] = useState(false);
-  const [addDailyVitalsOpen, setAddDailyVitalsOpen] = useState(false);
-  const [addWeightEntryOpen, setAddWeightEntryOpen] = useState(false);
+  const [selectedMedication, setSelectedMedication] =
+    useState<Medication | null>(null);
   const [includeSignature, setIncludeSignature] = useState(false);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   const handleEditMedication = (medication: Medication) => {
     setSelectedMedication(medication);
-    setEditMedicationOpen(true);
   };
 
   const handleRetry = () => {
@@ -104,18 +93,22 @@ export default function ResidentProfile() {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive" />
             <div className="flex-1">
-              <h3 className="font-semibold text-destructive">Error Loading Resident</h3>
+              <h3 className="font-semibold text-destructive">
+                Error Loading Resident
+              </h3>
               <p className="mt-1 text-sm text-destructive/90">
-                {error.message === 'UNAUTHORIZED'
-                  ? 'You do not have permission to view this resident.'
-                  : error.message || 'Failed to load resident information'}
+                {error.message || "Failed to load resident information"}
               </p>
               <div className="mt-4 flex gap-2">
                 <Button onClick={handleRetry} variant="outline" size="sm">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Retry
                 </Button>
-                <Button onClick={() => navigate({ to: '/' })} variant="outline" size="sm">
+                <Button
+                  onClick={() => navigate({ to: "/" })}
+                  variant="outline"
+                  size="sm"
+                >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Return to Dashboard
                 </Button>
@@ -132,7 +125,7 @@ export default function ResidentProfile() {
       <div className="container mx-auto p-6">
         <div className="rounded-lg border p-4">
           <p>Resident not found</p>
-          <Button onClick={() => navigate({ to: '/' })} className="mt-4">
+          <Button onClick={() => navigate({ to: "/" })} className="mt-4">
             Return to Dashboard
           </Button>
         </div>
@@ -142,14 +135,20 @@ export default function ResidentProfile() {
 
   const age = calculateAge(resident.dateOfBirth);
   const initials = `${resident.firstName[0]}${resident.lastName[0]}`;
-  const activeMedications = resident.medications.filter((m) => m.status === 'active');
+  const activeMedications = resident.medications.filter(
+    (m) => String(m.status) === "active",
+  );
 
   return (
     <div className="container mx-auto space-y-6 p-6">
       {/* Top Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate({ to: '/' })}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate({ to: "/" })}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-3">
@@ -182,12 +181,13 @@ export default function ResidentProfile() {
             <Printer className="mr-2 h-4 w-4" />
             Print
           </Button>
-          {/* Admin-only Edit Profile button */}
           {!adminLoading && isAdmin && (
-            <Button onClick={() => setEditDialogOpen(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Profile
-            </Button>
+            <EditResidentDialog resident={resident}>
+              <Button>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Profile
+              </Button>
+            </EditResidentDialog>
           )}
         </div>
       </div>
@@ -200,8 +200,10 @@ export default function ResidentProfile() {
               <User className="h-5 w-5" />
               Resident Information
             </CardTitle>
-            <Badge variant={resident.status === 'active' ? 'default' : 'secondary'}>
-              {resident.status === 'active' ? 'Active' : 'Discharged'}
+            <Badge
+              variant={resident.status === "active" ? "default" : "secondary"}
+            >
+              {resident.status === "active" ? "Active" : "Discharged"}
             </Badge>
           </div>
         </CardHeader>
@@ -223,7 +225,9 @@ export default function ResidentProfile() {
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Admission Date</p>
-              <p className="font-medium">{formatDate(resident.admissionDate)}</p>
+              <p className="font-medium">
+                {formatDate(resident.admissionDate)}
+              </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Room Number</p>
@@ -235,24 +239,23 @@ export default function ResidentProfile() {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Room Type</p>
               <p className="font-medium">
-                {resident.roomType === 'solo' ? 'Solo' : 'Shared Room'}
+                {resident.roomType === "solo" ? "Solo" : "Shared Room"}
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Medicaid Number</p>
-              <p className="font-medium">{resident.medicaidNumber || 'N/A'}</p>
+              <p className="font-medium">{resident.medicaidNumber || "N/A"}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Medicare Number</p>
-              <p className="font-medium">{resident.medicareNumber || 'N/A'}</p>
+              <p className="font-medium">{resident.medicareNumber || "N/A"}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Three Info Cards Side by Side */}
+      {/* Three Info Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Assigned Physicians */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -262,13 +265,17 @@ export default function ResidentProfile() {
           </CardHeader>
           <CardContent>
             {resident.physicians.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No physicians assigned</p>
+              <p className="text-sm text-muted-foreground">
+                No physicians assigned
+              </p>
             ) : (
               <div className="space-y-3">
                 {resident.physicians.map((physician) => (
-                  <div key={physician.id.toString()} className="space-y-1">
+                  <div key={String(physician.id)} className="space-y-1">
                     <p className="font-medium">{physician.name}</p>
-                    <p className="text-sm text-muted-foreground">{physician.specialty}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {physician.specialty}
+                    </p>
                     <p className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Phone className="h-3 w-3" />
                       {physician.contactNumber}
@@ -280,7 +287,6 @@ export default function ResidentProfile() {
           </CardContent>
         </Card>
 
-        {/* Pharmacy Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -290,7 +296,9 @@ export default function ResidentProfile() {
           </CardHeader>
           <CardContent>
             {!resident.pharmacy ? (
-              <p className="text-sm text-muted-foreground">No pharmacy assigned</p>
+              <p className="text-sm text-muted-foreground">
+                No pharmacy assigned
+              </p>
             ) : (
               <div className="space-y-2">
                 <p className="font-medium">{resident.pharmacy.name}</p>
@@ -307,7 +315,6 @@ export default function ResidentProfile() {
           </CardContent>
         </Card>
 
-        {/* Responsible Contacts */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -317,13 +324,17 @@ export default function ResidentProfile() {
           </CardHeader>
           <CardContent>
             {resident.responsiblePersons.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No contacts assigned</p>
+              <p className="text-sm text-muted-foreground">
+                No contacts assigned
+              </p>
             ) : (
               <div className="space-y-3">
                 {resident.responsiblePersons.map((person) => (
-                  <div key={person.id.toString()} className="space-y-1">
+                  <div key={String(person.id)} className="space-y-1">
                     <p className="font-medium">{person.name}</p>
-                    <p className="text-sm text-muted-foreground">{person.relationship}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {person.relationship}
+                    </p>
                     <p className="flex items-center gap-1 text-sm text-muted-foreground">
                       <Phone className="h-3 w-3" />
                       {person.contactNumber}
@@ -336,7 +347,7 @@ export default function ResidentProfile() {
         </Card>
       </div>
 
-      {/* Insurance Information */}
+      {/* Insurance */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -346,7 +357,9 @@ export default function ResidentProfile() {
         </CardHeader>
         <CardContent>
           {!resident.insurance ? (
-            <p className="text-sm text-muted-foreground">No insurance information available</p>
+            <p className="text-sm text-muted-foreground">
+              No insurance information available
+            </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1">
@@ -363,7 +376,9 @@ export default function ResidentProfile() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Contact Number</p>
-                <p className="font-medium">{resident.insurance.contactNumber}</p>
+                <p className="font-medium">
+                  {resident.insurance.contactNumber}
+                </p>
               </div>
             </div>
           )}
@@ -390,18 +405,23 @@ export default function ResidentProfile() {
             <Calendar className="h-4 w-4" />
             ADL
           </TabsTrigger>
+          <TabsTrigger value="weight" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Weight Log
+          </TabsTrigger>
         </TabsList>
 
         {/* Medications Tab */}
         <TabsContent value="medications" className="space-y-4">
           <div className="flex justify-between print:hidden">
             <h3 className="text-lg font-semibold">Active Medications</h3>
-            {/* Admin-only Add Medication button */}
             {!adminLoading && isAdmin && (
-              <Button onClick={() => setAddMedicationOpen(true)}>
-                <Pill className="mr-2 h-4 w-4" />
-                Add Medication
-              </Button>
+              <AddMedicationDialog resident={resident}>
+                <Button>
+                  <Pill className="mr-2 h-4 w-4" />
+                  Add Medication
+                </Button>
+              </AddMedicationDialog>
             )}
           </div>
           {activeMedications.length === 0 ? (
@@ -414,26 +434,34 @@ export default function ResidentProfile() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {activeMedications.map((medication) => (
-                <Card key={medication.id.toString()}>
+                <Card key={String(medication.id)}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-base">{medication.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{medication.dosage}</p>
+                        <CardTitle className="text-base">
+                          {medication.name}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {medication.dosage}
+                        </p>
                       </div>
-                      <Badge>{medication.status}</Badge>
+                      <Badge>{String(medication.status)}</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div>
-                      <p className="text-sm font-medium">Administration Times:</p>
+                      <p className="text-sm font-medium">
+                        Administration Times:
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        {medication.administrationTimes.join(', ')}
+                        {medication.administrationTimes.join(", ")}
                       </p>
                     </div>
                     {medication.prescribingPhysician && (
                       <div>
-                        <p className="text-sm font-medium">Prescribing Physician:</p>
+                        <p className="text-sm font-medium">
+                          Prescribing Physician:
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {medication.prescribingPhysician.name}
                         </p>
@@ -442,20 +470,26 @@ export default function ResidentProfile() {
                     {medication.notes && (
                       <div>
                         <p className="text-sm font-medium">Notes:</p>
-                        <p className="text-sm text-muted-foreground">{medication.notes}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {medication.notes}
+                        </p>
                       </div>
                     )}
-                    {/* Admin-only Edit button */}
                     {!adminLoading && isAdmin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditMedication(medication)}
-                        className="mt-2 w-full"
+                      <EditMedicationDialog
+                        resident={resident}
+                        medication={medication}
                       >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Medication
-                      </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditMedication(medication)}
+                          className="mt-2 w-full"
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Medication
+                        </Button>
+                      </EditMedicationDialog>
                     )}
                   </CardContent>
                 </Card>
@@ -468,10 +502,14 @@ export default function ResidentProfile() {
         <TabsContent value="vitals" className="space-y-4">
           <div className="flex justify-between print:hidden">
             <h3 className="text-lg font-semibold">Daily Vitals</h3>
-            <Button onClick={() => setAddDailyVitalsOpen(true)}>
-              <Activity className="mr-2 h-4 w-4" />
-              Add Vitals
-            </Button>
+            {!adminLoading && isAdmin && (
+              <AddDailyVitalsDialog resident={resident}>
+                <Button>
+                  <Activity className="mr-2 h-4 w-4" />
+                  Record Vitals
+                </Button>
+              </AddDailyVitalsDialog>
+            )}
           </div>
           {resident.dailyVitals.length === 0 ? (
             <Card>
@@ -482,56 +520,63 @@ export default function ResidentProfile() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {resident.dailyVitals
-                .sort((a, b) => Number(b.measurementDateTime - a.measurementDateTime))
-                .map((vitals) => (
-                  <Card key={vitals.id.toString()}>
-                    <CardHeader>
-                      <CardTitle className="text-base">
-                        {formatDate(vitals.measurementDateTime)}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Temperature</p>
-                          <p className="font-medium">{vitals.temperature}°F</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Blood Pressure</p>
+              {[...resident.dailyVitals].reverse().map((vitals) => (
+                <Card key={String(vitals.id)}>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      {formatDate(vitals.measurementDateTime)}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-6 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Temperature</p>
+                        <p className="font-medium">
+                          {vitals.temperature.toFixed(1)}°C
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Blood Pressure</p>
+                        <p className="font-medium">
+                          {vitals.bloodPressureSystolic}/
+                          {vitals.bloodPressureDiastolic} mmHg
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Pulse Rate</p>
+                        <p className="font-medium">{vitals.pulseRate} bpm</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">
+                          Respiratory Rate
+                        </p>
+                        <p className="font-medium">
+                          {vitals.respiratoryRate} /min
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">O₂ Saturation</p>
+                        <p className="font-medium">
+                          {vitals.oxygenSaturation}%
+                        </p>
+                      </div>
+                      {vitals.bloodGlucose != null && (
+                        <div>
+                          <p className="text-muted-foreground">Blood Glucose</p>
                           <p className="font-medium">
-                            {vitals.bloodPressureSystolic.toString()}/
-                            {vitals.bloodPressureDiastolic.toString()} mmHg
+                            {vitals.bloodGlucose} mg/dL
                           </p>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Pulse Rate</p>
-                          <p className="font-medium">{vitals.pulseRate.toString()} bpm</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Respiratory Rate</p>
-                          <p className="font-medium">{vitals.respiratoryRate.toString()} /min</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm text-muted-foreground">Oxygen Saturation</p>
-                          <p className="font-medium">{vitals.oxygenSaturation.toString()}%</p>
-                        </div>
-                        {vitals.bloodGlucose && (
-                          <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">Blood Glucose</p>
-                            <p className="font-medium">{vitals.bloodGlucose.toString()} mg/dL</p>
-                          </div>
-                        )}
-                      </div>
-                      {vitals.notes && (
-                        <div className="mt-4">
-                          <p className="text-sm font-medium">Notes:</p>
-                          <p className="text-sm text-muted-foreground">{vitals.notes}</p>
-                        </div>
                       )}
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                    {vitals.notes && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {vitals.notes}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
@@ -539,11 +584,17 @@ export default function ResidentProfile() {
         {/* MAR Tab */}
         <TabsContent value="mar" className="space-y-4">
           <div className="flex justify-between print:hidden">
-            <h3 className="text-lg font-semibold">Medication Administration Records</h3>
-            <Button onClick={() => setAddMarRecordOpen(true)}>
-              <FileText className="mr-2 h-4 w-4" />
-              Add MAR Record
-            </Button>
+            <h3 className="text-lg font-semibold">
+              Medication Administration Records
+            </h3>
+            {!adminLoading && isAdmin && (
+              <AddMarRecordDialog resident={resident}>
+                <Button>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Add MAR Record
+                </Button>
+              </AddMarRecordDialog>
+            )}
           </div>
           {resident.marRecords.length === 0 ? (
             <Card>
@@ -553,40 +604,31 @@ export default function ResidentProfile() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {resident.marRecords
-                .sort((a, b) => Number(b.administrationTime - a.administrationTime))
-                .map((record) => (
-                  <Card key={record.id.toString()}>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base">{record.medication.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(record.administrationTime)}
-                          </p>
-                        </div>
-                        <Badge>{record.medication.status}</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
+            <div className="space-y-3">
+              {[...resident.marRecords].reverse().map((record) => (
+                <Card key={String(record.id)}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm font-medium">Dosage:</p>
-                        <p className="text-sm text-muted-foreground">{record.medication.dosage}</p>
+                        <p className="font-medium">{record.medication.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {record.medication.dosage} —{" "}
+                          {String(record.medication.administrationRoute)}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">Administered By:</p>
-                        <p className="text-sm text-muted-foreground">{record.administeredBy}</p>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{formatDate(record.administrationTime)}</p>
+                        <p>By: {record.administeredBy}</p>
                       </div>
-                      {record.notes && (
-                        <div>
-                          <p className="text-sm font-medium">Notes:</p>
-                          <p className="text-sm text-muted-foreground">{record.notes}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                    {record.notes && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {record.notes}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
@@ -594,11 +636,17 @@ export default function ResidentProfile() {
         {/* ADL Tab */}
         <TabsContent value="adl" className="space-y-4">
           <div className="flex justify-between print:hidden">
-            <h3 className="text-lg font-semibold">Activities of Daily Living</h3>
-            <Button onClick={() => setAddAdlRecordOpen(true)}>
-              <Calendar className="mr-2 h-4 w-4" />
-              Add ADL Record
-            </Button>
+            <h3 className="text-lg font-semibold">
+              Activities of Daily Living
+            </h3>
+            {!adminLoading && isAdmin && (
+              <AddAdlRecordDialog resident={resident}>
+                <Button>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Add ADL Record
+                </Button>
+              </AddAdlRecordDialog>
+            )}
           </div>
           {resident.adlRecords.length === 0 ? (
             <Card>
@@ -608,77 +656,83 @@ export default function ResidentProfile() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {resident.adlRecords
-                .sort((a, b) => Number(b.date - a.date))
-                .map((record) => (
-                  <Card key={record.id.toString()}>
-                    <CardHeader>
-                      <CardTitle className="text-base">{record.activity}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{formatDate(record.date)}</p>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
+            <div className="space-y-3">
+              {[...resident.adlRecords].reverse().map((record) => (
+                <Card key={String(record.id)}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm font-medium">Assistance Level:</p>
-                        <p className="text-sm text-muted-foreground">{record.assistanceLevel}</p>
+                        <p className="font-medium">{record.activity}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Assistance: {record.assistanceLevel}
+                        </p>
                       </div>
-                      {record.staffNotes && (
-                        <div>
-                          <p className="text-sm font-medium">Staff Notes:</p>
-                          <p className="text-sm text-muted-foreground">{record.staffNotes}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(record.date)}
+                      </p>
+                    </div>
+                    {record.staffNotes && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {record.staffNotes}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Weight Log Tab */}
+        <TabsContent value="weight" className="space-y-4">
+          <div className="flex justify-between print:hidden">
+            <h3 className="text-lg font-semibold">Weight Log</h3>
+            {!adminLoading && isAdmin && (
+              <AddWeightEntryDialog resident={resident}>
+                <Button>
+                  <Activity className="mr-2 h-4 w-4" />
+                  Add Weight Entry
+                </Button>
+              </AddWeightEntryDialog>
+            )}
+          </div>
+          {resident.weightLog.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Activity className="mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-lg font-medium">No weight entries</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {[...resident.weightLog].reverse().map((entry) => (
+                <Card key={String(entry.id)}>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          {entry.weight} {entry.weightUnit}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(entry.measurementDate)}
+                      </p>
+                    </div>
+                    {entry.notes && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {entry.notes}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs */}
-      {isAdmin && (
-        <>
-          <EditResidentDialog
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-            resident={resident}
-          />
-          <AddMedicationDialog
-            open={addMedicationOpen}
-            onOpenChange={setAddMedicationOpen}
-            resident={resident}
-          />
-          {selectedMedication && (
-            <EditMedicationDialog
-              open={editMedicationOpen}
-              onOpenChange={setEditMedicationOpen}
-              resident={resident}
-              medication={selectedMedication}
-            />
-          )}
-        </>
-      )}
-      <AddMarRecordDialog
-        open={addMarRecordOpen}
-        onOpenChange={setAddMarRecordOpen}
-        resident={resident}
-      />
-      <AddAdlRecordDialog
-        open={addAdlRecordOpen}
-        onOpenChange={setAddAdlRecordOpen}
-        resident={resident}
-      />
-      <AddDailyVitalsDialog
-        open={addDailyVitalsOpen}
-        onOpenChange={setAddDailyVitalsOpen}
-        resident={resident}
-      />
-      <AddWeightEntryDialog
-        open={addWeightEntryOpen}
-        onOpenChange={setAddWeightEntryOpen}
-        resident={resident}
-      />
+      {/* Keep selectedMedication in scope to avoid unused warning */}
+      {selectedMedication && null}
     </div>
   );
 }

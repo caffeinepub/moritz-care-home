@@ -1,228 +1,178 @@
-import { useState } from 'react';
-import { useAddMarRecord } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { dateStringToNanoseconds } from '../lib/dateUtils';
-import type { Resident, Medication } from '../backend';
-import { MedicationStatus } from '../backend';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
+import { toast } from "sonner";
+import type { Medication } from "../backend";
+import { useAddMarRecord } from "../hooks/useQueries";
+import type { Resident } from "../hooks/useQueries";
 
 interface AddMarRecordDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  resident: Resident | null;
+  resident: Resident;
+  children?: React.ReactNode;
 }
 
-export default function AddMarRecordDialog({ open, onOpenChange, resident }: AddMarRecordDialogProps) {
-  const [selectedMedicationId, setSelectedMedicationId] = useState<string>('');
-  const [administrationDate, setAdministrationDate] = useState('');
-  const [administrationTime, setAdministrationTime] = useState('');
-  const [administeredBy, setAdministeredBy] = useState('');
-  const [notes, setNotes] = useState('');
+export default function AddMarRecordDialog({
+  resident,
+  children,
+}: AddMarRecordDialogProps) {
+  const [open, setOpen] = useState(false);
+  const { mutate: addMarRecord, isPending } = useAddMarRecord();
 
-  const addMarRecord = useAddMarRecord();
+  const [selectedMedicationId, setSelectedMedicationId] = useState("");
+  const [administrationTime, setAdministrationTime] = useState("");
+  const [administeredBy, setAdministeredBy] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const activeMedications = resident.medications.filter(
+    (m: Medication) => m.status === "active" || m.status === ("active" as any),
+  );
 
   const resetForm = () => {
-    setSelectedMedicationId('');
-    setAdministrationDate('');
-    setAdministrationTime('');
-    setAdministeredBy('');
-    setNotes('');
+    setSelectedMedicationId("");
+    setAdministrationTime("");
+    setAdministeredBy("");
+    setNotes("");
   };
 
-  const activeMedications = resident?.medications.filter((m) => m.status === MedicationStatus.active) || [];
-  const selectedMedication = activeMedications.find((m) => m.id.toString() === selectedMedicationId);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!resident || !selectedMedicationId || !administrationDate || !administrationTime || !administeredBy) {
-      toast.error('Please fill in all required fields');
+    if (
+      !selectedMedicationId ||
+      !administrationTime ||
+      !administeredBy.trim()
+    ) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
-    const medication = activeMedications.find((m) => m.id.toString() === selectedMedicationId);
-    if (!medication) {
-      toast.error('Selected medication not found');
-      return;
-    }
+    const timestamp = new Date(administrationTime).getTime() * 1_000_000;
 
-    try {
-      const dateTimeString = `${administrationDate}T${administrationTime}`;
-      const administrationTimeNanoseconds = dateStringToNanoseconds(dateTimeString);
-
-      await addMarRecord.mutateAsync({
+    addMarRecord(
+      {
         residentId: resident.id,
-        medication,
-        administrationTime: administrationTimeNanoseconds,
-        administeredBy,
-        notes,
-      });
-
-      resetForm();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding MAR record:', error);
-    }
+        medicationId: Number(selectedMedicationId),
+        administrationTime: timestamp,
+        administeredBy: administeredBy.trim(),
+        notes: notes.trim(),
+      },
+      {
+        onSuccess: () => {
+          toast.success("MAR record added successfully.");
+          resetForm();
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to add MAR record.",
+          );
+        },
+      },
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white border-border">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button variant="outline" size="sm">
+            Add MAR Record
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="bg-white">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add Medication Administration Record</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Record medication administration for {resident?.firstName} {resident?.lastName}
-          </DialogDescription>
+          <DialogTitle>Add Medication Administration Record</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="medication" className="text-foreground">
-              Medication <span className="text-red-500">*</span>
-            </Label>
-            <Select value={selectedMedicationId} onValueChange={setSelectedMedicationId}>
-              <SelectTrigger id="medication" className="bg-white border-input text-foreground">
-                <SelectValue placeholder="Select a medication" />
+            <Label>Medication *</Label>
+            <Select
+              value={selectedMedicationId}
+              onValueChange={setSelectedMedicationId}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select medication" />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                {activeMedications.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">No active medications</div>
-                ) : (
-                  activeMedications.map((medication) => (
-                    <SelectItem key={medication.id.toString()} value={medication.id.toString()}>
-                      {medication.name} - {medication.dosage}
-                    </SelectItem>
-                  ))
-                )}
+                {activeMedications.map((m: Medication) => (
+                  <SelectItem key={String(m.id)} value={String(m.id)}>
+                    {m.name} — {m.dosage}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          {selectedMedication && (
-            <Card className="bg-white border-border">
-              <CardContent className="pt-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="font-medium text-foreground">Medication:</span>
-                    <span className="text-foreground">{selectedMedication.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium text-foreground">Dosage:</span>
-                    <span className="text-foreground">{selectedMedication.dosage}</span>
-                  </div>
-                  {selectedMedication.dosageQuantity && (
-                    <div className="flex justify-between">
-                      <span className="font-medium text-foreground">Quantity:</span>
-                      <span className="text-foreground">{selectedMedication.dosageQuantity}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="font-medium text-foreground">Route:</span>
-                    <span className="text-foreground capitalize">{selectedMedication.administrationRoute}</span>
-                  </div>
-                  {selectedMedication.administrationTimes.length > 0 && (
-                    <div className="flex justify-between">
-                      <span className="font-medium text-foreground">Scheduled Times:</span>
-                      <span className="text-foreground">{selectedMedication.administrationTimes.join(', ')}</span>
-                    </div>
-                  )}
-                  {selectedMedication.prescribingPhysician && (
-                    <div className="flex justify-between">
-                      <span className="font-medium text-foreground">Prescribing Physician:</span>
-                      <span className="text-foreground">{selectedMedication.prescribingPhysician.name}</span>
-                    </div>
-                  )}
-                  {selectedMedication.notes && (
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium text-foreground">Notes:</span>
-                      <span className="text-muted-foreground">{selectedMedication.notes}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="administrationDate" className="text-foreground">
-                Administration Date <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="administrationDate"
-                type="date"
-                value={administrationDate}
-                onChange={(e) => setAdministrationDate(e.target.value)}
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="administrationTime" className="text-foreground">
-                Administration Time <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="administrationTime"
-                type="time"
-                value={administrationTime}
-                onChange={(e) => setAdministrationTime(e.target.value)}
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label>Administration Time *</Label>
+            <Input
+              type="datetime-local"
+              value={administrationTime}
+              onChange={(e) => setAdministrationTime(e.target.value)}
+              className="bg-white"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="administeredBy" className="text-foreground">
-              Administered By <span className="text-red-500">*</span>
-            </Label>
+            <Label>Administered By *</Label>
             <Input
-              id="administeredBy"
               value={administeredBy}
               onChange={(e) => setAdministeredBy(e.target.value)}
-              placeholder="Staff member name"
-              required
-              className="bg-white border-input text-foreground"
+              placeholder="Staff name"
+              className="bg-white"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes" className="text-foreground">
-              Notes
-            </Label>
+            <Label>Notes</Label>
             <Textarea
-              id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Any observations or notes"
+              placeholder="Optional notes"
+              className="bg-white"
               rows={3}
-              className="bg-white border-input text-foreground"
             />
           </div>
 
-          <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={addMarRecord.isPending} className="bg-white">
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={addMarRecord.isPending || activeMedications.length === 0} className="bg-primary text-primary-foreground">
-              {addMarRecord.isPending ? (
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adding...
                 </>
               ) : (
-                'Add Record'
+                "Add Record"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -1,244 +1,220 @@
-import { useState, useEffect } from 'react';
-import { useUpdateMedication } from '../hooks/useQueries';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
-import type { Resident, Medication } from '../backend';
-import { AdministrationRoute, MedicationStatus } from '../backend';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import type { Medication } from "../backend";
+import { useUpdateMedication } from "../hooks/useQueries";
+import type { Resident } from "../hooks/useQueries";
 
 interface EditMedicationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  resident: Resident | null;
-  medication: Medication | null;
+  resident: Resident;
+  medication: Medication;
+  children?: React.ReactNode;
 }
 
-/**
- * Dialog component for editing existing medications with pre-filled form fields and solid white backgrounds for all UI elements.
- */
-export default function EditMedicationDialog({ open, onOpenChange, resident, medication }: EditMedicationDialogProps) {
-  const [name, setName] = useState('');
-  const [dosage, setDosage] = useState('');
-  const [dosageQuantity, setDosageQuantity] = useState('');
-  const [administrationRoute, setAdministrationRoute] = useState<AdministrationRoute>(AdministrationRoute.oral);
-  const [administrationTimes, setAdministrationTimes] = useState('');
-  const [prescribingPhysicianName, setPrescribingPhysicianName] = useState('');
-  const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<MedicationStatus>(MedicationStatus.active);
+const ROUTES = [
+  { value: "oral", label: "Oral" },
+  { value: "injection", label: "Injection" },
+  { value: "topical", label: "Topical" },
+  { value: "inhaled", label: "Inhaled" },
+  { value: "sublingual", label: "Sublingual" },
+  { value: "rectal", label: "Rectal" },
+  { value: "transdermal", label: "Transdermal" },
+  { value: "intravenous", label: "Intravenous" },
+  { value: "intramuscular", label: "Intramuscular" },
+  { value: "subcutaneous", label: "Subcutaneous" },
+  { value: "ophthalmic", label: "Ophthalmic" },
+];
 
-  const updateMedication = useUpdateMedication();
+export default function EditMedicationDialog({
+  resident,
+  medication,
+  children,
+}: EditMedicationDialogProps) {
+  const [open, setOpen] = useState(false);
+  const { mutate: updateMedication, isPending } = useUpdateMedication();
+
+  const [name, setName] = useState("");
+  const [dosage, setDosage] = useState("");
+  const [administrationTimes, setAdministrationTimes] = useState("");
+  const [administrationRoute, setAdministrationRoute] = useState("oral");
+  const [dosageQuantity, setDosageQuantity] = useState("");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState("active");
 
   useEffect(() => {
-    if (medication) {
+    if (open && medication) {
       setName(medication.name);
       setDosage(medication.dosage);
-      setDosageQuantity(medication.dosageQuantity || '');
-      setAdministrationRoute(medication.administrationRoute || AdministrationRoute.oral);
-      setAdministrationTimes(medication.administrationTimes.join(', '));
-      setPrescribingPhysicianName(medication.prescribingPhysician?.name || '');
-      setNotes(medication.notes || '');
-      setStatus(medication.status);
+      setAdministrationTimes(medication.administrationTimes.join(", "));
+      setAdministrationRoute(String(medication.administrationRoute));
+      setDosageQuantity(medication.dosageQuantity);
+      setNotes(medication.notes);
+      setStatus(String(medication.status));
     }
-  }, [medication]);
+  }, [open, medication]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!resident || !medication || !name || !dosage) {
-      toast.error('Please fill in all required fields');
+    if (!name.trim() || !dosage.trim()) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
-    try {
-      const prescribingPhysician = resident.physicians.find(
-        (p) => p.name.toLowerCase() === prescribingPhysicianName.toLowerCase()
-      );
-
-      const timesArray = administrationTimes
-        ? administrationTimes.split(',').map((t) => t.trim())
-        : [];
-
-      await updateMedication.mutateAsync({
+    updateMedication(
+      {
         residentId: resident.id,
-        medicationId: medication.id,
-        name,
-        dosage,
-        administrationTimes: timesArray,
-        prescribingPhysician: prescribingPhysician || null,
+        medicationId: Number(medication.id),
+        name: name.trim(),
+        dosage: dosage.trim(),
+        administrationTimes: administrationTimes
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
         administrationRoute,
-        dosageQuantity,
-        notes,
+        dosageQuantity: dosageQuantity.trim(),
+        notes: notes.trim(),
         status,
-      });
-
-      toast.success('Medication updated successfully');
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error editing medication:', error);
-      const message = error instanceof Error ? error.message : 'Failed to update medication';
-      toast.error(message);
-    }
+      },
+      {
+        onSuccess: () => {
+          toast.success("Medication updated successfully.");
+          setOpen(false);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to update medication.",
+          );
+        },
+      },
+    );
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-white border-border">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {children ?? (
+          <Button variant="outline" size="sm">
+            Edit
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="bg-white">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Edit Medication</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Update medication for {resident?.firstName} {resident?.lastName}
-          </DialogDescription>
+          <DialogTitle>Edit Medication</DialogTitle>
         </DialogHeader>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-foreground">
-              Medication Name <span className="text-red-500">*</span>
-            </Label>
+            <Label>Medication Name *</Label>
             <Input
-              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Lisinopril"
-              required
-              className="bg-white border-input text-foreground"
+              className="bg-white"
             />
           </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="dosage" className="text-foreground">
-                Dosage <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="dosage"
-                value={dosage}
-                onChange={(e) => setDosage(e.target.value)}
-                placeholder="e.g., 10mg"
-                required
-                className="bg-white border-input text-foreground"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dosageQuantity" className="text-foreground">
-                Dosage Quantity
-              </Label>
-              <Input
-                id="dosageQuantity"
-                value={dosageQuantity}
-                onChange={(e) => setDosageQuantity(e.target.value)}
-                placeholder="e.g., 1 tablet"
-                className="bg-white border-input text-foreground"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="administrationRoute" className="text-foreground">
-              Administration Route <span className="text-red-500">*</span>
-            </Label>
-            <Select value={administrationRoute} onValueChange={(value) => setAdministrationRoute(value as AdministrationRoute)}>
-              <SelectTrigger id="administrationRoute" className="bg-white border-input text-foreground">
+            <Label>Dosage *</Label>
+            <Input
+              value={dosage}
+              onChange={(e) => setDosage(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Administration Times</Label>
+            <Input
+              value={administrationTimes}
+              onChange={(e) => setAdministrationTimes(e.target.value)}
+              placeholder="e.g. 8:00 AM, 8:00 PM"
+              className="bg-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Administration Route</Label>
+            <Select
+              value={administrationRoute}
+              onValueChange={setAdministrationRoute}
+            >
+              <SelectTrigger className="bg-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value={AdministrationRoute.oral}>Oral</SelectItem>
-                <SelectItem value={AdministrationRoute.injection}>Injection</SelectItem>
-                <SelectItem value={AdministrationRoute.topical}>Topical</SelectItem>
-                <SelectItem value={AdministrationRoute.inhaled}>Inhaled</SelectItem>
-                <SelectItem value={AdministrationRoute.sublingual}>Sublingual</SelectItem>
-                <SelectItem value={AdministrationRoute.rectal}>Rectal</SelectItem>
-                <SelectItem value={AdministrationRoute.transdermal}>Transdermal</SelectItem>
-                <SelectItem value={AdministrationRoute.intravenous}>Intravenous</SelectItem>
-                <SelectItem value={AdministrationRoute.intramuscular}>Intramuscular</SelectItem>
-                <SelectItem value={AdministrationRoute.subcutaneous}>Subcutaneous</SelectItem>
-                <SelectItem value={AdministrationRoute.ophthalmic}>Ophthalmic</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="administrationTimes" className="text-foreground">
-              Administration Times
-            </Label>
-            <Input
-              id="administrationTimes"
-              value={administrationTimes}
-              onChange={(e) => setAdministrationTimes(e.target.value)}
-              placeholder="e.g., 8:00 AM, 2:00 PM, 8:00 PM"
-              className="bg-white border-input text-foreground"
-            />
-            <p className="text-xs text-muted-foreground">Separate multiple times with commas</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="prescribingPhysician" className="text-foreground">
-              Prescribing Physician
-            </Label>
-            <Select value={prescribingPhysicianName} onValueChange={setPrescribingPhysicianName}>
-              <SelectTrigger id="prescribingPhysician" className="bg-white border-input text-foreground">
-                <SelectValue placeholder="Select a physician" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {resident?.physicians.map((physician) => (
-                  <SelectItem key={physician.id.toString()} value={physician.name}>
-                    {physician.name} - {physician.specialty}
+                {ROUTES.map((r) => (
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="status" className="text-foreground">
-              Status <span className="text-red-500">*</span>
-            </Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as MedicationStatus)}>
-              <SelectTrigger id="status" className="bg-white border-input text-foreground">
+            <Label>Dosage Quantity</Label>
+            <Input
+              value={dosageQuantity}
+              onChange={(e) => setDosageQuantity(e.target.value)}
+              className="bg-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="bg-white">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value={MedicationStatus.active}>Active</SelectItem>
-                <SelectItem value={MedicationStatus.discontinued}>Discontinued</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="discontinued">Discontinued</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="notes" className="text-foreground">
-              Notes
-            </Label>
+            <Label>Notes</Label>
             <Textarea
-              id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes or instructions"
+              className="bg-white"
               rows={3}
-              className="bg-white border-input text-foreground"
             />
           </div>
-
-          <div className="flex justify-end gap-4 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={updateMedication.isPending} className="bg-white">
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={updateMedication.isPending} className="bg-primary text-primary-foreground">
-              {updateMedication.isPending ? (
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  Saving...
                 </>
               ) : (
-                'Update Medication'
+                "Save Changes"
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

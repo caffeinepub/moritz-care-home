@@ -1,214 +1,125 @@
 #!/usr/bin/env bash
-# Production Frontend Redeploy Script
-# This script rebuilds and redeploys the current frontend to production (IC network).
-# Usage: ./frontend/scripts/redeploy_production.sh
+# Production frontend redeploy script
+# Usage: bash frontend/scripts/redeploy_production.sh
+# Run from the repository root.
 
-set -euo pipefail  # Exit on error, undefined variables, and pipe failures
+set -euo pipefail
 
-# Configuration
-TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-LOG_DIR="frontend/deployment_logs"
-LOG_FILE="${LOG_DIR}/deploy_${TIMESTAMP}.log"
-CANISTER_IDS_FILE="${LOG_DIR}/canister_ids_${TIMESTAMP}.txt"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+FRONTEND_DIR="$REPO_ROOT/frontend"
+DEPLOY_LOGS_DIR="$FRONTEND_DIR/deployment_logs"
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+LOG_FILE="$DEPLOY_LOGS_DIR/deploy_${TIMESTAMP}.log"
 
-# Create log directory if it doesn't exist
-mkdir -p "${LOG_DIR}"
+mkdir -p "$DEPLOY_LOGS_DIR"
 
-# Function to log messages
-log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"
-}
+echo "=== Production Redeploy: $TIMESTAMP ===" | tee "$LOG_FILE"
+echo "Repo root: $REPO_ROOT" | tee -a "$LOG_FILE"
 
-# Function to capture command output
-run_command() {
-    local cmd="$1"
-    log "Executing: ${cmd}"
-    if eval "${cmd}" 2>&1 | tee -a "${LOG_FILE}"; then
-        log "✅ Command succeeded: ${cmd}"
-        return 0
-    else
-        local exit_code=$?
-        log "❌ Command failed with exit code ${exit_code}: ${cmd}"
-        return ${exit_code}
-    fi
-}
+# ── Step 1: Extract canister ID BEFORE building ──────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 1: Extracting backend canister ID ──" | tee -a "$LOG_FILE"
 
-# Start deployment
-log "=========================================="
-log "Production Frontend Redeploy"
-log "=========================================="
-log "Log file: ${LOG_FILE}"
-log "Canister IDs file: ${CANISTER_IDS_FILE}"
-log ""
+CANISTER_IDS_FILE="$REPO_ROOT/canister_ids.json"
+BACKEND_CANISTER_ID=""
 
-# Capture repository state
-log "Capturing repository state..."
-GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
-GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
-GIT_DESCRIBE=$(git describe --always --dirty 2>/dev/null || echo "unknown")
+if [ -f "$CANISTER_IDS_FILE" ]; then
+  # Try to extract from canister_ids.json (ic network)
+  BACKEND_CANISTER_ID=$(python3 -c "
+import json, sys
+try:
+    data = json.load(open('$CANISTER_IDS_FILE'))
+    cid = data.get('backend', {}).get('ic', '') or data.get('backend', {}).get('production', '')
+    print(cid)
+except Exception as e:
+    print('')
+" 2>/dev/null || echo "")
+fi
 
-log "Repository state:"
-log "  Git commit: ${GIT_COMMIT}"
-log "  Git branch: ${GIT_BRANCH}"
-log "  Git tag: ${GIT_TAG:-none}"
-log "  Git describe: ${GIT_DESCRIBE}"
-log ""
+# Fallback: try dfx canister id
+if [ -z "$BACKEND_CANISTER_ID" ]; then
+  echo "canister_ids.json not found or missing ic entry, trying dfx..." | tee -a "$LOG_FILE"
+  BACKEND_CANISTER_ID=$(cd "$REPO_ROOT" && dfx canister id backend --network ic 2>/dev/null || echo "")
+fi
 
-# Step 1: Inject build metadata and build frontend
-log "Step 1: Injecting build metadata and building frontend..."
-
-# Generate build metadata
-BUILD_VERSION="${TIMESTAMP}"
-BUILD_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-
-log "Build metadata:"
-log "  VITE_BUILD_VERSION=${BUILD_VERSION}"
-log "  VITE_GIT_COMMIT=${GIT_COMMIT}"
-log "  VITE_BUILD_TIMESTAMP=${BUILD_TIMESTAMP}"
-
-# Export environment variables for the build
-export VITE_BUILD_VERSION="${BUILD_VERSION}"
-export VITE_GIT_COMMIT="${GIT_COMMIT}"
-export VITE_BUILD_TIMESTAMP="${BUILD_TIMESTAMP}"
-
-if run_command "cd frontend && npm run build"; then
-    log "Frontend build completed successfully with injected metadata"
+if [ -z "$BACKEND_CANISTER_ID" ]; then
+  echo "WARNING: Could not determine backend canister ID. Frontend will show 'Not configured'." | tee -a "$LOG_FILE"
 else
-    log "❌ DEPLOYMENT FAILED: Frontend build failed"
-    log "Check the log file for details: ${LOG_FILE}"
-    exit 1
+  echo "Backend canister ID: $BACKEND_CANISTER_ID" | tee -a "$LOG_FILE"
 fi
 
-# Step 2: Deploy to IC network
-log ""
-log "Step 2: Deploying to Internet Computer network..."
-if run_command "dfx deploy --network ic"; then
-    log "Deployment to IC network completed successfully"
-else
-    log "❌ DEPLOYMENT FAILED: dfx deploy failed"
-    log "Check the log file for details: ${LOG_FILE}"
-    exit 1
-fi
+# ── Step 2: Write .env file for Vite build ────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 2: Writing frontend/.env ──" | tee -a "$LOG_FILE"
 
-# Step 3: Extract and verify canister IDs
-log ""
-log "Step 3: Extracting and verifying canister IDs..."
-
-FRONTEND_ID=""
-BACKEND_ID=""
-EXTRACTION_FAILED=false
-
-# Extract frontend canister ID
-if FRONTEND_ID=$(dfx canister --network ic id frontend 2>/dev/null); then
-    log "Frontend Canister ID: ${FRONTEND_ID}"
-else
-    log "❌ ERROR: Could not retrieve frontend canister ID"
-    EXTRACTION_FAILED=true
-fi
-
-# Extract backend canister ID
-if BACKEND_ID=$(dfx canister --network ic id backend 2>/dev/null); then
-    log "Backend Canister ID: ${BACKEND_ID}"
-else
-    log "❌ ERROR: Could not retrieve backend canister ID"
-    EXTRACTION_FAILED=true
-fi
-
-# Fail if either canister ID could not be retrieved
-if [ "$EXTRACTION_FAILED" = true ]; then
-    log "❌ DEPLOYMENT FAILED: Could not retrieve all canister IDs"
-    log "This indicates a deployment issue. Check the log file: ${LOG_FILE}"
-    exit 1
-fi
-
-# Write canister IDs to file with repository state
+ENV_FILE="$FRONTEND_DIR/.env"
 {
-    echo "=========================================="
-    echo "Deployed Canister IDs"
-    echo "Timestamp: $(date +'%Y-%m-%d %H:%M:%S')"
-    echo "=========================================="
-    echo ""
-    echo "Frontend Canister ID: ${FRONTEND_ID}"
-    echo "Backend Canister ID: ${BACKEND_ID}"
-    echo ""
-    echo "Build Metadata:"
-    echo "  Version: ${BUILD_VERSION}"
-    echo "  Git Commit: ${GIT_COMMIT}"
-    echo "  Build Time: ${BUILD_TIMESTAMP}"
-    echo ""
-    echo "Repository State:"
-    echo "  Git Commit (full): ${GIT_COMMIT}"
-    echo "  Git Branch: ${GIT_BRANCH}"
-    if [ -n "${GIT_TAG}" ]; then
-        echo "  Git Tag: ${GIT_TAG}"
-    fi
-    echo "  Git Describe: ${GIT_DESCRIBE}"
-    echo ""
-    echo "Deployment Type: Standard Redeploy"
-    echo ""
-    echo "=========================================="
-} | tee "${CANISTER_IDS_FILE}"
+  echo "VITE_CANISTER_ID_BACKEND=$BACKEND_CANISTER_ID"
+  echo "VITE_HOST=https://ic0.app"
+} > "$ENV_FILE"
+echo "Wrote $ENV_FILE" | tee -a "$LOG_FILE"
+cat "$ENV_FILE" | tee -a "$LOG_FILE"
 
-log "Canister IDs successfully written to: ${CANISTER_IDS_FILE}"
+# ── Step 3: Capture repository state ─────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 3: Repository state ──" | tee -a "$LOG_FILE"
+GIT_COMMIT=$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+echo "Git commit: $GIT_COMMIT" | tee -a "$LOG_FILE"
+echo "Git branch: $GIT_BRANCH" | tee -a "$LOG_FILE"
 
-# Step 4: Start/restart backend canister
-log ""
-log "Step 4: Starting backend canister if stopped..."
+# ── Step 4: Inject build metadata ────────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 4: Injecting build metadata ──" | tee -a "$LOG_FILE"
+BUILD_ID="${TIMESTAMP}_${GIT_COMMIT}"
+BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-# Check if restart script exists
-RESTART_SCRIPT="frontend/scripts/restart_backend_canister.sh"
-if [ -f "${RESTART_SCRIPT}" ]; then
-    log "Executing backend canister restart script..."
-    if bash "${RESTART_SCRIPT}" 2>&1 | tee -a "${LOG_FILE}"; then
-        log "✅ Backend canister start/restart completed successfully"
-    else
-        EXIT_CODE=$?
-        log "⚠️  WARNING: Backend canister start/restart failed (exit code: ${EXIT_CODE})"
-        log "The deployment completed, but the backend canister may be stopped."
-        log "You may need to manually start it with:"
-        log "  dfx canister --network ic start backend"
-        log "Or run the restart script manually:"
-        log "  ./frontend/scripts/restart_backend_canister.sh"
-    fi
+# Append build metadata to .env
+{
+  echo "VITE_BUILD_ID=$BUILD_ID"
+  echo "VITE_BUILD_TIME=$BUILD_TIME"
+  echo "VITE_GIT_COMMIT=$GIT_COMMIT"
+} >> "$ENV_FILE"
+echo "Build metadata injected." | tee -a "$LOG_FILE"
+
+# ── Step 5: Build frontend ────────────────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 5: Building frontend ──" | tee -a "$LOG_FILE"
+cd "$FRONTEND_DIR"
+pnpm run build 2>&1 | tee -a "$LOG_FILE"
+echo "Frontend build complete." | tee -a "$LOG_FILE"
+
+# ── Step 6: Deploy to IC ──────────────────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 6: Deploying frontend canister to IC ──" | tee -a "$LOG_FILE"
+cd "$REPO_ROOT"
+dfx deploy frontend --network ic --no-wallet 2>&1 | tee -a "$LOG_FILE"
+echo "Frontend deployed." | tee -a "$LOG_FILE"
+
+# ── Step 7: Write canister ID summary ────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 7: Writing canister ID summary ──" | tee -a "$LOG_FILE"
+SUMMARY_FILE="$DEPLOY_LOGS_DIR/canister_ids_${TIMESTAMP}.txt"
+{
+  echo "Deploy timestamp: $TIMESTAMP"
+  echo "Git commit: $GIT_COMMIT"
+  echo "Git branch: $GIT_BRANCH"
+  echo "Backend canister ID: $BACKEND_CANISTER_ID"
+  echo "Clean Rebuild: No"
+} > "$SUMMARY_FILE"
+echo "Summary written to $SUMMARY_FILE" | tee -a "$LOG_FILE"
+
+# ── Step 8: Restart backend canister ─────────────────────────────────────────
+echo "" | tee -a "$LOG_FILE"
+echo "── Step 8: Restarting backend canister ──" | tee -a "$LOG_FILE"
+if [ -f "$SCRIPT_DIR/restart_backend_canister.sh" ]; then
+  bash "$SCRIPT_DIR/restart_backend_canister.sh" 2>&1 | tee -a "$LOG_FILE" || true
 else
-    log "⚠️  WARNING: Restart script not found at ${RESTART_SCRIPT}"
-    log "Attempting to start backend canister directly..."
-    if dfx canister --network ic start backend 2>&1 | tee -a "${LOG_FILE}"; then
-        log "✅ Backend canister started successfully"
-    else
-        log "⚠️  WARNING: Could not start backend canister"
-        log "You may need to start it manually with:"
-        log "  dfx canister --network ic start backend"
-    fi
+  echo "restart_backend_canister.sh not found, skipping." | tee -a "$LOG_FILE"
 fi
 
-# Success summary
-log ""
-log "=========================================="
-log "✅ DEPLOYMENT SUCCESSFUL"
-log "=========================================="
-log "Full deployment log: ${LOG_FILE}"
-log "Canister IDs saved to: ${CANISTER_IDS_FILE}"
-log ""
-log "Repository state used for deployment:"
-log "  - Git commit: ${GIT_COMMIT}"
-log "  - Git branch: ${GIT_BRANCH}"
-if [ -n "${GIT_TAG}" ]; then
-    log "  - Git tag: ${GIT_TAG}"
-fi
-log "  - Git describe: ${GIT_DESCRIBE}"
-log ""
-log "Build metadata injected:"
-log "  - Frontend build identifier: v${BUILD_VERSION}-${GIT_COMMIT:0:7}"
-log "  - Build timestamp: ${BUILD_TIMESTAMP}"
-log ""
-log "Next steps:"
-log "1. Review the canister IDs in: ${CANISTER_IDS_FILE}"
-log "2. Run post-deployment smoke tests (see frontend/DEPLOYMENT_CHECKLIST.md)"
-log "3. Verify diagnostics indicator shows: v${BUILD_VERSION}-${GIT_COMMIT:0:7}"
-log "4. Verify backend canister ID matches: ${BACKEND_ID}"
-log "5. Verify backend canister is running with: dfx canister --network ic status backend"
-log ""
-
-exit 0
+echo "" | tee -a "$LOG_FILE"
+echo "=== Redeploy complete: $TIMESTAMP ===" | tee -a "$LOG_FILE"
+echo "Log: $LOG_FILE"
+echo "Backend canister ID: $BACKEND_CANISTER_ID"

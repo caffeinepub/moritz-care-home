@@ -1,12 +1,15 @@
-import { useInternetIdentity } from './useInternetIdentity';
-import { useQuery } from '@tanstack/react-query';
-import { type backendInterface } from '../backend';
-import { createActorWithConfig } from '../config';
-import { getSecretParameter } from '../utils/urlParams';
-import { withTimeout, normalizeError, isNonFatalError } from '../lib/actorInit';
-import { ACTOR_CREATE_TIMEOUT_MS, ADMIN_INIT_TIMEOUT_MS } from '../lib/startupTimings';
+import { useQuery } from "@tanstack/react-query";
+import type { backendInterface } from "../backend";
+import { createActorWithConfig } from "../config";
+import { isNonFatalError, normalizeError, withTimeout } from "../lib/actorInit";
+import {
+  ACTOR_CREATION_TIMEOUT,
+  ADMIN_INIT_TIMEOUT,
+} from "../lib/startupTimings";
+import { getSecretParameter } from "../utils/urlParams";
+import { useInternetIdentity } from "./useInternetIdentity";
 
-const ACTOR_QUERY_KEY = 'resilient-actor';
+const ACTOR_QUERY_KEY = "resilient-actor";
 
 export function useResilientActor() {
   const { identity } = useInternetIdentity();
@@ -17,53 +20,47 @@ export function useResilientActor() {
       try {
         const isAuthenticated = !!identity;
 
-        // Step 1: Create actor with timeout
         const actorOptions = isAuthenticated
-          ? {
-              agentOptions: {
-                identity,
-              },
-            }
+          ? { agentOptions: { identity } }
           : undefined;
 
         const actor = await withTimeout(
           createActorWithConfig(actorOptions),
-          ACTOR_CREATE_TIMEOUT_MS,
-          'Connection timed out: Unable to create backend actor'
+          ACTOR_CREATION_TIMEOUT,
+          "Connection timed out: Unable to create backend actor",
         );
 
-        // Step 2: Best-effort admin initialization (only if token exists)
-        const adminToken = getSecretParameter('caffeineAdminToken');
-        
-        if (adminToken && adminToken.trim() !== '') {
+        // Best-effort admin initialization — skip when no token present
+        const adminToken = getSecretParameter("caffeineAdminToken");
+        if (adminToken && adminToken.trim() !== "") {
           try {
             await withTimeout(
-              actor._initializeAccessControlWithSecret(adminToken),
-              ADMIN_INIT_TIMEOUT_MS,
-              'Access control initialization timed out'
+              (actor as any)._initializeAccessControlWithSecret(adminToken),
+              ADMIN_INIT_TIMEOUT,
+              "Access control initialization timed out",
             );
           } catch (initError) {
-            // Check if this is a non-fatal error
             if (isNonFatalError(initError)) {
-              console.warn('Access control initialization warning:', normalizeError(initError));
-              // Continue with the actor - this is not a fatal error
+              console.warn(
+                "Access control initialization warning:",
+                normalizeError(initError),
+              );
             } else {
-              // For other errors, log but continue (best-effort)
-              console.error('Access control initialization failed:', normalizeError(initError));
-              // We still return the actor - the backend will handle permissions
+              console.error(
+                "Access control initialization failed:",
+                normalizeError(initError),
+              );
             }
           }
         }
 
         return actor;
       } catch (error) {
-        // Normalize and re-throw the error for React Query to handle
-        const normalizedMessage = normalizeError(error);
-        throw new Error(normalizedMessage);
+        throw new Error(normalizeError(error));
       }
     },
-    staleTime: Infinity,
-    retry: false, // Don't auto-retry, let user trigger retry
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
     enabled: true,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

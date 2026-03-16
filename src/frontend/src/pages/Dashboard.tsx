@@ -1,14 +1,3 @@
-import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useGetActiveResidents, useGetDischargedResidents, useDischargeResident, useDeleteResident, useIsCallerAdmin } from '../hooks/useQueries';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, UserCheck, UserX, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
-import { formatDate, calculateAge } from '../lib/dateUtils';
-import AddResidentDialog from '../components/AddResidentDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,45 +7,67 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { toast } from 'sonner';
-import type { Resident } from '../backend';
+} from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  AlertCircle,
+  Plus,
+  RefreshCw,
+  Trash2,
+  UserCheck,
+  UserX,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import AddResidentDialog from "../components/AddResidentDialog";
+import {
+  useDischargeResident,
+  useGetActiveResidents,
+  useGetDischargedResidents,
+  useIsCallerAdmin,
+  usePermanentlyDeleteResident,
+} from "../hooks/useQueries";
+import type { Resident } from "../hooks/useQueries";
+import { calculateAge, formatDate } from "../lib/dateUtils";
 
-/**
- * Main dashboard displaying residents in tabbed views with resilient actor-based queries, proper loading states, error recovery with retry, and admin-only actions.
- */
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [dischargeConfirmOpen, setDischargeConfirmOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [selectedResident, setSelectedResident] = useState<Resident | null>(null);
+  const [selectedResident, setSelectedResident] = useState<Resident | null>(
+    null,
+  );
 
-  const { 
-    data: activeResidents = [], 
-    isLoading: loadingActive, 
+  const {
+    data: activeResidents = [],
+    isLoading: loadingActive,
     error: activeError,
     isFetched: activeFetched,
-    refetch: refetchActive
+    refetch: refetchActive,
   } = useGetActiveResidents();
-  
-  const { 
-    data: dischargedResidents = [], 
-    isLoading: loadingDischarged, 
+
+  const {
+    data: dischargedResidents = [],
+    isLoading: loadingDischarged,
     error: dischargedError,
     isFetched: dischargedFetched,
-    refetch: refetchDischarged
+    refetch: refetchDischarged,
   } = useGetDischargedResidents();
-  
-  const { 
-    data: isAdmin, 
+
+  const {
+    data: isAdmin,
     isLoading: adminLoading,
     error: adminError,
-    refetch: refetchAdmin
+    refetch: refetchAdmin,
   } = useIsCallerAdmin();
 
   const dischargeMutation = useDischargeResident();
-  const deleteMutation = useDeleteResident();
+  const deleteMutation = usePermanentlyDeleteResident();
 
   const handleDischargeClick = (resident: Resident) => {
     setSelectedResident(resident);
@@ -70,31 +81,35 @@ export default function Dashboard() {
 
   const handleDischargeConfirm = async () => {
     if (!selectedResident) return;
-
     try {
       await dischargeMutation.mutateAsync(selectedResident.id);
-      toast.success(`${selectedResident.firstName} ${selectedResident.lastName} has been discharged successfully.`);
+      toast.success(
+        `${selectedResident.firstName} ${selectedResident.lastName} has been discharged.`,
+      );
       setDischargeConfirmOpen(false);
       setSelectedResident(null);
     } catch (error) {
-      console.error('Discharge error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to discharge resident. Please try again.';
-      toast.error(message);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to discharge resident.",
+      );
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (!selectedResident) return;
-
     try {
       await deleteMutation.mutateAsync(selectedResident.id);
-      toast.success(`${selectedResident.firstName} ${selectedResident.lastName} has been permanently deleted.`);
+      toast.success(
+        `${selectedResident.firstName} ${selectedResident.lastName} has been deleted.`,
+      );
       setDeleteConfirmOpen(false);
       setSelectedResident(null);
     } catch (error) {
-      console.error('Delete error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to delete resident. Please try again.';
-      toast.error(message);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete resident.",
+      );
     }
   };
 
@@ -107,11 +122,11 @@ export default function Dashboard() {
   const renderResidentCard = (resident: Resident) => {
     const age = calculateAge(resident.dateOfBirth);
     const initials = `${resident.firstName[0]}${resident.lastName[0]}`;
-    const isActive = resident.status === 'active';
+    const isActive = resident.status === "active";
 
     return (
       <Card
-        key={resident.id.toString()}
+        key={String(resident.id)}
         className="cursor-pointer transition-shadow hover:shadow-lg"
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -123,7 +138,7 @@ export default function Dashboard() {
             </Avatar>
             <div>
               <CardTitle
-                className="text-lg hover:text-primary"
+                className="text-lg hover:text-primary cursor-pointer"
                 onClick={() => navigate({ to: `/resident/${resident.id}` })}
               >
                 {resident.firstName} {resident.lastName}
@@ -134,8 +149,8 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
-          <Badge variant={isActive ? 'default' : 'secondary'}>
-            {isActive ? 'Active' : 'Discharged'}
+          <Badge variant={isActive ? "default" : "secondary"}>
+            {isActive ? "Active" : "Discharged"}
           </Badge>
         </CardHeader>
         <CardContent>
@@ -146,16 +161,22 @@ export default function Dashboard() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Date of Birth:</span>
-              <span className="font-medium">{formatDate(resident.dateOfBirth)}</span>
+              <span className="font-medium">
+                {formatDate(resident.dateOfBirth)}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Admission Date:</span>
-              <span className="font-medium">{formatDate(resident.admissionDate)}</span>
+              <span className="font-medium">
+                {formatDate(resident.admissionDate)}
+              </span>
             </div>
             {resident.dischargeTimestamp && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Discharge Date:</span>
-                <span className="font-medium">{formatDate(resident.dischargeTimestamp)}</span>
+                <span className="font-medium">
+                  {formatDate(resident.dischargeTimestamp)}
+                </span>
               </div>
             )}
             <div className="flex justify-between">
@@ -164,7 +185,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Admin-only action buttons */}
           {!adminLoading && isAdmin && (
             <div className="mt-4 flex gap-2">
               {isActive && (
@@ -202,21 +222,29 @@ export default function Dashboard() {
     );
   };
 
-  // Show error state with retry option
-  if ((activeError || dischargedError || adminError) && (activeFetched || dischargedFetched)) {
-    const errorMessage = activeError?.message || dischargedError?.message || adminError?.message || 'Failed to load residents';
+  if (
+    (activeError || dischargedError || adminError) &&
+    (activeFetched || dischargedFetched)
+  ) {
+    const errorMessage =
+      activeError?.message ||
+      dischargedError?.message ||
+      adminError?.message ||
+      "Failed to load residents";
     return (
       <div className="container mx-auto p-6">
         <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive" />
             <div className="flex-1">
-              <h3 className="font-semibold text-destructive">Error Loading Dashboard</h3>
+              <h3 className="font-semibold text-destructive">
+                Error Loading Dashboard
+              </h3>
               <p className="mt-1 text-sm text-destructive/90">{errorMessage}</p>
-              <Button 
-                onClick={handleRetry} 
-                variant="outline" 
-                size="sm" 
+              <Button
+                onClick={handleRetry}
+                variant="outline"
+                size="sm"
                 className="mt-4"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -233,17 +261,20 @@ export default function Dashboard() {
     <div className="container mx-auto space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Resident Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Resident Dashboard
+          </h1>
           <p className="text-muted-foreground">
             Manage and view all residents in the care home
           </p>
         </div>
-        {/* Admin-only Add Resident button */}
         {!adminLoading && isAdmin && (
-          <Button onClick={() => setAddDialogOpen(true)} size="lg">
-            <Plus className="mr-2 h-5 w-5" />
-            Add Resident
-          </Button>
+          <AddResidentDialog>
+            <Button size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Add Resident
+            </Button>
+          </AddResidentDialog>
         )}
       </div>
 
@@ -272,15 +303,14 @@ export default function Dashboard() {
         <TabsContent value="active" className="space-y-4">
           {loadingActive ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <Card key={`skeleton-active-${n}`} className="animate-pulse">
                   <CardHeader className="space-y-2">
                     <div className="h-4 w-3/4 rounded bg-muted" />
                     <div className="h-3 w-1/2 rounded bg-muted" />
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <div className="h-3 w-full rounded bg-muted" />
                       <div className="h-3 w-full rounded bg-muted" />
                       <div className="h-3 w-full rounded bg-muted" />
                     </div>
@@ -294,7 +324,9 @@ export default function Dashboard() {
                 <UserCheck className="mb-4 h-12 w-12 text-muted-foreground" />
                 <p className="text-lg font-medium">No active residents</p>
                 <p className="text-sm text-muted-foreground">
-                  {isAdmin ? 'Click "Add Resident" to get started' : 'No residents to display'}
+                  {isAdmin
+                    ? 'Click "Add Resident" to get started'
+                    : "No residents to display"}
                 </p>
               </CardContent>
             </Card>
@@ -308,15 +340,17 @@ export default function Dashboard() {
         <TabsContent value="discharged" className="space-y-4">
           {loadingDischarged ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
+              {[1, 2, 3].map((n) => (
+                <Card
+                  key={`skeleton-discharged-${n}`}
+                  className="animate-pulse"
+                >
                   <CardHeader className="space-y-2">
                     <div className="h-4 w-3/4 rounded bg-muted" />
                     <div className="h-3 w-1/2 rounded bg-muted" />
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <div className="h-3 w-full rounded bg-muted" />
                       <div className="h-3 w-full rounded bg-muted" />
                       <div className="h-3 w-full rounded bg-muted" />
                     </div>
@@ -342,22 +376,20 @@ export default function Dashboard() {
         </TabsContent>
       </Tabs>
 
-      {/* Admin-only Add Resident Dialog */}
-      {isAdmin && (
-        <AddResidentDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
-      )}
-
-      {/* Discharge Confirmation Dialog */}
-      <AlertDialog open={dischargeConfirmOpen} onOpenChange={setDischargeConfirmOpen}>
+      {/* Discharge Confirmation */}
+      <AlertDialog
+        open={dischargeConfirmOpen}
+        onOpenChange={setDischargeConfirmOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Discharge Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to discharge{' '}
+              Are you sure you want to discharge{" "}
               <span className="font-semibold">
                 {selectedResident?.firstName} {selectedResident?.lastName}
               </span>
-              ? This action will mark them as discharged and they will be moved to the discharged residents list.
+              ? They will be moved to the discharged residents list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -366,23 +398,23 @@ export default function Dashboard() {
               onClick={handleDischargeConfirm}
               disabled={dischargeMutation.isPending}
             >
-              {dischargeMutation.isPending ? 'Discharging...' : 'Discharge'}
+              {dischargeMutation.isPending ? "Discharging..." : "Discharge"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Resident</AlertDialogTitle>
+            <AlertDialogTitle>Permanently Delete Resident</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete{' '}
+              Are you sure you want to permanently delete{" "}
               <span className="font-semibold">
                 {selectedResident?.firstName} {selectedResident?.lastName}
               </span>
-              ? This action cannot be undone and will remove all associated records.
+              ? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -392,7 +424,7 @@ export default function Dashboard() {
               disabled={deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
+              {deleteMutation.isPending ? "Deleting..." : "Delete Permanently"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

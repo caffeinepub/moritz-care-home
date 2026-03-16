@@ -10,14 +10,6 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export interface ADLRecord {
-  'id' : bigint,
-  'residentId' : bigint,
-  'staffNotes' : string,
-  'assistanceLevel' : string,
-  'date' : bigint,
-  'activity' : string,
-}
 export type AdministrationRoute = { 'injection' : null } |
   { 'inhaled' : null } |
   { 'oral' : null } |
@@ -29,19 +21,6 @@ export type AdministrationRoute = { 'injection' : null } |
   { 'topical' : null } |
   { 'subcutaneous' : null } |
   { 'rectal' : null };
-export interface DailyVitals {
-  'id' : bigint,
-  'residentId' : bigint,
-  'bloodGlucose' : [] | [bigint],
-  'respiratoryRate' : bigint,
-  'temperature' : number,
-  'pulseRate' : bigint,
-  'oxygenSaturation' : bigint,
-  'measurementDateTime' : bigint,
-  'notes' : string,
-  'bloodPressureDiastolic' : bigint,
-  'bloodPressureSystolic' : bigint,
-}
 export interface Insurance {
   'id' : bigint,
   'address' : string,
@@ -60,13 +39,6 @@ export interface Medication {
   'notes' : string,
   'dosageQuantity' : string,
 }
-export interface MedicationAdministrationRecord {
-  'id' : bigint,
-  'medication' : Medication,
-  'notes' : string,
-  'administrationTime' : bigint,
-  'administeredBy' : string,
-}
 export type MedicationStatus = { 'active' : null } |
   { 'discontinued' : null };
 export interface Pharmacy {
@@ -81,32 +53,7 @@ export interface Physician {
   'specialty' : string,
   'contactNumber' : string,
 }
-export interface Resident {
-  'id' : bigint,
-  'bed' : [] | [string],
-  'status' : ResidentStatus,
-  'weightLog' : Array<WeightEntry>,
-  'dateOfBirth' : bigint,
-  'admissionDate' : bigint,
-  'marRecords' : Array<MedicationAdministrationRecord>,
-  'adlRecords' : Array<ADLRecord>,
-  'isArchived' : boolean,
-  'roomNumber' : string,
-  'insurance' : [] | [Insurance],
-  'medications' : Array<Medication>,
-  'pharmacy' : [] | [Pharmacy],
-  'dailyVitals' : Array<DailyVitals>,
-  'responsiblePersons' : Array<ResponsiblePerson>,
-  'dischargeTimestamp' : [] | [bigint],
-  'medicaidNumber' : string,
-  'physicians' : Array<Physician>,
-  'lastName' : string,
-  'roomType' : RoomType,
-  'medicareNumber' : string,
-  'firstName' : string,
-}
-export type ResidentStatus = { 'active' : null } |
-  { 'discharged' : null };
+export type ProfileSetupError = { 'NotFound' : null };
 export interface ResponsiblePerson {
   'id' : bigint,
   'relationship' : string,
@@ -116,22 +63,14 @@ export interface ResponsiblePerson {
 }
 export type RoomType = { 'solo' : null } |
   { 'sharedRoom' : null };
-export type SortCriteria = { 'bed' : null } |
-  { 'residentId' : null } |
-  { 'name' : null } |
-  { 'roomNumber' : null };
-export interface UserProfile { 'name' : string, 'employeeId' : string }
+export interface UserProfileWithRole {
+  'name' : string,
+  'role' : string,
+  'employeeId' : string,
+}
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
-export interface WeightEntry {
-  'id' : bigint,
-  'weight' : number,
-  'residentId' : bigint,
-  'weightUnit' : string,
-  'notes' : string,
-  'measurementDate' : bigint,
-}
 export interface _CaffeineStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -160,46 +99,7 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
-  'addAdlRecord' : ActorMethod<
-    [bigint, bigint, string, string, string],
-    undefined
-  >,
-  'addDailyVitals' : ActorMethod<
-    [
-      bigint,
-      number,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      bigint,
-      [] | [bigint],
-      bigint,
-      string,
-    ],
-    undefined
-  >,
-  'addInsurance' : ActorMethod<[string, string, string, string], undefined>,
-  'addMarRecord' : ActorMethod<
-    [bigint, Medication, bigint, string, string],
-    undefined
-  >,
-  'addMedication' : ActorMethod<
-    [
-      bigint,
-      string,
-      string,
-      Array<string>,
-      [] | [Physician],
-      AdministrationRoute,
-      string,
-      string,
-    ],
-    undefined
-  >,
-  'addPharmacy' : ActorMethod<[string, string, string], undefined>,
-  'addPhysician' : ActorMethod<[string, string, string], undefined>,
-  'addResident' : ActorMethod<
+  'addResidentAccessControl' : ActorMethod<
     [
       string,
       string,
@@ -218,169 +118,19 @@ export interface _SERVICE {
     ],
     undefined
   >,
-  'addResponsiblePerson' : ActorMethod<
-    [string, string, string, string],
-    undefined
-  >,
-  'addWeightEntry' : ActorMethod<
-    [bigint, number, string, bigint, string],
-    undefined
-  >,
-  'archiveResident' : ActorMethod<[bigint], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'autoArchiveDischargedResidents' : ActorMethod<[], undefined>,
-  'calculateAge' : ActorMethod<[bigint], bigint>,
-  'checkUpgradeHealth' : ActorMethod<
-    [],
-    { 'residents' : bigint, 'nextResidentId' : bigint, 'userProfiles' : bigint }
-  >,
-  'dischargeResident' : ActorMethod<[bigint], undefined>,
-  'editMedication' : ActorMethod<
-    [
-      bigint,
-      bigint,
-      string,
-      string,
-      Array<string>,
-      [] | [Physician],
-      AdministrationRoute,
-      string,
-      string,
-    ],
-    undefined
-  >,
-  /**
-   * / Ensures the caller is registered with baseline access for normal app usage (idempotent).
-   * / Safe to call repeatedly. Should be called immediately after login.
-   */
   'ensureRegisteredUser' : ActorMethod<[], undefined>,
-  'findResidentByRoom' : ActorMethod<[string], [] | [Resident]>,
-  'generateAdlReport' : ActorMethod<[bigint], Array<ADLRecord>>,
-  'generateFullMedicationReport' : ActorMethod<[bigint], Array<Medication>>,
-  'generateMarReport' : ActorMethod<
-    [bigint],
-    Array<MedicationAdministrationRecord>
-  >,
-  'generateMedicationReport' : ActorMethod<[bigint], Array<Medication>>,
-  'generateResidentProfileReport' : ActorMethod<[bigint], [] | [Resident]>,
-  'getActiveResidents' : ActorMethod<[], Array<Resident>>,
-  'getAllInsuranceCompanies' : ActorMethod<[], Array<Insurance>>,
-  'getAllPharmacies' : ActorMethod<[], Array<Pharmacy>>,
-  'getAllPhysicians' : ActorMethod<[], Array<Physician>>,
-  'getAllResidents' : ActorMethod<[], Array<Resident>>,
-  'getAllResponsiblePersons' : ActorMethod<[], Array<ResponsiblePerson>>,
-  'getAllRoomNumbers' : ActorMethod<[], Array<string>>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getDailyVitals' : ActorMethod<[bigint], Array<DailyVitals>>,
-  'getDischargedResidents' : ActorMethod<[], Array<Resident>>,
-  'getFilteredAndSortedResidents' : ActorMethod<
-    [[] | [ResidentStatus], [] | [SortCriteria]],
-    Array<Resident>
+  'getUserProfileWithRole' : ActorMethod<
+    [Principal],
+    { 'ok' : UserProfileWithRole } |
+      { 'err' : ProfileSetupError }
   >,
-  'getInsurance' : ActorMethod<[bigint], [] | [Insurance]>,
-  'getNonArchivedResidents' : ActorMethod<[], Array<Resident>>,
-  'getPharmacy' : ActorMethod<[bigint], [] | [Pharmacy]>,
-  'getPhysician' : ActorMethod<[bigint], [] | [Physician]>,
-  'getResident' : ActorMethod<[bigint], [] | [Resident]>,
-  'getResidentCounts' : ActorMethod<
-    [],
-    {
-      'activeResidents' : bigint,
-      'archivedResidents' : bigint,
-      'dischargedResidents' : bigint,
-      'totalResidents' : bigint,
-    }
-  >,
-  'getResidentRoomMap' : ActorMethod<[], Array<[bigint, string]>>,
-  'getResidentStatistics' : ActorMethod<
-    [],
-    {
-      'residentsByRoom' : Array<[bigint, string, string]>,
-      'activeResidents' : bigint,
-      'residentsByRoomType' : Array<[bigint, string, RoomType]>,
-      'dischargedResidents' : bigint,
-      'totalResidents' : bigint,
-    }
-  >,
-  'getResidentsByRoom' : ActorMethod<[string], Array<Resident>>,
-  'getResidentsByRoomType' : ActorMethod<[RoomType], Array<Resident>>,
-  'getResponsiblePerson' : ActorMethod<[bigint], [] | [ResponsiblePerson]>,
-  'getSystemDiagnostics' : ActorMethod<
-    [boolean],
-    {
-      'nextIdCounters' : {
-        'nextPharmacyId' : bigint,
-        'nextResponsiblePersonId' : bigint,
-        'nextResidentId' : bigint,
-        'nextPhysicianId' : bigint,
-        'nextInsuranceId' : bigint,
-        'nextMedicationId' : bigint,
-        'nextWeightEntryId' : bigint,
-        'nextMarId' : bigint,
-        'nextAdlId' : bigint,
-        'nextDailyVitalsId' : bigint,
-      },
-      'sampleData' : [] | [Array<[bigint, string]>],
-      'aggregateCounts' : {
-        'activeResidents' : bigint,
-        'archivedResidents' : bigint,
-        'dischargedResidents' : bigint,
-        'totalResidents' : bigint,
-      },
-    }
-  >,
-  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'getWeightLog' : ActorMethod<[bigint], Array<WeightEntry>>,
   'healthCheck' : ActorMethod<
     [],
     { 'message' : string, 'timestamp' : [] | [bigint] }
   >,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'permanentlyDeleteResident' : ActorMethod<[bigint], undefined>,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'updateMedication' : ActorMethod<
-    [
-      bigint,
-      bigint,
-      string,
-      string,
-      Array<string>,
-      [] | [Physician],
-      AdministrationRoute,
-      string,
-      string,
-      MedicationStatus,
-    ],
-    undefined
-  >,
-  'updateMedicationStatus' : ActorMethod<
-    [bigint, bigint, MedicationStatus],
-    undefined
-  >,
-  'updateResident' : ActorMethod<
-    [
-      bigint,
-      string,
-      string,
-      bigint,
-      bigint,
-      ResidentStatus,
-      string,
-      RoomType,
-      [] | [string],
-      Array<Physician>,
-      [] | [Pharmacy],
-      [] | [Insurance],
-      string,
-      string,
-      Array<ResponsiblePerson>,
-      Array<Medication>,
-    ],
-    Resident
-  >,
-  'v105_dischargeResident' : ActorMethod<[bigint], undefined>,
-  'v105_permanentlyDeleteResident' : ActorMethod<[bigint], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
